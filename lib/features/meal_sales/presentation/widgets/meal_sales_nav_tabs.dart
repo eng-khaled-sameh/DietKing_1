@@ -15,11 +15,7 @@ class MealSalesNavTabs extends StatefulWidget {
   final int initialIndex;
   final ValueChanged<int>? onTabChanged;
 
-  const MealSalesNavTabs({
-    super.key,
-    this.initialIndex = 0,
-    this.onTabChanged,
-  });
+  const MealSalesNavTabs({super.key, this.initialIndex = 0, this.onTabChanged});
 
   @override
   State<MealSalesNavTabs> createState() => _MealSalesNavTabsState();
@@ -79,9 +75,9 @@ class _MealSalesNavTabsState extends State<MealSalesNavTabs> {
           (
             label: 'الطلبات المعلقة',
             icon: Icons.pause_circle_outline_rounded,
-            badge: heldCount > 0 ? heldCount.toString() : null
+            badge: heldCount > 0 ? heldCount.toString() : null,
           ),
-          (label: 'تقرير الوردية', icon: Icons.assessment_outlined, badge: null),
+          (label: 'إدارة', icon: Icons.assessment_outlined, badge: null),
         ];
 
         return Container(
@@ -121,7 +117,9 @@ class _MealSalesNavTabsState extends State<MealSalesNavTabs> {
                           color: isSelected
                               ? AppColors.primaryContainer
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                          borderRadius: BorderRadius.circular(
+                            AppDimens.radiusSm,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -138,8 +136,9 @@ class _MealSalesNavTabsState extends State<MealSalesNavTabs> {
                               tab.label,
                               style: GoogleFonts.ibmPlexSansArabic(
                                 fontSize: AppDimens.fontSm,
-                                fontWeight:
-                                    isSelected ? FontWeight.w700 : FontWeight.w500,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
                                 color: isSelected
                                     ? AppColors.onPrimary
                                     : AppColors.onSurfaceVariant,

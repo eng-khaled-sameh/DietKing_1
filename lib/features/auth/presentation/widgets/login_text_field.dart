@@ -13,6 +13,11 @@ class LoginTextField extends StatefulWidget {
     required this.icon,
     this.isPassword = false,
     this.controller,
+    this.focusNode,
+    this.nextFocusNode,
+    this.textInputAction,
+    this.onSubmitted,
+    this.errorText,
   });
 
   final String label;
@@ -20,6 +25,11 @@ class LoginTextField extends StatefulWidget {
   final IconData icon;
   final bool isPassword;
   final TextEditingController? controller;
+  final FocusNode? focusNode;
+  final FocusNode? nextFocusNode;
+  final TextInputAction? textInputAction;
+  final VoidCallback? onSubmitted;
+  final String? errorText;
 
   @override
   State<LoginTextField> createState() => _LoginTextFieldState();
@@ -36,6 +46,8 @@ class _LoginTextFieldState extends State<LoginTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -57,12 +69,23 @@ class _LoginTextFieldState extends State<LoginTextField> {
             color: AppColors.surfaceContainer,
             borderRadius: BorderRadius.circular(AppDimens.radiusMd),
             border: Border.all(
-              color: AppColors.outlineVariant.withValues(alpha: 0.3),
+              color: hasError
+                  ? const Color(0xFFCF6679)
+                  : AppColors.outlineVariant.withValues(alpha: 0.3),
             ),
           ),
           child: TextField(
             controller: widget.controller,
+            focusNode: widget.focusNode,
             obscureText: _obscureText,
+            textInputAction: widget.textInputAction ?? TextInputAction.next,
+            onSubmitted: (_) {
+              if (widget.nextFocusNode != null) {
+                widget.nextFocusNode!.requestFocus();
+              } else {
+                widget.onSubmitted?.call();
+              }
+            },
             style: GoogleFonts.ibmPlexSansArabic(
               fontSize: AppDimens.fontMd,
               color: AppColors.onSurface,
@@ -79,7 +102,7 @@ class _LoginTextFieldState extends State<LoginTextField> {
               ),
               prefixIcon: Icon(
                 widget.icon,
-                color: AppColors.primary,
+                color: hasError ? const Color(0xFFCF6679) : AppColors.primary,
                 size: AppDimens.iconMd,
               ),
               suffixIcon: widget.isPassword
@@ -102,6 +125,28 @@ class _LoginTextFieldState extends State<LoginTextField> {
             ),
           ),
         ),
+
+        // رسالة الخطأ تحت الحقل
+        if (hasError) ...[
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 14,
+                color: Color(0xFFCF6679),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                widget.errorText!,
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontSize: AppDimens.fontXs,
+                  color: const Color(0xFFCF6679),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

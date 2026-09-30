@@ -1,11 +1,13 @@
+import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:my_desktop_app/core/theme/app_dimens.dart';
 
+import '../../cubits/session/session_cubit.dart';
 import '../theme/app_colors.dart';
-import '../shift_info.dart';
 
-/// شريط معلومات الجلسة: الكاشير + الفرع + حالة الاتصال + الوقت والتاريخ
+/// شريط معلومات الجلسة: الكاشير + الفرع + الوردية + حالة الاتصال + الوقت والتاريخ
 class PosSessionInfoRow extends StatefulWidget {
   const PosSessionInfoRow({super.key});
 
@@ -45,38 +47,44 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Row(
         children: [
-          // Dynamic cashier and branch info
-          _InfoChip(
-            icon: Icons.badge_outlined,
-            label: 'الكاشير:',
-            value: ShiftInfo.cashierName,
+          // ── يمين: معلومات الجلسة من SessionCubit ──────────────────────────
+          BlocSelector<SessionCubit, SessionState, _SessionInfo>(
+            selector: (state) => _SessionInfo(
+              cashierName: state.cashierName,
+              branchName: state.branchName.isNotEmpty
+                  ? state.branchName
+                  : state.branchCode,
+              shift: state.shift,
+            ),
+            builder: (context, info) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _InfoChip(
+                    icon: Icons.badge_outlined,
+                    label: 'الكاشير:',
+                    value: info.cashierName,
+                  ),
+                  _divider(),
+                  _InfoChip(
+                    icon: Icons.store_outlined,
+                    label: 'الفرع:',
+                    value: info.branchName,
+                  ),
+                  _divider(),
+                  _InfoChip(
+                    icon: Icons.watch_later_outlined,
+                    label: 'الوردية:',
+                    value: info.shift,
+                  ),
+                ],
+              );
+            },
           ),
-          Container(
-            width: 1,
-            height: 18,
-            margin: const EdgeInsets.symmetric(horizontal: AppDimens.spaceSm),
-            color: AppColors.outlineVariant.withValues(alpha: 0.4),
-          ),
-          _InfoChip(
-            icon: Icons.store_outlined,
-            label: 'الفرع:',
-            value: ShiftInfo.branchName,
-          ),
-          Container(
-            width: 1,
-            height: 18,
-            margin: const EdgeInsets.symmetric(horizontal: AppDimens.spaceSm),
-            color: AppColors.outlineVariant.withValues(alpha: 0.4),
-          ),
-          // Shift title chip
-          _InfoChip(
-            icon: Icons.watch_later_outlined,
-            label: 'الوردية:',
-            value: ShiftInfo.currentShiftTitle,
-          ),
+
           const Spacer(),
 
-          // ── (2) وسط: حالة الاتصال النابضة ────────────────────────────────
+          // ── وسط: حالة الاتصال النابضة ────────────────────────────────────
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: AppDimens.spaceSm,
@@ -103,12 +111,17 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
                   ),
                 ),
                 const SizedBox(width: AppDimens.spaceXs),
-                Text(
-                  'متصل - Register 01',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                    fontSize: AppDimens.fontXs,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.tertiary,
+                // عرض branchCode من SessionCubit في مكان "Register 01"
+                BlocSelector<SessionCubit, SessionState, String>(
+                  selector: (s) =>
+                      s.branchCode.isNotEmpty ? 'متصل - ${s.branchCode}' : 'متصل',
+                  builder: (context, label) => Text(
+                    label,
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      fontSize: AppDimens.fontXs,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.tertiary,
+                    ),
                   ),
                 ),
               ],
@@ -117,7 +130,7 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
 
           const Spacer(),
 
-          // ── (3) يسار: الوقت والتاريخ (ثابتين) ───────────────────────────
+          // ── يسار: الوقت والتاريخ (ثابتين) ─────────────────────────────────
           // TODO: bind to live clock
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -146,6 +159,31 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
       ),
     );
   }
+
+  Widget _divider() {
+    return Container(
+      width: 1,
+      height: 18,
+      margin: const EdgeInsets.symmetric(horizontal: AppDimens.spaceSm),
+      color: AppColors.outlineVariant.withValues(alpha: 0.4),
+    );
+  }
+}
+
+/// DTO داخلي لـ BlocSelector لتجنب إعادة البناء غير الضرورية
+class _SessionInfo extends Equatable {
+  final String cashierName;
+  final String branchName;
+  final String shift;
+
+  const _SessionInfo({
+    required this.cashierName,
+    required this.branchName,
+    required this.shift,
+  });
+
+  @override
+  List<Object?> get props => [cashierName, branchName, shift];
 }
 
 class _InfoChip extends StatelessWidget {
@@ -174,7 +212,7 @@ class _InfoChip extends StatelessWidget {
           ),
         ),
         Text(
-          value,
+          value.isNotEmpty ? value : '—',
           style: GoogleFonts.ibmPlexSansArabic(
             fontSize: AppDimens.fontSm,
             fontWeight: FontWeight.w700,

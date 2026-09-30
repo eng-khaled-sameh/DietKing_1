@@ -1,15 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/supabase_config.dart';
+import 'core/supabase_client.dart';
 import 'core/theme/app_colors.dart';
 import 'core/cubits/held_orders_cubit.dart';
+import 'cubits/branches/branches_cubit.dart';
+import 'cubits/catalog/catalog_cubit.dart';
+import 'cubits/session/session_cubit.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey, // ignore: deprecated_member_use
+  );
+
+  // عند كل تشغيل: أزل أي جلسة Supabase قديمة محفوظة محلياً
+  // حتى يختار الكاشير الفرع والوردية في كل مرة
+  await supabase.auth.signOut(scope: SignOutScope.local);
+
   runApp(
     MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => HeldOrdersCubit()),
+        // CatalogCubit على مستوى التطبيق — يبقى حياً طوال الجلسة
+        BlocProvider(create: (_) => CatalogCubit()),
+        // BranchesCubit — يُحمَّل مرة واحدة ويبقى طوال الجلسة
+        BlocProvider(create: (_) => BranchesCubit()),
+        // SessionCubit — بيانات الجلسة الثابتة بعد تسجيل الدخول
+        BlocProvider(create: (_) => SessionCubit()),
       ],
       child: const DietKingApp(),
     ),

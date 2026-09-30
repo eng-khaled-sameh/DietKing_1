@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/cubits/held_orders_cubit.dart';
 import '../../../../core/models/held_order.dart';
@@ -8,10 +9,13 @@ import '../../../../core/models/invoice_data.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/widgets/pos_status_footer.dart';
+import '../../../../cubits/catalog/catalog_cubit.dart';
+import '../../../../cubits/catalog/catalog_state.dart';
+import '../../../../cubits/session/session_cubit.dart';
 import '../cubits/cart_cubit.dart';
-import '../mock_data/mock_meal_catalog.dart';
 import '../widgets/invoice_preview_dialog.dart';
 import '../widgets/meal_sales_app_bar.dart';
+import '../widgets/meal_type_selection_dialog.dart';
 import '../widgets/order_summary_panel.dart';
 import '../widgets/protein_matrix_table.dart';
 import '../widgets/quick_addon_card.dart';
@@ -35,7 +39,7 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
   final FocusNode _focusNode = FocusNode();
 
   /// عدّاد تسلسلي بسيط لرقم الطلب (في الذاكرة فقط)
-  static int _orderCounter = 1000;
+  static int _orderCounter = 0;
 
   @override
   void initState() {
@@ -84,6 +88,7 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
   /// يبني [InvoiceData] من الحالة الحالية لـ [CartCubit] ويفتح Dialog المعاينة
   void _handleCheckout() {
     final state = _cartCubit.state;
+    final sessionState = context.read<SessionCubit>().state;
 
     // لو السلة فارغة، اعرض Snackbar ولا تفتح Dialog
     if (state.lines.isEmpty) {
@@ -98,7 +103,7 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
 
     // بناء رقم الطلب التسلسلي
     _orderCounter++;
-    final orderNumber = '#$_orderCounter';
+    final orderNumber = '#${_orderCounter.toString().padLeft(4, '0')}';
 
     // تحويل CartLine → InvoiceLineItem
     final invoiceItems = state.lines
@@ -112,11 +117,12 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
             ))
         .toList();
 
-    // TODO: bind to real session — حاليًا بيانات ثابتة
     final invoiceData = InvoiceData(
       companyName: 'دايت كنج',
-      branchName: 'فرع الرياض',
-      cashierName: 'كاشير 1',
+      branchName: sessionState.branchName.isNotEmpty 
+          ? sessionState.branchName 
+          : sessionState.branchCode,
+      cashierName: sessionState.cashierName,
       orderNumber: orderNumber,
       dateTime: DateTime.now(),
       items: invoiceItems,
@@ -135,7 +141,8 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
           _cartCubit.clearAll();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('تم الدفع وطباعة الفاتورة بنجاح', textAlign: TextAlign.right),
+              content: Text('تم الدفع وطباعة الفاتورة بنجاح',
+                  textAlign: TextAlign.right),
               backgroundColor: Colors.green,
             ),
           );
@@ -155,11 +162,13 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
           if (event is KeyDownEvent) {
             // تجنب تعارض الاختصارات مع أي TextField مفتوح
             final primaryFocus = FocusManager.instance.primaryFocus;
-            final isTextFieldFocused = primaryFocus?.context?.widget is EditableText;
+            final isTextFieldFocused =
+                primaryFocus?.context?.widget is EditableText;
 
             if (event.logicalKey == LogicalKeyboardKey.f4) {
               _handleHoldOrder();
-            } else if (event.logicalKey == LogicalKeyboardKey.escape && !isTextFieldFocused) {
+            } else if (event.logicalKey == LogicalKeyboardKey.escape &&
+                !isTextFieldFocused) {
               _cartCubit.clearAll();
             } else if ((event.logicalKey == LogicalKeyboardKey.enter ||
                     event.logicalKey == LogicalKeyboardKey.numpadEnter) &&
@@ -179,9 +188,11 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
   }
 }
 
+// ── Body مع BlocBuilder للكاتالوج ─────────────────────────────────────────────
+
 class _MealSalesBody extends StatelessWidget {
   final VoidCallback onCheckout;
-  
+
   const _MealSalesBody({required this.onCheckout});
 
   @override
@@ -203,82 +214,19 @@ class _MealSalesBody extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ── عمود الكاتالوج (8/12) ──────────────────────────────────
+                  // ── عمود الكاتالوج (8/12) ───────────────────────────────
                   Expanded(
                     flex: 8,
-                    child: SingleChildScrollView(
-                      padding:
-                          const EdgeInsets.only(left: AppDimens.spaceSm),
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // ── عنوان قسم البروتين ───────────────────────────
-                          const SectionHeader(
-                            title: 'أصناف البروتين الرئيسية',
-                            subtitle:
-                                'اختر نوع البروتين والوزن لإضافته للفاتورة مباشرة',
-                            icon: Icons.fitness_center_rounded,
-                            badgeLabel: '3 أنواع × 5 أوزان',
-                          ),
-
-                          const SizedBox(height: AppDimens.spaceMd),
-
-                          // ── جدول مصفوفة البروتين ─────────────────────────
-                          const ProteinMatrixTable(),
-
-                          const SizedBox(height: AppDimens.spaceXl),
-
-                          // ── عنوان قسم الإضافات ───────────────────────────
-                          const SectionHeader(
-                            title: 'إضافات سريعة وسناكات ومشروبات',
-                            subtitle:
-                                'سندوتشات دايت، سلطات خضراء، ومشروبات بدون سكر',
-                            icon: Icons.fastfood_rounded,
-                            badgeLabel: '6 أصناف متوفرة',
-                          ),
-
-                          const SizedBox(height: AppDimens.spaceMd),
-
-                          // ── شبكة بطاقات الإضافات (3 أعمدة) ─────────────
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              mainAxisSpacing: AppDimens.spaceSm,
-                              crossAxisSpacing: AppDimens.spaceSm,
-                              mainAxisExtent: 52, // طول ثابت على قد المحتوى
-                            ),
-                            itemCount: mockAddonItems.length,
-                            itemBuilder: (context, index) {
-                              final addon = mockAddonItems[index];
-                              return QuickAddonCard(
-                                label: addon.label,
-                                subLabel: addon.subLabel,
-                                price: addon.price.toDouble(),
-                                icon: addon.icon,
-                                onTap: () {
-                                  context.read<CartCubit>().addItem(
-                                        name: addon.label,
-                                        variantLabel: 'إضافة',
-                                        unitPrice: addon.price.toDouble(),
-                                      );
-                                },
-                              );
-                            },
-                          ),
-
-                          const SizedBox(height: AppDimens.spaceMd),
-                        ],
-                      ),
+                    child: BlocBuilder<CatalogCubit, CatalogState>(
+                      builder: (context, catalogState) {
+                        return _CatalogColumn(catalogState: catalogState);
+                      },
                     ),
                   ),
 
                   const SizedBox(width: AppDimens.spaceLg),
 
-                  // ── عمود ملخص الطلب الجانبي الثابت (4/12) ─────────────────
+                  // ── عمود ملخص الطلب الجانبي الثابت (4/12) ──────────────
                   Expanded(
                     flex: 4,
                     child: OrderSummaryPanel(
@@ -290,8 +238,277 @@ class _MealSalesBody extends StatelessWidget {
             ),
           ),
 
-          // ── 3. فوتر حالة الأجهزة ──────────────────────────────────────────
+          // ── 3. فوتر حالة الأجهزة ────────────────────────────────────────
           const PosStatusFooter(),
+        ],
+      ),
+    );
+  }
+}
+
+// ── عمود الكاتالوج — يتعامل مع حالات التحميل والخطأ والبيانات ───────────────
+
+class _CatalogColumn extends StatelessWidget {
+  final CatalogState catalogState;
+
+  const _CatalogColumn({required this.catalogState});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = catalogState.status;
+
+    // ── حالة loading بدون بيانات (أول تحميل) ─────────────────────────────
+    if (status == CatalogStatus.loading &&
+        catalogState.products.isEmpty) {
+      return const _CatalogLoadingState();
+    }
+
+    // ── حالة فشل بدون بيانات ────────────────────────────────────────────
+    if (status == CatalogStatus.failure &&
+        catalogState.products.isEmpty) {
+      return _CatalogErrorState(
+        message:
+            catalogState.errorMessage ?? 'تعذر تحميل المنتجات',
+        onRetry: () =>
+            context.read<CatalogCubit>().load(force: true),
+      );
+    }
+
+    // ── حالة initial (لم يبدأ التحميل بعد) ─────────────────────────────
+    if (status == CatalogStatus.initial) {
+      return const _CatalogLoadingState();
+    }
+
+    // ── البيانات موجودة (loaded أو loading مع stale data أو failure مع stale data)
+    final mealProducts = catalogState.mealProducts;
+    final addonProducts = catalogState.addonProducts;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(left: AppDimens.spaceSm),
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── قسم وجبات البروتين ──────────────────────────────────────────
+          if (mealProducts.isNotEmpty) ...[
+            SectionHeader(
+              title: 'أصناف البروتين الرئيسية',
+              subtitle:
+                  'اختر نوع البروتين والوزن لإضافته للفاتورة مباشرة',
+              icon: Icons.fitness_center_rounded,
+              badgeLabel:
+                  '${mealProducts.length} ${mealProducts.length == 1 ? 'نوع' : 'أنواع'}',
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            ProteinMatrixTable(products: mealProducts),
+            const SizedBox(height: AppDimens.spaceXl),
+          ],
+
+          // ── قسم الإضافات ────────────────────────────────────────────────
+          if (addonProducts.isNotEmpty) ...[
+            SectionHeader(
+              title: 'إضافات سريعة وسناكات ومشروبات',
+              subtitle: 'إضافات، سلطات، ومشروبات',
+              icon: Icons.fastfood_rounded,
+              badgeLabel: '${addonProducts.length} أصناف متوفرة',
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: AppDimens.spaceSm,
+                crossAxisSpacing: AppDimens.spaceSm,
+                mainAxisExtent: 52,
+              ),
+              itemCount: addonProducts.length,
+              itemBuilder: (context, index) {
+                final product = addonProducts[index];
+                final price = product.price ?? 0.0;
+                return QuickAddonCard(
+                  label: product.name,
+                  subLabel: product.description ?? product.tag ?? '',
+                  price: price,
+                  icon: _addonIcon(product.tag),
+                  onTap: () async {
+                    String finalName = product.name;
+                    if (finalName.contains('متكامل') || finalName.contains('متكامله') || finalName.contains('متكاملة')) {
+                      final selectedType = await showDialog<String>(
+                        context: context,
+                        builder: (_) => const MealTypeSelectionDialog(),
+                      );
+                      if (selectedType == null) return;
+                      finalName = '${product.name} ($selectedType)';
+                    }
+                    if (!context.mounted) return;
+                    context.read<CartCubit>().addItem(
+                          name: finalName,
+                          variantLabel: 'إضافة',
+                          unitPrice: price,
+                        );
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+          ],
+
+          // لو مافيش منتجات في الكلا القسمين
+          if (mealProducts.isEmpty && addonProducts.isEmpty)
+            const _EmptyCatalogState(),
+        ],
+      ),
+    );
+  }
+
+  IconData _addonIcon(String? tag) {
+    if (tag == null) return Icons.add_circle_outline_rounded;
+    final t = tag.toLowerCase();
+    if (t.contains('مشروب') || t.contains('drink')) {
+      return Icons.local_drink_rounded;
+    }
+    if (t.contains('سلطة') || t.contains('salad')) return Icons.eco_rounded;
+    if (t.contains('سناك') || t.contains('snack')) return Icons.cookie_rounded;
+    if (t.contains('ساندوتش') || t.contains('sandwich')) {
+      return Icons.bakery_dining_rounded;
+    }
+    return Icons.fastfood_rounded;
+  }
+}
+
+// ── حالة التحميل ──────────────────────────────────────────────────────────────
+
+class _CatalogLoadingState extends StatelessWidget {
+  const _CatalogLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                AppColors.primary.withValues(alpha: 0.8),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          Text(
+            'جارٍ تحميل المنتجات...',
+            style: GoogleFonts.ibmPlexSansArabic(
+              fontSize: AppDimens.fontMd,
+              color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── حالة الخطأ ────────────────────────────────────────────────────────────────
+
+class _CatalogErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _CatalogErrorState({
+    required this.message,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.wifi_off_rounded,
+            size: 48,
+            color: AppColors.onSurfaceVariant.withValues(alpha: 0.4),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          Text(
+            message,
+            style: GoogleFonts.ibmPlexSansArabic(
+              fontSize: AppDimens.fontMd,
+              color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppDimens.spaceLg),
+          Container(
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryButtonGradient,
+              borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryContainer.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onRetry,
+                borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceXl,
+                    vertical: AppDimens.spaceMd,
+                  ),
+                  child: Text(
+                    'إعادة المحاولة',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      fontSize: AppDimens.fontMd,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── كاتالوج فارغ (لا توجد منتجات نشطة) ──────────────────────────────────────
+
+class _EmptyCatalogState extends StatelessWidget {
+  const _EmptyCatalogState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 48,
+            color: AppColors.onSurfaceVariant.withValues(alpha: 0.3),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          Text(
+            'لا توجد منتجات نشطة حالياً',
+            style: GoogleFonts.ibmPlexSansArabic(
+              fontSize: AppDimens.fontMd,
+              color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+          ),
         ],
       ),
     );

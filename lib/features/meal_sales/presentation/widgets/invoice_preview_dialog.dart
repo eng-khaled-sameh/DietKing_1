@@ -28,13 +28,16 @@ class InvoicePreviewDialog extends StatefulWidget {
 class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
   bool _isPrinting = false;
 
-  Future<void> _handlePayment() async {
+  Future<void> _handlePayment(String paymentMethod) async {
     if (_isPrinting) return;
     setState(() => _isPrinting = true);
 
     try {
+      // تحديث بيانات الفاتورة بطريقة الدفع المختارة
+      final invoiceToPrint = widget.invoiceData.copyWith(paymentMethod: paymentMethod);
+
       // 1. بناء PDF
-      final pdfBytes = await buildInvoicePdf(widget.invoiceData);
+      final pdfBytes = await buildInvoicePdf(invoiceToPrint);
 
       // 2. طباعة فعلية عبر نافذة الطابعة في نظام التشغيل
       await Printing.layoutPdf(
@@ -367,6 +370,16 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 4),
+                        Center(
+                          child: Text(
+                            'دايت كينج شريكك الصحي',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: AppDimens.fontXs,
+                              color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -418,13 +431,50 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
 
                     const SizedBox(width: AppDimens.spaceMd),
 
-                    // ── زر تم الدفع ─────────────────────────────────────────────
+                    // ── زر كاش ─────────────────────────────────────────────
                     Expanded(
-                      flex: 2,
+                      flex: 1,
                       child: SizedBox(
                         height: 46,
                         child: ElevatedButton.icon(
-                          onPressed: _isPrinting ? null : _handlePayment,
+                          onPressed: _isPrinting ? null : () => _handlePayment('كاش'),
+                          icon: _isPrinting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.payments_outlined, size: 20),
+                          label: Text(
+                            'كاش',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: AppDimens.fontMd + 1,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade600,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppDimens.spaceMd),
+
+                    // ── زر فيزا ─────────────────────────────────────────────
+                    Expanded(
+                      flex: 1,
+                      child: SizedBox(
+                        height: 46,
+                        child: ElevatedButton.icon(
+                          onPressed: _isPrinting ? null : () => _handlePayment('فيزا'),
                           icon: _isPrinting
                               ? const SizedBox(
                                   width: 18,
@@ -434,9 +484,9 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                                     color: AppColors.onPrimary,
                                   ),
                                 )
-                              : const Icon(Icons.print_rounded, size: 20),
+                              : const Icon(Icons.credit_card_rounded, size: 20),
                           label: Text(
-                            _isPrinting ? 'جاري الطباعة...' : 'تم الدفع',
+                            'فيزا',
                             style: GoogleFonts.ibmPlexSansArabic(
                               fontSize: AppDimens.fontMd + 1,
                               fontWeight: FontWeight.w800,

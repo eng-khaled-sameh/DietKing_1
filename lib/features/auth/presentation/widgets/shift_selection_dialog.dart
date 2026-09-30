@@ -1,10 +1,12 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/shift_info.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
+import '../../../../cubits/catalog/catalog_cubit.dart';
 import '../../../meal_sales/presentation/screens/meal_sales_screen.dart';
 import 'shift_cash_float_input.dart';
 import 'shift_dialog_header.dart';
@@ -74,6 +76,10 @@ class _ShiftSelectionDialogState extends State<ShiftSelectionDialog> {
     ShiftInfo.currentShiftTitle = selected['title'] as String;
     ShiftInfo.cashierName = selected['cashierName'] as String;
     ShiftInfo.branchName = selected['branchName'] as String;
+
+    // بدء تحميل الكاتالوج مرة واحدة عند بداية الجلسة
+    // (الكاش يمنع أي طلب إضافي عند العودة للشاشة لاحقاً)
+    context.read<CatalogCubit>().load();
 
     // إغلاق النافذة والانتقال لشاشة البيع بالوجبة الرئيسية
     Navigator.of(context).pop();

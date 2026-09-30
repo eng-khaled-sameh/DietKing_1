@@ -204,7 +204,15 @@ Future<Uint8List> buildInvoicePdf(InvoiceData data) async {
               font: boldFont,
               fontSize: 14,
             ),
-
+            if (data.paymentMethod != null) ...[
+              pw.SizedBox(height: 6),
+              _buildTotalRow(
+                label: 'طريقة الدفع:',
+                value: data.paymentMethod!,
+                font: boldFont,
+                fontSize: 12,
+              ),
+            ],
             pw.SizedBox(height: 10),
 
             // ── 11. خط فاصل + نص شكر ───────────────────────────────────────
@@ -214,6 +222,13 @@ Future<Uint8List> buildInvoicePdf(InvoiceData data) async {
               child: pw.Text(
                 'شكرًا لزيارتكم - دايت كنج',
                 style: pw.TextStyle(font: boldFont, fontSize: 10),
+              ),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Center(
+              child: pw.Text(
+                'دايت كينج شريكك الصحي',
+                style: pw.TextStyle(font: font, fontSize: 10),
               ),
             ),
             pw.SizedBox(height: 16),
