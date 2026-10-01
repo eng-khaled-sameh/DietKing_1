@@ -77,12 +77,16 @@ class CartState extends Equatable {
 
 /// سطر واحد في سلة الطلب (قابل للتعديل عبر Cubit)
 class CartLine extends Equatable {
+  final String productId;
+  final String? variantId;
   final String name; // "دجاج 200غ"
   final String variantLabel; // "200غ" — يُعرض كشارة في الفاتورة
   final double unitPrice;
   final int quantity;
 
   const CartLine({
+    required this.productId,
+    this.variantId,
     required this.name,
     required this.variantLabel,
     required this.unitPrice,
@@ -93,14 +97,16 @@ class CartLine extends Equatable {
 
   CartLine copyWith({int? quantity}) =>
       CartLine(
+        productId: productId,
+        variantId: variantId,
         name: name,
         variantLabel: variantLabel,
         unitPrice: unitPrice,
         quantity: quantity ?? this.quantity,
       );
 
-  /// مفتاح الهوية: نفس الاسم + نفس variantLabel = نفس الصنف
-  String get key => '$name|$variantLabel';
+  /// مفتاح الهوية: نفس productId + نفس variantId = نفس الصنف
+  String get key => '${productId}_${variantId ?? "null"}';
 
   /// تحويل إلى OrderLine للتوافق مع Widget القائمة القديم
   OrderLine toOrderLine() => OrderLine(
@@ -111,7 +117,7 @@ class CartLine extends Equatable {
       );
 
   @override
-  List<Object?> get props => [name, variantLabel, unitPrice, quantity];
+  List<Object?> get props => [productId, variantId, name, variantLabel, unitPrice, quantity];
 }
 
 // ── Cubit ─────────────────────────────────────────────────────────────────────
@@ -121,21 +127,25 @@ class CartLine extends Equatable {
 class CartCubit extends Cubit<CartState> {
   CartCubit() : super(const CartState());
 
-  /// إضافة صنف: إن كان موجودًا بنفس الاسم والمتغير تُزاد الكمية،
+  /// إضافة صنف: إن كان موجودًا بنفس المتغير تُزاد الكمية،
   /// وإلا يضاف سطر جديد بكمية 1.
   void addItem({
+    required String productId,
+    String? variantId,
     required String name,
     required String variantLabel,
     required double unitPrice,
   }) {
     final lines = List<CartLine>.from(state.lines);
-    final key = '$name|$variantLabel';
+    final key = '${productId}_${variantId ?? "null"}';
     final idx = lines.indexWhere((l) => l.key == key);
 
     if (idx >= 0) {
       lines[idx] = lines[idx].copyWith(quantity: lines[idx].quantity + 1);
     } else {
       lines.add(CartLine(
+        productId: productId,
+        variantId: variantId,
         name: name,
         variantLabel: variantLabel,
         unitPrice: unitPrice,

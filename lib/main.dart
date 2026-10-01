@@ -8,11 +8,20 @@ import 'core/theme/app_colors.dart';
 import 'core/cubits/held_orders_cubit.dart';
 import 'cubits/branches/branches_cubit.dart';
 import 'cubits/catalog/catalog_cubit.dart';
+import 'cubits/sales/sales_cubit.dart';
 import 'cubits/session/session_cubit.dart';
+import 'cubits/sync/sync_cubit.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
+import 'repositories/sales_repository.dart';
+
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize FFI for Windows desktop
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
 
   await Supabase.initialize(
     url: SupabaseConfig.url,
@@ -33,6 +42,10 @@ Future<void> main() async {
         BlocProvider(create: (_) => BranchesCubit()),
         // SessionCubit — بيانات الجلسة الثابتة بعد تسجيل الدخول
         BlocProvider(create: (_) => SessionCubit()),
+        // SalesCubit — لإتمام المبيعات وحفظها
+        BlocProvider(create: (_) => SalesCubit(SalesRepository())),
+        // SyncCubit — مزامنة الخلفية
+        BlocProvider(create: (_) => SyncCubit()),
       ],
       child: const DietKingApp(),
     ),

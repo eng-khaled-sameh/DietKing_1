@@ -171,6 +171,7 @@ class ProteinMatrixTable extends StatelessWidget {
 
             return Expanded(
               child: _MatrixCell(
+                productId: p.id,
                 productName: p.name,
                 variantId: variant.id,
                 weightLabel: variant.label,
@@ -215,6 +216,7 @@ class _EmptyCell extends StatelessWidget {
 
 // ── خلية واحدة في الجدول ─────────────────────────────────────────────────────
 class _MatrixCell extends StatefulWidget {
+  final String productId;
   final String productName;
   final String variantId;
   final String weightLabel;
@@ -222,6 +224,7 @@ class _MatrixCell extends StatefulWidget {
   final bool showLeftBorder;
 
   const _MatrixCell({
+    required this.productId,
     required this.productName,
     required this.variantId,
     required this.weightLabel,
@@ -271,6 +274,8 @@ class _MatrixCellState extends State<_MatrixCell>
 
     if (!context.mounted) return;
     context.read<CartCubit>().addItem(
+          productId: widget.productId,
+          variantId: widget.variantId,
           name: finalName,
           variantLabel: widget.weightLabel,
           unitPrice: widget.price,

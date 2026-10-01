@@ -6,6 +6,7 @@ import '../../../../core/cubits/held_orders_cubit.dart';
 import '../../../../core/models/held_order.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
+import '../../../admin/presentation/screens/admin_screen.dart';
 import '../../../held_orders/presentation/screens/held_orders_screen.dart';
 import '../screens/meal_sales_screen.dart';
 import 'meal_sales_shortcuts_row.dart';
@@ -54,6 +55,15 @@ class _MealSalesNavTabsState extends State<MealSalesNavTabs> {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (_, _, _) => const HeldOrdersScreen(),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
+      );
+      return;
+    } else if (index == 2) {
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, _, _) => const AdminScreen(),
           transitionDuration: Duration.zero,
           reverseTransitionDuration: Duration.zero,
         ),

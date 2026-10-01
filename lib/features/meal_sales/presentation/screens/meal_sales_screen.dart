@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:my_desktop_app/cubits/sales/sales_cubit.dart';
 
 import '../../../../core/cubits/held_orders_cubit.dart';
 import '../../../../core/models/held_order.dart';
@@ -25,10 +26,7 @@ import '../widgets/section_header.dart';
 class MealSalesScreen extends StatefulWidget {
   final List<CartLine>? initialCartLines;
 
-  const MealSalesScreen({
-    super.key,
-    this.initialCartLines,
-  });
+  const MealSalesScreen({super.key, this.initialCartLines});
 
   @override
   State<MealSalesScreen> createState() => _MealSalesScreenState();
@@ -107,20 +105,22 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
 
     // تحويل CartLine → InvoiceLineItem
     final invoiceItems = state.lines
-        .map((line) => InvoiceLineItem(
-              name: line.variantLabel.isNotEmpty
-                  ? '${line.name} (${line.variantLabel})'
-                  : line.name,
-              quantity: line.quantity,
-              unitPrice: line.unitPrice,
-              totalPrice: line.lineTotal,
-            ))
+        .map(
+          (line) => InvoiceLineItem(
+            name: line.variantLabel.isNotEmpty
+                ? '${line.name} (${line.variantLabel})'
+                : line.name,
+            quantity: line.quantity,
+            unitPrice: line.unitPrice,
+            totalPrice: line.lineTotal,
+          ),
+        )
         .toList();
 
     final invoiceData = InvoiceData(
       companyName: 'دايت كنج',
-      branchName: sessionState.branchName.isNotEmpty 
-          ? sessionState.branchName 
+      branchName: sessionState.branchName.isNotEmpty
+          ? sessionState.branchName
           : sessionState.branchCode,
       cashierName: sessionState.cashierName,
       orderNumber: orderNumber,
@@ -137,12 +137,14 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
       barrierDismissible: false,
       builder: (_) => InvoicePreviewDialog(
         invoiceData: invoiceData,
+        cartState: state,
+        sessionState: sessionState,
         onPaymentComplete: () {
           _cartCubit.clearAll();
+          context.read<SalesCubit>().reset();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('تم الدفع وطباعة الفاتورة بنجاح',
-                  textAlign: TextAlign.right),
+              content: Text('تم الدفع بنجاح', textAlign: TextAlign.right),
               backgroundColor: Colors.green,
             ),
           );
@@ -179,9 +181,7 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
         },
         child: Directionality(
           textDirection: TextDirection.rtl,
-          child: _MealSalesBody(
-            onCheckout: _handleCheckout,
-          ),
+          child: _MealSalesBody(onCheckout: _handleCheckout),
         ),
       ),
     );
@@ -229,9 +229,7 @@ class _MealSalesBody extends StatelessWidget {
                   // ── عمود ملخص الطلب الجانبي الثابت (4/12) ──────────────
                   Expanded(
                     flex: 4,
-                    child: OrderSummaryPanel(
-                      onCheckout: onCheckout,
-                    ),
+                    child: OrderSummaryPanel(onCheckout: onCheckout),
                   ),
                 ],
               ),
@@ -258,19 +256,15 @@ class _CatalogColumn extends StatelessWidget {
     final status = catalogState.status;
 
     // ── حالة loading بدون بيانات (أول تحميل) ─────────────────────────────
-    if (status == CatalogStatus.loading &&
-        catalogState.products.isEmpty) {
+    if (status == CatalogStatus.loading && catalogState.products.isEmpty) {
       return const _CatalogLoadingState();
     }
 
     // ── حالة فشل بدون بيانات ────────────────────────────────────────────
-    if (status == CatalogStatus.failure &&
-        catalogState.products.isEmpty) {
+    if (status == CatalogStatus.failure && catalogState.products.isEmpty) {
       return _CatalogErrorState(
-        message:
-            catalogState.errorMessage ?? 'تعذر تحميل المنتجات',
-        onRetry: () =>
-            context.read<CatalogCubit>().load(force: true),
+        message: catalogState.errorMessage ?? 'تعذر تحميل المنتجات',
+        onRetry: () => context.read<CatalogCubit>().load(force: true),
       );
     }
 
@@ -293,8 +287,7 @@ class _CatalogColumn extends StatelessWidget {
           if (mealProducts.isNotEmpty) ...[
             SectionHeader(
               title: 'أصناف البروتين الرئيسية',
-              subtitle:
-                  'اختر نوع البروتين والوزن لإضافته للفاتورة مباشرة',
+              subtitle: 'اختر نوع البروتين والوزن لإضافته للفاتورة مباشرة',
               icon: Icons.fitness_center_rounded,
               badgeLabel:
                   '${mealProducts.length} ${mealProducts.length == 1 ? 'نوع' : 'أنواع'}',
@@ -316,8 +309,7 @@ class _CatalogColumn extends StatelessWidget {
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
                 mainAxisSpacing: AppDimens.spaceSm,
                 crossAxisSpacing: AppDimens.spaceSm,
@@ -334,7 +326,9 @@ class _CatalogColumn extends StatelessWidget {
                   icon: _addonIcon(product.tag),
                   onTap: () async {
                     String finalName = product.name;
-                    if (finalName.contains('متكامل') || finalName.contains('متكامله') || finalName.contains('متكاملة')) {
+                    if (finalName.contains('متكامل') ||
+                        finalName.contains('متكامله') ||
+                        finalName.contains('متكاملة')) {
                       final selectedType = await showDialog<String>(
                         context: context,
                         builder: (_) => const MealTypeSelectionDialog(),
@@ -344,10 +338,12 @@ class _CatalogColumn extends StatelessWidget {
                     }
                     if (!context.mounted) return;
                     context.read<CartCubit>().addItem(
-                          name: finalName,
-                          variantLabel: 'إضافة',
-                          unitPrice: price,
-                        );
+                      productId: product.id,
+                      variantId: null,
+                      name: finalName,
+                      variantLabel: 'إضافة',
+                      unitPrice: price,
+                    );
                   },
                 );
               },
@@ -419,10 +415,7 @@ class _CatalogErrorState extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
-  const _CatalogErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _CatalogErrorState({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {

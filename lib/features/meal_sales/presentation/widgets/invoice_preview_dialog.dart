@@ -1,23 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:printing/printing.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/local_db.dart';
 import '../../../../core/models/invoice_data.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
+import '../../../../cubits/session/session_cubit.dart';
+import '../../../../cubits/sync/sync_cubit.dart';
+import '../cubits/cart_cubit.dart';
 import '../services/invoice_pdf_builder.dart';
 
-// TODO: حفظ نسخة من الفاتورة في قاعدة البيانات (Supabase) بعد إتمام الطباعة، لأغراض السجلات والتقارير لاحقًا.
-
-/// Dialog معاينة الفاتورة — يعرض معاينة مرئية (Flutter Widget) لبيانات الفاتورة
-/// مع زر "تم الدفع" لطباعة PDF فعليًا وزر "رجوع" للإلغاء.
+/// Dialog معاينة الفاتورة — offline-first:
+/// عند إتمام الدفع تُحفظ الفاتورة محلياً أولاً ثم يُطبع رقمها المحلي فوراً.
+/// المزامنة مع Supabase تحدث في الخلفية عبر SyncCubit.
 class InvoicePreviewDialog extends StatefulWidget {
   final InvoiceData invoiceData;
+  final CartState cartState;
+  final SessionState sessionState;
   final VoidCallback onPaymentComplete;
 
   const InvoicePreviewDialog({
     super.key,
     required this.invoiceData,
+    required this.cartState,
+    required this.sessionState,
     required this.onPaymentComplete,
   });
 
@@ -26,37 +34,163 @@ class InvoicePreviewDialog extends StatefulWidget {
 }
 
 class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
-  bool _isPrinting = false;
+  String? _selectedPaymentMethod;
+  bool _isPrintingPdf = false;
+  bool _isSaving = false;
+  String? _errorMessage;
+
+  /// رقم الفاتورة المحلي المولَّد عند الحفظ
+  String? _localInvoiceNumber;
+
+  // ── حفظ الفاتورة محلياً وطباعتها ─────────────────────────────────────────
 
   Future<void> _handlePayment(String paymentMethod) async {
-    if (_isPrinting) return;
-    setState(() => _isPrinting = true);
+    if (_isSaving || _isPrintingPdf) return;
+
+    setState(() {
+      _selectedPaymentMethod = paymentMethod;
+      _errorMessage = null;
+      _isSaving = true;
+    });
 
     try {
-      // تحديث بيانات الفاتورة بطريقة الدفع المختارة
-      final invoiceToPrint = widget.invoiceData.copyWith(paymentMethod: paymentMethod);
+      final repo = LocalRecordsRepository();
+      final session = widget.sessionState;
+      final cart = widget.cartState;
+      final now = DateTime.now();
 
-      // 1. بناء PDF
-      final pdfBytes = await buildInvoicePdf(invoiceToPrint);
+      // توليد رقم الفاتورة المحلي
+      final localNumber =
+          await repo.nextLocalNumber(session.branchCode.isNotEmpty
+              ? session.branchCode
+              : 'DK');
 
-      // 2. طباعة فعلية عبر نافذة الطابعة في نظام التشغيل
-      await Printing.layoutPdf(
-        onLayout: (format) async => pdfBytes,
-        name: 'DietKing_Invoice_${DateTime.now().millisecondsSinceEpoch}',
+      // توليد client_id
+      final clientId = generateUuidV4();
+
+      // بناء payload كامل
+      final payload = <String, dynamic>{
+        'client_id': clientId,
+        'branch_id': session.branchId,
+        'shift': session.shift,
+        'payment_method': paymentMethod,
+        'local_number': localNumber,
+        'discount_amount':
+            double.parse(cart.discountAmount.toStringAsFixed(2)),
+        'discount_percent': cart.isDiscountPercentage
+            ? double.parse(cart.discountValue.toStringAsFixed(2))
+            : null,
+        'vat_rate': cart.isVatPercentage
+            ? double.parse(cart.vatValue.toStringAsFixed(2))
+            : 0.0,
+        'vat_amount': double.parse(cart.vatAmount.toStringAsFixed(2)),
+        'total': double.parse(cart.grandTotal.toStringAsFixed(2)),
+        'session_id': session.sessionId,
+        'sold_at': now.toUtc().toIso8601String(),
+        'notes': null,
+        'items': cart.lines
+            .map((l) => {
+                  'product_id': l.productId,
+                  if (l.variantId != null) 'variant_id': l.variantId,
+                  'qty': l.quantity,
+                  'unit_price':
+                      double.parse(l.unitPrice.toStringAsFixed(2)),
+                })
+            .toList(),
+      };
+
+      // display_data للطباعة المستقبلية
+      final displayData = <String, dynamic>{
+        'company_name': 'دايت كنج',
+        'branch_name': session.branchName.isNotEmpty
+            ? session.branchName
+            : session.branchCode,
+        'cashier_name': session.cashierName,
+        'order_number': localNumber,
+        'date_time': now.toIso8601String(),
+        'payment_method': paymentMethod,
+        'subtotal': cart.subtotal,
+        'discount_amount': cart.discountAmount,
+        'vat_amount': cart.vatAmount,
+        'grand_total': cart.grandTotal,
+        'items': cart.lines
+            .map((l) => {
+                  'name': l.variantLabel.isNotEmpty
+                      ? '${l.name} (${l.variantLabel})'
+                      : l.name,
+                  'quantity': l.quantity,
+                  'unit_price': l.unitPrice,
+                  'total_price': l.lineTotal,
+                })
+            .toList(),
+      };
+
+      // حفظ في قاعدة البيانات المحلية
+      await repo.insert(LocalRecord(
+        kind: 'sale',
+        clientId: clientId,
+        userId: session.userId,
+        branchId: session.branchId,
+        sessionId: session.sessionId,
+        localNumber: localNumber,
+        paymentMethod: paymentMethod,
+        total: cart.grandTotal,
+        payload: payload,
+        displayData: displayData,
+        status: 'pending',
+        createdAt: now,
+      ));
+
+      _localInvoiceNumber = localNumber;
+
+      // شغّل المزامنة في الخلفية
+      if (mounted) {
+        context.read<SyncCubit>().triggerSync();
+      }
+
+      // اطبع الفاتورة بالرقم المحلي فوراً
+      if (mounted) {
+        setState(() => _isSaving = false);
+        await _printPdfAndClose(localNumber, paymentMethod);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+          _errorMessage = 'خطأ في حفظ الفاتورة: ${e.toString()}';
+        });
+      }
+    }
+  }
+
+  Future<void> _printPdfAndClose(
+      String invoiceNumber, String paymentMethod) async {
+    if (!mounted) return;
+    setState(() => _isPrintingPdf = true);
+    try {
+      final invoiceToPrint = widget.invoiceData.copyWith(
+        paymentMethod: paymentMethod,
+        orderNumber: invoiceNumber,
       );
 
-      // 3. إغلاق Dialog + تفريغ السلة + Snackbar
+      final pdfBytes = await buildInvoicePdf(invoiceToPrint);
+
+      await Printing.layoutPdf(
+        onLayout: (format) async => pdfBytes,
+        name: 'DietKing_Invoice_$invoiceNumber',
+      );
+
       if (mounted) {
         Navigator.of(context).pop();
         widget.onPaymentComplete();
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isPrinting = false);
+        setState(() => _isPrintingPdf = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('حدث خطأ أثناء الطباعة: $e', textAlign: TextAlign.right),
-            backgroundColor: Colors.redAccent,
+            content: Text('فشلت الطباعة: $e', textAlign: TextAlign.right),
+            backgroundColor: Colors.orange,
           ),
         );
       }
@@ -66,6 +200,7 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
   @override
   Widget build(BuildContext context) {
     final data = widget.invoiceData;
+    final displayNumber = _localInvoiceNumber ?? data.orderNumber;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -108,8 +243,10 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryContainer.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                        color:
+                            AppColors.primaryContainer.withValues(alpha: 0.2),
+                        borderRadius:
+                            BorderRadius.circular(AppDimens.radiusMd),
                       ),
                       child: const Icon(
                         Icons.receipt_long_rounded,
@@ -152,9 +289,11 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                     padding: const EdgeInsets.all(AppDimens.spaceMd),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusMd),
                       border: Border.all(
-                        color: AppColors.outlineVariant.withValues(alpha: 0.25),
+                        color:
+                            AppColors.outlineVariant.withValues(alpha: 0.25),
                       ),
                     ),
                     child: Column(
@@ -187,7 +326,7 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                         const SizedBox(height: AppDimens.spaceSm),
 
                         // ── معلومات الطلب ─────────────────────────────────────
-                        _buildInfoRow('رقم الطلب', data.orderNumber),
+                        _buildInfoRow('رقم الطلب', displayNumber),
                         const SizedBox(height: 4),
                         _buildInfoRow(
                           'التاريخ',
@@ -240,13 +379,15 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                         const SizedBox(height: 6),
                         Divider(
                           height: 1,
-                          color: AppColors.outlineVariant.withValues(alpha: 0.3),
+                          color:
+                              AppColors.outlineVariant.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: 6),
 
                         // ── أسطر الأصناف ──────────────────────────────────────
                         ...data.items.map((item) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 3),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 3),
                               child: Row(
                                 children: [
                                   Expanded(
@@ -305,18 +446,21 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                         _buildTotalRow('المجموع الفرعي', data.subtotal),
                         const SizedBox(height: 4),
 
-                        // ── الخصم (يُعرض دائمًا) ─────────────────────────────
-                        _buildTotalRow('الخصم', data.discountAmount, isNegative: true),
+                        // ── الخصم ─────────────────────────────────────────────
+                        _buildTotalRow('الخصم', data.discountAmount,
+                            isNegative: true),
                         const SizedBox(height: 4),
 
                         // ── ضريبة القيمة المضافة ──────────────────────────────
-                        _buildTotalRow('ضريبة القيمة المضافة:', data.vatAmount),
+                        _buildTotalRow(
+                            'ضريبة القيمة المضافة:', data.vatAmount),
                         const SizedBox(height: AppDimens.spaceSm),
 
-                        // ── خط فاصل + الإجمالي النهائي ────────────────────────
+                        // ── الإجمالي النهائي ───────────────────────────────────
                         Divider(
                           height: 1,
-                          color: AppColors.outlineVariant.withValues(alpha: 0.3),
+                          color:
+                              AppColors.outlineVariant.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: AppDimens.spaceSm),
                         Container(
@@ -327,13 +471,16 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                AppColors.primaryContainer.withValues(alpha: 0.15),
-                                AppColors.primaryContainer.withValues(alpha: 0.05),
+                                AppColors.primaryContainer
+                                    .withValues(alpha: 0.15),
+                                AppColors.primaryContainer
+                                    .withValues(alpha: 0.05),
                               ],
                               begin: Alignment.centerRight,
                               end: Alignment.centerLeft,
                             ),
-                            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                            borderRadius:
+                                BorderRadius.circular(AppDimens.radiusSm),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -366,7 +513,8 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                             'شكرًا لزيارتكم - دايت كنج',
                             style: GoogleFonts.ibmPlexSansArabic(
                               fontSize: AppDimens.fontXs,
-                              color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                              color: AppColors.onSurfaceVariant
+                                  .withValues(alpha: 0.7),
                             ),
                           ),
                         ),
@@ -376,7 +524,8 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                             'دايت كينج شريكك الصحي',
                             style: GoogleFonts.ibmPlexSansArabic(
                               fontSize: AppDimens.fontXs,
-                              color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                              color: AppColors.onSurfaceVariant
+                                  .withValues(alpha: 0.7),
                             ),
                           ),
                         ),
@@ -399,109 +548,180 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                     bottomRight: Radius.circular(AppDimens.radiusLg),
                   ),
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    // ── زر رجوع / إلغاء ────────────────────────────────────────
-                    Expanded(
-                      child: SizedBox(
-                        height: 46,
-                        child: OutlinedButton.icon(
-                          onPressed: _isPrinting ? null : () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                          label: Text(
-                            'رجوع',
-                            style: GoogleFonts.ibmPlexSansArabic(
-                              fontSize: AppDimens.fontMd,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.onSurfaceVariant,
-                            backgroundColor: AppColors.surfaceContainer,
-                            side: BorderSide(
-                              color: AppColors.outlineVariant.withValues(alpha: 0.5),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                    if (_errorMessage != null) ...[
+                      Text(
+                        _errorMessage!,
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: AppDimens.fontMd,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.redAccent,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppDimens.spaceMd),
+                    ],
+                    Row(
+                      children: [
+                        // ── زر رجوع ──────────────────────────────────────────
+                        Expanded(
+                          child: SizedBox(
+                            height: 46,
+                            child: OutlinedButton.icon(
+                              onPressed: _isPrintingPdf || _isSaving
+                                  ? null
+                                  : () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.arrow_back_rounded,
+                                  size: 18),
+                              label: Text(
+                                'رجوع',
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                  fontSize: AppDimens.fontMd,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.onSurfaceVariant,
+                                backgroundColor: AppColors.surfaceContainer,
+                                side: BorderSide(
+                                  color: AppColors.outlineVariant
+                                      .withValues(alpha: 0.5),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      AppDimens.radiusMd),
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                        const SizedBox(width: AppDimens.spaceMd),
 
-                    const SizedBox(width: AppDimens.spaceMd),
-
-                    // ── زر كاش ─────────────────────────────────────────────
-                    Expanded(
-                      flex: 1,
-                      child: SizedBox(
-                        height: 46,
-                        child: ElevatedButton.icon(
-                          onPressed: _isPrinting ? null : () => _handlePayment('كاش'),
-                          icon: _isPrinting
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
+                        // ── أزرار الدفع ────────────────────────────────────────
+                        if (_errorMessage != null)
+                          Expanded(
+                            flex: 2,
+                            child: SizedBox(
+                              height: 46,
+                              child: ElevatedButton.icon(
+                                onPressed: () => _handlePayment(
+                                    _selectedPaymentMethod ?? 'كاش'),
+                                icon: _isSaving
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.refresh_rounded,
+                                        size: 20),
+                                label: Text(
+                                  'إعادة المحاولة',
+                                  style: GoogleFonts.ibmPlexSansArabic(
+                                    fontSize: AppDimens.fontMd + 1,
+                                    fontWeight: FontWeight.w800,
                                   ),
-                                )
-                              : const Icon(Icons.payments_outlined, size: 20),
-                          label: Text(
-                            'كاش',
-                            style: GoogleFonts.ibmPlexSansArabic(
-                              fontSize: AppDimens.fontMd + 1,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade600,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppDimens.spaceMd),
-
-                    // ── زر فيزا ─────────────────────────────────────────────
-                    Expanded(
-                      flex: 1,
-                      child: SizedBox(
-                        height: 46,
-                        child: ElevatedButton.icon(
-                          onPressed: _isPrinting ? null : () => _handlePayment('فيزا'),
-                          icon: _isPrinting
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.onPrimary,
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange.shade600,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                        AppDimens.radiusMd),
                                   ),
-                                )
-                              : const Icon(Icons.credit_card_rounded, size: 20),
-                          label: Text(
-                            'فيزا',
-                            style: GoogleFonts.ibmPlexSansArabic(
-                              fontSize: AppDimens.fontMd + 1,
-                              fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          )
+                        else ...[
+                          // ── زر كاش ───────────────────────────────────────────
+                          Expanded(
+                            flex: 1,
+                            child: SizedBox(
+                              height: 46,
+                              child: ElevatedButton.icon(
+                                onPressed: _isSaving || _isPrintingPdf
+                                    ? null
+                                    : () => _handlePayment('كاش'),
+                                icon: _isSaving &&
+                                        _selectedPaymentMethod == 'كاش'
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.payments_outlined,
+                                        size: 20),
+                                label: Text(
+                                  'كاش',
+                                  style: GoogleFonts.ibmPlexSansArabic(
+                                    fontSize: AppDimens.fontMd + 1,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green.shade600,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                        AppDimens.radiusMd),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryContainer,
-                            foregroundColor: AppColors.onPrimary,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                          const SizedBox(width: AppDimens.spaceMd),
+
+                          // ── زر فيزا ───────────────────────────────────────────
+                          Expanded(
+                            flex: 1,
+                            child: SizedBox(
+                              height: 46,
+                              child: ElevatedButton.icon(
+                                onPressed: _isSaving || _isPrintingPdf
+                                    ? null
+                                    : () => _handlePayment('فيزا'),
+                                icon: _isSaving &&
+                                        _selectedPaymentMethod == 'فيزا'
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.onPrimary,
+                                        ),
+                                      )
+                                    : const Icon(Icons.credit_card_rounded,
+                                        size: 20),
+                                label: Text(
+                                  'فيزا',
+                                  style: GoogleFonts.ibmPlexSansArabic(
+                                    fontSize: AppDimens.fontMd + 1,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryContainer,
+                                  foregroundColor: AppColors.onPrimary,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                        AppDimens.radiusMd),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -555,7 +775,8 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
         ],
       );
 
-  Widget _buildTotalRow(String label, double amount, {bool isNegative = false}) =>
+  Widget _buildTotalRow(String label, double amount,
+          {bool isNegative = false}) =>
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

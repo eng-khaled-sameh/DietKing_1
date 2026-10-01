@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -15,6 +17,9 @@ class SessionState extends Equatable {
   final String branchName;
   final String branchCode;
   final String shift;
+  // ── حقول مضافة: معرّف الجلسة ووقت البداية ─────────────────────────────────
+  final String sessionId;   // UUID v4 مولَّد بـ Random.secure عند start()
+  final DateTime? startedAt; // وقت بداية الجلسة بتوقيت الجهاز
 
   const SessionState({
     this.isActive = false,
@@ -25,6 +30,8 @@ class SessionState extends Equatable {
     this.branchName = '',
     this.branchCode = '',
     this.shift = '',
+    this.sessionId = '',
+    this.startedAt,
   });
 
   @override
@@ -37,6 +44,8 @@ class SessionState extends Equatable {
         branchName,
         branchCode,
         shift,
+        sessionId,
+        startedAt,
       ];
 }
 
@@ -75,11 +84,28 @@ class SessionCubit extends Cubit<SessionState> {
       branchName: branch.name,
       branchCode: branch.code,
       shift: shift,
+      sessionId: _generateUuidV4(),
+      startedAt: DateTime.now(),
     ));
   }
 
   /// ينهي الجلسة — الطريقة الوحيدة لتفريغ البيانات، تُستدعى عند تسجيل الخروج
   void end() {
     emit(const SessionState());
+  }
+
+  // ── UUID v4 بـ Random.secure ───────────────────────────────────────────────
+  static String _generateUuidV4() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10xx
+    final hex =
+        bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).toList();
+    return '${hex.sublist(0, 4).join()}-'
+        '${hex.sublist(4, 6).join()}-'
+        '${hex.sublist(6, 8).join()}-'
+        '${hex.sublist(8, 10).join()}-'
+        '${hex.sublist(10, 16).join()}';
   }
 }

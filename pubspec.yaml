@@ -21,6 +21,11 @@ dependencies:
   pdf: ^3.13.1
   printing: ^5.15.1
   supabase_flutter: ^2.18.0
+  # Local SQLite storage (offline-first)
+  sqflite_common_ffi: ^2.3.4+4
+  sqlite3_flutter_libs: ^0.5.27
+  path: ^1.9.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
