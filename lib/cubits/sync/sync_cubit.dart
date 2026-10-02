@@ -32,12 +32,21 @@ class SyncState extends Equatable {
 // ── Cubit ──────────────────────────────────────────────────────────────────────
 
 /// SyncCubit — على مستوى التطبيق
-/// يدير SyncService + Timer.periodic كل 30 ثانية
+///
+/// يعمل فقط طالما فيه سجلات pending.
+/// عند فشل الشبكة: exponential backoff (30s → 60s → 120s → 300s كحد أقصى).
+/// بعد أول نجاح: يرجع للـ 30 ثانية.
 class SyncCubit extends Cubit<SyncState> {
   late final SyncService _service;
   Timer? _timer;
   String? _userId;
   final LocalRecordsRepository _repo = LocalRecordsRepository();
+
+  /// جدول الـ backoff: بالثواني
+  static const List<int> _backoffSchedule = [30, 60, 120, 300];
+
+  /// الفهرس الحالي في جدول الـ backoff
+  int _backoffIndex = 0;
 
   SyncCubit() : super(const SyncState()) {
     _service = SyncService(onCountsChanged: _handleCountsChanged);
@@ -46,15 +55,20 @@ class SyncCubit extends Cubit<SyncState> {
   /// يُستدعى بعد تسجيل الدخول لتعيين المستخدم الحالي وبدء المزامنة
   Future<void> onLogin(String userId) async {
     _userId = userId;
+    _backoffIndex = 0;
     await _refreshCounts();
-    unawaited(triggerSync());
-    _startTimer();
+    // لو فيه pending: شغّل مزامنة فورية وابدأ الـ timer
+    if (state.pendingCount > 0) {
+      unawaited(triggerSync());
+      _scheduleNextTimer();
+    }
   }
 
   /// يُستدعى بعد تسجيل الخروج لإيقاف Timer
   void onLogout() {
     _stopTimer();
     _userId = null;
+    _backoffIndex = 0;
     emit(const SyncState());
   }
 
@@ -64,10 +78,24 @@ class SyncCubit extends Cubit<SyncState> {
     if (state.isSyncing) return;
 
     emit(state.copyWith(isSyncing: true));
-    try {
-      await _service.runOnce(_userId!);
-    } finally {
-      await _refreshCounts();
+    final hadNetworkError = await _service.runOnce(_userId!);
+    await _refreshCounts();
+
+    // إذا نجحت المزامنة (ولو جزئياً): أعِد تعيين الـ backoff
+    if (!hadNetworkError) {
+      _backoffIndex = 0;
+    } else {
+      // فشل الشبكة: زِد الـ backoff للمرة القادمة
+      if (_backoffIndex < _backoffSchedule.length - 1) {
+        _backoffIndex++;
+      }
+    }
+
+    // إعادة جدولة لو ما زال فيه pending
+    if (state.pendingCount > 0) {
+      _scheduleNextTimer();
+    } else {
+      _stopTimer();
     }
   }
 
@@ -94,15 +122,21 @@ class SyncCubit extends Cubit<SyncState> {
     if (pending == 0) _stopTimer();
   }
 
-  void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) async {
+  /// يجدول Timer للمحاولة القادمة بناءً على backoff index الحالي
+  void _scheduleNextTimer() {
+    _stopTimer();
+
+    final delaySeconds = _backoffSchedule[_backoffIndex];
+    _timer = Timer(Duration(seconds: delaySeconds), () async {
       if (_userId == null) return;
+
+      // تحقق أولاً: هل ما زال فيه pending؟
       final p = await _repo.countPending(_userId!);
       if (p == 0) {
         _stopTimer();
         return;
       }
+
       await triggerSync();
     });
   }

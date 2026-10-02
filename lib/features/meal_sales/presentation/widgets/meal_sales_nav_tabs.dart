@@ -7,6 +7,7 @@ import '../../../../core/models/held_order.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../admin/presentation/screens/admin_screen.dart';
+import '../../../admin/presentation/widgets/admin_password_dialog.dart';
 import '../../../held_orders/presentation/screens/held_orders_screen.dart';
 import '../screens/meal_sales_screen.dart';
 import 'meal_sales_shortcuts_row.dart';
@@ -39,7 +40,7 @@ class _MealSalesNavTabsState extends State<MealSalesNavTabs> {
     }
   }
 
-  void _handleTabTap(int index) {
+  Future<void> _handleTabTap(int index) async {
     if (index == _selectedIndex) return;
 
     if (index == 0) {
@@ -61,6 +62,11 @@ class _MealSalesNavTabsState extends State<MealSalesNavTabs> {
       );
       return;
     } else if (index == 2) {
+      // ── التحقق من باسورد الإدارة قبل الانتقال ──
+      final granted = await showAdminPasswordDialog(context);
+      if (!context.mounted) return;
+      if (!granted) return;
+
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (_, _, _) => const AdminScreen(),

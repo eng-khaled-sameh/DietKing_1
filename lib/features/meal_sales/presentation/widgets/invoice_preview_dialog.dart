@@ -60,10 +60,9 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
       final now = DateTime.now();
 
       // توليد رقم الفاتورة المحلي
-      final localNumber =
-          await repo.nextLocalNumber(session.branchCode.isNotEmpty
-              ? session.branchCode
-              : 'DK');
+      final localNumber = await repo.nextLocalNumber(
+        session.branchCode.isNotEmpty ? session.branchCode : 'DK',
+      );
 
       // توليد client_id
       final clientId = generateUuidV4();
@@ -75,8 +74,7 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
         'shift': session.shift,
         'payment_method': paymentMethod,
         'local_number': localNumber,
-        'discount_amount':
-            double.parse(cart.discountAmount.toStringAsFixed(2)),
+        'discount_amount': double.parse(cart.discountAmount.toStringAsFixed(2)),
         'discount_percent': cart.isDiscountPercentage
             ? double.parse(cart.discountValue.toStringAsFixed(2))
             : null,
@@ -89,13 +87,14 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
         'sold_at': now.toUtc().toIso8601String(),
         'notes': null,
         'items': cart.lines
-            .map((l) => {
-                  'product_id': l.productId,
-                  if (l.variantId != null) 'variant_id': l.variantId,
-                  'qty': l.quantity,
-                  'unit_price':
-                      double.parse(l.unitPrice.toStringAsFixed(2)),
-                })
+            .map(
+              (l) => {
+                'product_id': l.productId,
+                if (l.variantId != null) 'variant_id': l.variantId,
+                'qty': l.quantity,
+                'unit_price': double.parse(l.unitPrice.toStringAsFixed(2)),
+              },
+            )
             .toList(),
       };
 
@@ -114,44 +113,61 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
         'vat_amount': cart.vatAmount,
         'grand_total': cart.grandTotal,
         'items': cart.lines
-            .map((l) => {
-                  'name': l.variantLabel.isNotEmpty
-                      ? '${l.name} (${l.variantLabel})'
-                      : l.name,
-                  'quantity': l.quantity,
-                  'unit_price': l.unitPrice,
-                  'total_price': l.lineTotal,
-                })
+            .map(
+              (l) => {
+                'name': l.variantLabel.isNotEmpty
+                    ? '${l.name} (${l.variantLabel})'
+                    : l.name,
+                'quantity': l.quantity,
+                'unit_price': l.unitPrice,
+                'total_price': l.lineTotal,
+              },
+            )
             .toList(),
       };
 
       // حفظ في قاعدة البيانات المحلية
-      await repo.insert(LocalRecord(
-        kind: 'sale',
-        clientId: clientId,
-        userId: session.userId,
-        branchId: session.branchId,
-        sessionId: session.sessionId,
-        localNumber: localNumber,
-        paymentMethod: paymentMethod,
-        total: cart.grandTotal,
-        payload: payload,
-        displayData: displayData,
-        status: 'pending',
-        createdAt: now,
-      ));
+      await repo.insert(
+        LocalRecord(
+          kind: 'sale',
+          clientId: clientId,
+          userId: session.userId,
+          branchId: session.branchId,
+          sessionId: session.sessionId,
+          localNumber: localNumber,
+          paymentMethod: paymentMethod,
+          total: cart.grandTotal,
+          payload: payload,
+          displayData: displayData,
+          status: 'pending',
+          createdAt: now,
+        ),
+      );
 
       _localInvoiceNumber = localNumber;
 
-      // شغّل المزامنة في الخلفية
+      // انتظر المزامنة مع السيرفر لجلب رقم الفاتورة الرسمي
+      String printNumber = localNumber;
       if (mounted) {
-        context.read<SyncCubit>().triggerSync();
+        try {
+          await context.read<SyncCubit>().triggerSync();
+          if (mounted) {
+            // اقرأ السجل من قاعدة البيانات المحلية لجلب serverNumber
+            final records = await repo.getBySession(session.sessionId, 'sale');
+            final saved = records.where((r) => r.clientId == clientId).firstOrNull;
+            if (saved?.serverNumber != null && saved!.serverNumber!.isNotEmpty) {
+              printNumber = saved.serverNumber!;
+            }
+          }
+        } catch (_) {
+          // لو المزامنة فشلت (لا يوجد إنترنت) نطبع بالرقم المحلي
+        }
       }
 
-      // اطبع الفاتورة بالرقم المحلي فوراً
+      // اطبع الفاتورة
       if (mounted) {
         setState(() => _isSaving = false);
-        await _printPdfAndClose(localNumber, paymentMethod);
+        await _printPdfAndClose(printNumber, paymentMethod);
       }
     } catch (e) {
       if (mounted) {
@@ -164,7 +180,9 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
   }
 
   Future<void> _printPdfAndClose(
-      String invoiceNumber, String paymentMethod) async {
+    String invoiceNumber,
+    String paymentMethod,
+  ) async {
     if (!mounted) return;
     setState(() => _isPrintingPdf = true);
     try {
@@ -243,10 +261,10 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color:
-                            AppColors.primaryContainer.withValues(alpha: 0.2),
-                        borderRadius:
-                            BorderRadius.circular(AppDimens.radiusMd),
+                        color: AppColors.primaryContainer.withValues(
+                          alpha: 0.2,
+                        ),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                       ),
                       child: const Icon(
                         Icons.receipt_long_rounded,
@@ -289,11 +307,9 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                     padding: const EdgeInsets.all(AppDimens.spaceMd),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceContainerLowest,
-                      borderRadius:
-                          BorderRadius.circular(AppDimens.radiusMd),
+                      borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                       border: Border.all(
-                        color:
-                            AppColors.outlineVariant.withValues(alpha: 0.25),
+                        color: AppColors.outlineVariant.withValues(alpha: 0.25),
                       ),
                     ),
                     child: Column(
@@ -345,10 +361,7 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                           children: [
                             Expanded(
                               flex: 4,
-                              child: Text(
-                                'الصنف',
-                                style: _headerStyle(),
-                              ),
+                              child: Text('الصنف', style: _headerStyle()),
                             ),
                             Expanded(
                               flex: 1,
@@ -379,64 +392,66 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                         const SizedBox(height: 6),
                         Divider(
                           height: 1,
-                          color:
-                              AppColors.outlineVariant.withValues(alpha: 0.3),
+                          color: AppColors.outlineVariant.withValues(
+                            alpha: 0.3,
+                          ),
                         ),
                         const SizedBox(height: 6),
 
                         // ── أسطر الأصناف ──────────────────────────────────────
-                        ...data.items.map((item) => Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 3),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    flex: 4,
-                                    child: Text(
-                                      item.name,
-                                      style: GoogleFonts.ibmPlexSansArabic(
-                                        fontSize: AppDimens.fontSm,
-                                        color: AppColors.onSurface,
-                                      ),
+                        ...data.items.map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 4,
+                                  child: Text(
+                                    item.name,
+                                    style: GoogleFonts.ibmPlexSansArabic(
+                                      fontSize: AppDimens.fontSm,
+                                      color: AppColors.onSurface,
                                     ),
                                   ),
-                                  Expanded(
-                                    flex: 1,
-                                    child: Text(
-                                      '${item.quantity}',
-                                      style: GoogleFonts.ibmPlexSansArabic(
-                                        fontSize: AppDimens.fontSm,
-                                        color: AppColors.onSurface,
-                                      ),
-                                      textAlign: TextAlign.center,
+                                ),
+                                Expanded(
+                                  flex: 1,
+                                  child: Text(
+                                    '${item.quantity}',
+                                    style: GoogleFonts.ibmPlexSansArabic(
+                                      fontSize: AppDimens.fontSm,
+                                      color: AppColors.onSurface,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      item.unitPrice.toStringAsFixed(2),
-                                      style: GoogleFonts.ibmPlexSansArabic(
-                                        fontSize: AppDimens.fontSm,
-                                        color: AppColors.onSurfaceVariant,
-                                      ),
-                                      textAlign: TextAlign.left,
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    item.unitPrice.toStringAsFixed(2),
+                                    style: GoogleFonts.ibmPlexSansArabic(
+                                      fontSize: AppDimens.fontSm,
+                                      color: AppColors.onSurfaceVariant,
                                     ),
+                                    textAlign: TextAlign.left,
                                   ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      item.totalPrice.toStringAsFixed(2),
-                                      style: GoogleFonts.ibmPlexSansArabic(
-                                        fontSize: AppDimens.fontSm,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.onSurface,
-                                      ),
-                                      textAlign: TextAlign.left,
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    item.totalPrice.toStringAsFixed(2),
+                                    style: GoogleFonts.ibmPlexSansArabic(
+                                      fontSize: AppDimens.fontSm,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.onSurface,
                                     ),
+                                    textAlign: TextAlign.left,
                                   ),
-                                ],
-                              ),
-                            )),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
 
                         const SizedBox(height: AppDimens.spaceSm),
                         _buildDivider(),
@@ -447,20 +462,23 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                         const SizedBox(height: 4),
 
                         // ── الخصم ─────────────────────────────────────────────
-                        _buildTotalRow('الخصم', data.discountAmount,
-                            isNegative: true),
+                        _buildTotalRow(
+                          'الخصم',
+                          data.discountAmount,
+                          isNegative: true,
+                        ),
                         const SizedBox(height: 4),
 
                         // ── ضريبة القيمة المضافة ──────────────────────────────
-                        _buildTotalRow(
-                            'ضريبة القيمة المضافة:', data.vatAmount),
+                        _buildTotalRow('ضريبة القيمة المضافة:', data.vatAmount),
                         const SizedBox(height: AppDimens.spaceSm),
 
                         // ── الإجمالي النهائي ───────────────────────────────────
                         Divider(
                           height: 1,
-                          color:
-                              AppColors.outlineVariant.withValues(alpha: 0.3),
+                          color: AppColors.outlineVariant.withValues(
+                            alpha: 0.3,
+                          ),
                         ),
                         const SizedBox(height: AppDimens.spaceSm),
                         Container(
@@ -471,16 +489,19 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                AppColors.primaryContainer
-                                    .withValues(alpha: 0.15),
-                                AppColors.primaryContainer
-                                    .withValues(alpha: 0.05),
+                                AppColors.primaryContainer.withValues(
+                                  alpha: 0.15,
+                                ),
+                                AppColors.primaryContainer.withValues(
+                                  alpha: 0.05,
+                                ),
                               ],
                               begin: Alignment.centerRight,
                               end: Alignment.centerLeft,
                             ),
-                            borderRadius:
-                                BorderRadius.circular(AppDimens.radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              AppDimens.radiusSm,
+                            ),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -513,8 +534,9 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                             'شكرًا لزيارتكم - دايت كنج',
                             style: GoogleFonts.ibmPlexSansArabic(
                               fontSize: AppDimens.fontXs,
-                              color: AppColors.onSurfaceVariant
-                                  .withValues(alpha: 0.7),
+                              color: AppColors.onSurfaceVariant.withValues(
+                                alpha: 0.7,
+                              ),
                             ),
                           ),
                         ),
@@ -524,8 +546,9 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                             'دايت كينج شريكك الصحي',
                             style: GoogleFonts.ibmPlexSansArabic(
                               fontSize: AppDimens.fontXs,
-                              color: AppColors.onSurfaceVariant
-                                  .withValues(alpha: 0.7),
+                              color: AppColors.onSurfaceVariant.withValues(
+                                alpha: 0.7,
+                              ),
                             ),
                           ),
                         ),
@@ -572,8 +595,10 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                               onPressed: _isPrintingPdf || _isSaving
                                   ? null
                                   : () => Navigator.of(context).pop(),
-                              icon: const Icon(Icons.arrow_back_rounded,
-                                  size: 18),
+                              icon: const Icon(
+                                Icons.arrow_back_rounded,
+                                size: 18,
+                              ),
                               label: Text(
                                 'رجوع',
                                 style: GoogleFonts.ibmPlexSansArabic(
@@ -585,12 +610,14 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                                 foregroundColor: AppColors.onSurfaceVariant,
                                 backgroundColor: AppColors.surfaceContainer,
                                 side: BorderSide(
-                                  color: AppColors.outlineVariant
-                                      .withValues(alpha: 0.5),
+                                  color: AppColors.outlineVariant.withValues(
+                                    alpha: 0.5,
+                                  ),
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(
-                                      AppDimens.radiusMd),
+                                    AppDimens.radiusMd,
+                                  ),
                                 ),
                               ),
                             ),
@@ -606,7 +633,8 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                               height: 46,
                               child: ElevatedButton.icon(
                                 onPressed: () => _handlePayment(
-                                    _selectedPaymentMethod ?? 'كاش'),
+                                  _selectedPaymentMethod ?? 'كاش',
+                                ),
                                 icon: _isSaving
                                     ? const SizedBox(
                                         width: 18,
@@ -616,8 +644,10 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                                           color: Colors.white,
                                         ),
                                       )
-                                    : const Icon(Icons.refresh_rounded,
-                                        size: 20),
+                                    : const Icon(
+                                        Icons.refresh_rounded,
+                                        size: 20,
+                                      ),
                                 label: Text(
                                   'إعادة المحاولة',
                                   style: GoogleFonts.ibmPlexSansArabic(
@@ -631,7 +661,8 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(
-                                        AppDimens.radiusMd),
+                                      AppDimens.radiusMd,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -647,8 +678,8 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                                 onPressed: _isSaving || _isPrintingPdf
                                     ? null
                                     : () => _handlePayment('كاش'),
-                                icon: _isSaving &&
-                                        _selectedPaymentMethod == 'كاش'
+                                icon:
+                                    _isSaving && _selectedPaymentMethod == 'كاش'
                                     ? const SizedBox(
                                         width: 18,
                                         height: 18,
@@ -657,8 +688,10 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                                           color: Colors.white,
                                         ),
                                       )
-                                    : const Icon(Icons.payments_outlined,
-                                        size: 20),
+                                    : const Icon(
+                                        Icons.payments_outlined,
+                                        size: 20,
+                                      ),
                                 label: Text(
                                   'كاش',
                                   style: GoogleFonts.ibmPlexSansArabic(
@@ -672,7 +705,8 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(
-                                        AppDimens.radiusMd),
+                                      AppDimens.radiusMd,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -680,7 +714,7 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                           ),
                           const SizedBox(width: AppDimens.spaceMd),
 
-                          // ── زر فيزا ───────────────────────────────────────────
+                          // ── زر شبكة ───────────────────────────────────────────
                           Expanded(
                             flex: 1,
                             child: SizedBox(
@@ -688,9 +722,10 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                               child: ElevatedButton.icon(
                                 onPressed: _isSaving || _isPrintingPdf
                                     ? null
-                                    : () => _handlePayment('فيزا'),
-                                icon: _isSaving &&
-                                        _selectedPaymentMethod == 'فيزا'
+                                    : () => _handlePayment('شبكة'),
+                                icon:
+                                    _isSaving &&
+                                        _selectedPaymentMethod == 'شبكة'
                                     ? const SizedBox(
                                         width: 18,
                                         height: 18,
@@ -699,10 +734,12 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                                           color: AppColors.onPrimary,
                                         ),
                                       )
-                                    : const Icon(Icons.credit_card_rounded,
-                                        size: 20),
+                                    : const Icon(
+                                        Icons.credit_card_rounded,
+                                        size: 20,
+                                      ),
                                 label: Text(
-                                  'فيزا',
+                                  'شبكة',
                                   style: GoogleFonts.ibmPlexSansArabic(
                                     fontSize: AppDimens.fontMd + 1,
                                     fontWeight: FontWeight.w800,
@@ -714,7 +751,8 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(
-                                        AppDimens.radiusMd),
+                                      AppDimens.radiusMd,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -736,67 +774,69 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
   TextStyle _headerStyle() => GoogleFonts.ibmPlexSansArabic(
-        fontSize: AppDimens.fontXs,
-        fontWeight: FontWeight.w700,
-        color: AppColors.onSurfaceVariant,
-      );
+    fontSize: AppDimens.fontXs,
+    fontWeight: FontWeight.w700,
+    color: AppColors.onSurfaceVariant,
+  );
 
   Widget _buildDivider() => Container(
-        height: 1,
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: AppColors.outlineVariant.withValues(alpha: 0.25),
-              width: 1,
-              style: BorderStyle.solid,
-            ),
-          ),
+    height: 1,
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(
+          color: AppColors.outlineVariant.withValues(alpha: 0.25),
+          width: 1,
+          style: BorderStyle.solid,
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _buildInfoRow(String label, String value) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.ibmPlexSansArabic(
-              fontSize: AppDimens.fontXs,
-              color: AppColors.onSurfaceVariant,
-            ),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.ibmPlexSansArabic(
-              fontSize: AppDimens.fontXs,
-              fontWeight: FontWeight.w600,
-              color: AppColors.onSurface,
-            ),
-          ),
-        ],
-      );
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(
+        label,
+        style: GoogleFonts.ibmPlexSansArabic(
+          fontSize: AppDimens.fontXs,
+          color: AppColors.onSurfaceVariant,
+        ),
+      ),
+      Text(
+        value,
+        style: GoogleFonts.ibmPlexSansArabic(
+          fontSize: AppDimens.fontXs,
+          fontWeight: FontWeight.w600,
+          color: AppColors.onSurface,
+        ),
+      ),
+    ],
+  );
 
-  Widget _buildTotalRow(String label, double amount,
-          {bool isNegative = false}) =>
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.ibmPlexSansArabic(
-              fontSize: AppDimens.fontSm,
-              color: AppColors.onSurface,
-            ),
-          ),
-          Text(
-            '${isNegative && amount > 0 ? '-' : ''}${amount.toStringAsFixed(2)} ر.س',
-            style: GoogleFonts.ibmPlexSansArabic(
-              fontSize: AppDimens.fontSm,
-              fontWeight: FontWeight.w600,
-              color: isNegative && amount > 0
-                  ? Colors.redAccent
-                  : AppColors.onSurface,
-            ),
-          ),
-        ],
-      );
+  Widget _buildTotalRow(
+    String label,
+    double amount, {
+    bool isNegative = false,
+  }) => Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(
+        label,
+        style: GoogleFonts.ibmPlexSansArabic(
+          fontSize: AppDimens.fontSm,
+          color: AppColors.onSurface,
+        ),
+      ),
+      Text(
+        '${isNegative && amount > 0 ? '-' : ''}${amount.toStringAsFixed(2)} ر.س',
+        style: GoogleFonts.ibmPlexSansArabic(
+          fontSize: AppDimens.fontSm,
+          fontWeight: FontWeight.w600,
+          color: isNegative && amount > 0
+              ? Colors.redAccent
+              : AppColors.onSurface,
+        ),
+      ),
+    ],
+  );
 }

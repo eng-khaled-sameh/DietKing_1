@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/app_modules.dart';
 import '../../../../core/supabase_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../cubits/branches/branches_cubit.dart';
 import '../../../../cubits/catalog/catalog_cubit.dart';
+import '../../../../cubits/pos_settings/pos_settings_cubit.dart';
 import '../../../../cubits/session/session_cubit.dart';
+import '../../../../cubits/sync/sync_cubit.dart';
 import '../../../../models/login_branch.dart';
+import '../../../../screens/home/modules_screen.dart';
 import '../../../../services/auth_service.dart';
 import '../../../meal_sales/presentation/screens/meal_sales_screen.dart';
 import '../widgets/login_card.dart';
@@ -55,6 +59,8 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _usernameError;
   String? _passwordError;
 
+  int _step = 1;
+
   final _authService = AuthService();
 
   @override
@@ -76,18 +82,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // ── Validation ───────────────────────────────────────────────────────────────
-  bool _validate() {
-    String? branchErr;
-    String? shiftErr;
+  bool _validateCredentials() {
     String? usernameErr;
     String? passwordErr;
 
-    if (_selectedBranch == null) {
-      branchErr = 'اختر الفرع';
-    }
-    if (_selectedShift == null) {
-      shiftErr = 'اختر الوردية';
-    }
     if (_usernameController.text.trim().isEmpty) {
       usernameErr = 'اسم المستخدم مطلوب';
     }
@@ -96,23 +94,53 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() {
-      _branchError = branchErr;
-      _shiftError = shiftErr;
       _usernameError = usernameErr;
       _passwordError = passwordErr;
       _authError = null;
     });
 
-    return branchErr == null &&
-        shiftErr == null &&
-        usernameErr == null &&
-        passwordErr == null;
+    return usernameErr == null && passwordErr == null;
+  }
+
+  bool _validateBranchShift() {
+    String? branchErr;
+    String? shiftErr;
+
+    if (_selectedBranch == null) {
+      branchErr = 'اختر الفرع';
+    }
+    if (_selectedShift == null) {
+      shiftErr = 'اختر الوردية';
+    }
+
+    setState(() {
+      _branchError = branchErr;
+      _shiftError = shiftErr;
+      _authError = null;
+    });
+
+    return branchErr == null && shiftErr == null;
+  }
+
+  void _handleNext() {
+    if (_isLoading) return;
+    if (!_validateCredentials()) return;
+    setState(() {
+      _step = 2;
+    });
+  }
+
+  void _handleBack() {
+    if (_isLoading) return;
+    setState(() {
+      _step = 1;
+    });
   }
 
   // ── Submit ───────────────────────────────────────────────────────────────────
   Future<void> _handleSubmit() async {
     if (_isLoading) return;
-    if (!_validate()) return;
+    if (!_validateBranchShift()) return;
 
     setState(() {
       _isLoading = true;
@@ -128,6 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       // قراءة بيانات المستخدم من Supabase بعد تسجيل الدخول
+      // نستخدم currentUser المحلي — لا نستدعي getUser() أو refreshSession() يدوياً
       final user = supabase.auth.currentUser;
       final userId = user?.id ?? '';
       final email = user?.email ?? _usernameController.text.trim().toLowerCase();
@@ -141,17 +170,31 @@ class _LoginScreenState extends State<LoginScreen> {
             email: email,
           );
 
-      // بدء تحميل الكاتالوج مرة واحدة عند بدء الجلسة
       if (!mounted) return;
-      context.read<CatalogCubit>().load();
+      context.read<SyncCubit>().onLogin(userId);
 
-      // الانتقال لشاشة البيع — استبدال شاشة الدخول (ممنوع الرجوع بزر الرجوع)
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => const MealSalesScreen(),
-        ),
-      );
+      
+      void navigateAfterLogin() {
+        final modules = allowedModules();
+        if (modules.length == 1 && modules.first == AppModule.cashier) {
+          context.read<CatalogCubit>().load();
+          context.read<PosSettingsCubit>().load();
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => const MealSalesScreen(),
+            ),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => const ModulesScreen(),
+            ),
+          );
+        }
+      }
+
+      navigateAfterLogin();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -194,6 +237,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         vertical: AppDimens.spaceLg,
                       ),
                       child: LoginCard(
+                        // ── التحكم بالخطوات ──
+                        step: _step,
+                        onNext: _handleNext,
+                        onBack: _handleBack,
                         // ── اختيار الفرع ──
                         selectedBranch: _selectedBranch,
                         branchError: _branchError,

@@ -63,20 +63,28 @@ Future<Uint8List> buildShiftClosePdf(ShiftCloseReportData data) async {
       build: (context) => [
         // ── ترويسة ───────────────────────────────────────────────────────────
         pw.Center(
-          child: pw.Text('دايت كنج',
-              style: pw.TextStyle(font: boldFont, fontSize: 22)),
+          child: pw.Text(
+            'دايت كنج',
+            style: pw.TextStyle(font: boldFont, fontSize: 22),
+          ),
         ),
         pw.Center(
-          child: pw.Text('تقرير إقفال الوردية',
-              style: pw.TextStyle(font: boldFont, fontSize: 16)),
+          child: pw.Text(
+            'تقرير إقفال الوردية',
+            style: pw.TextStyle(font: boldFont, fontSize: 16),
+          ),
         ),
         pw.SizedBox(height: 8),
         pw.Divider(thickness: 1, borderStyle: pw.BorderStyle.dashed),
         pw.SizedBox(height: 6),
 
         // ── معلومات الوردية ───────────────────────────────────────────────────
-        _infoRow('الفرع:', '${data.branchName} (${data.branchCode})', font,
-            boldFont),
+        _infoRow(
+          'الفرع:',
+          '${data.branchName} (${data.branchCode})',
+          font,
+          boldFont,
+        ),
         _infoRow('الكاشير:', data.cashierName, font, boldFont),
         _infoRow('الوردية:', data.shift, font, boldFont),
         _infoRow('وقت البداية:', fmt(data.openedAt), font, boldFont),
@@ -86,16 +94,27 @@ Future<Uint8List> buildShiftClosePdf(ShiftCloseReportData data) async {
         pw.SizedBox(height: 6),
 
         // ── جدول الفواتير ─────────────────────────────────────────────────────
-        pw.Text('فواتير الوردية',
-            style: pw.TextStyle(font: boldFont, fontSize: 12)),
+        pw.Text(
+          'فواتير الوردية',
+          style: pw.TextStyle(font: boldFont, fontSize: 12),
+        ),
         pw.SizedBox(height: 4),
         pw.TableHelper.fromTextArray(
-          headers: ['رقم الفاتورة', 'الوقت', 'الدفع', 'الخصم', 'ض.ق.م', 'الإجمالي'],
+          headers: [
+            'رقم الفاتورة',
+            'الوقت',
+            'الدفع',
+            'الخصم',
+            'ض.ق.م',
+            'الإجمالي',
+          ],
           data: data.invoices.map((r) {
             final number = r.serverNumber ?? r.localNumber ?? '-';
-            final timeStr = '${r.createdAt.hour.toString().padLeft(2, '0')}:${r.createdAt.minute.toString().padLeft(2, '0')}';
+            final timeStr =
+                '${r.createdAt.hour.toString().padLeft(2, '0')}:${r.createdAt.minute.toString().padLeft(2, '0')}';
             final payload = r.payload;
-            final discount = (payload['discount_amount'] as num?)?.toDouble() ?? 0.0;
+            final discount =
+                (payload['discount_amount'] as num?)?.toDouble() ?? 0.0;
             final vat = (payload['vat_amount'] as num?)?.toDouble() ?? 0.0;
             final total = (payload['total'] as num?)?.toDouble() ?? 0.0;
             final payment = r.paymentMethod ?? '-';
@@ -126,32 +145,71 @@ Future<Uint8List> buildShiftClosePdf(ShiftCloseReportData data) async {
         pw.SizedBox(height: 6),
 
         // ── الإجماليات ────────────────────────────────────────────────────────
-        pw.Text('ملخص الوردية',
-            style: pw.TextStyle(font: boldFont, fontSize: 12)),
+        pw.Text(
+          'ملخص الوردية',
+          style: pw.TextStyle(font: boldFont, fontSize: 12),
+        ),
         pw.SizedBox(height: 4),
         _infoRow('عدد الفواتير:', '${data.invoices.length}', font, boldFont),
-        _infoRow('إجمالي المبيعات:', '${data.totalSales.toStringAsFixed(2)} ر.س', font, boldFont),
-        _infoRow('إجمالي النقدي:', '${data.totalCash.toStringAsFixed(2)} ر.س', font, boldFont),
-        _infoRow('إجمالي الفيزا:', '${data.totalVisa.toStringAsFixed(2)} ر.س', font, boldFont),
-        _infoRow('إجمالي الخصومات:', '${data.totalDiscount.toStringAsFixed(2)} ر.س', font, boldFont),
-        _infoRow('إجمالي ض.ق.م:', '${data.totalVat.toStringAsFixed(2)} ر.س', font, boldFont),
+        _infoRow(
+          'إجمالي المبيعات:',
+          '${data.totalSales.toStringAsFixed(2)} ر.س',
+          font,
+          boldFont,
+        ),
+        _infoRow(
+          'إجمالي النقدي:',
+          '${data.totalCash.toStringAsFixed(2)} ر.س',
+          font,
+          boldFont,
+        ),
+        _infoRow(
+          'إجمالي:',
+          '${data.totalVisa.toStringAsFixed(2)} ر.س',
+          font,
+          boldFont,
+        ),
+        _infoRow(
+          'إجمالي الخصومات:',
+          '${data.totalDiscount.toStringAsFixed(2)} ر.س',
+          font,
+          boldFont,
+        ),
+        _infoRow(
+          'إجمالي ض.ق.م:',
+          '${data.totalVat.toStringAsFixed(2)} ر.س',
+          font,
+          boldFont,
+        ),
         pw.SizedBox(height: 8),
         pw.Divider(thickness: 1, borderStyle: pw.BorderStyle.dashed),
         pw.SizedBox(height: 6),
 
         // ── مقارنة الكاش ─────────────────────────────────────────────────────
-        pw.Text('مقارنة الكاش',
-            style: pw.TextStyle(font: boldFont, fontSize: 12)),
+        pw.Text(
+          'مقارنة الكاش',
+          style: pw.TextStyle(font: boldFont, fontSize: 12),
+        ),
         pw.SizedBox(height: 4),
-        _infoRow('المتوقع في الدرج:', '${data.expectedCash.toStringAsFixed(2)} ر.س', font, boldFont),
-        _infoRow('المبلغ الموجود:', '${data.countedCash.toStringAsFixed(2)} ر.س', font, boldFont),
+        _infoRow(
+          'المتوقع في الدرج:',
+          '${data.expectedCash.toStringAsFixed(2)} ر.س',
+          font,
+          boldFont,
+        ),
+        _infoRow(
+          'المبلغ الموجود:',
+          '${data.countedCash.toStringAsFixed(2)} ر.س',
+          font,
+          boldFont,
+        ),
         _infoRow(
           'الفرق:',
           data.difference == 0
               ? 'مطابق'
               : data.difference > 0
-                  ? 'زيادة ${data.difference.toStringAsFixed(2)} ر.س'
-                  : 'عجز ${data.difference.abs().toStringAsFixed(2)} ر.س',
+              ? 'زيادة ${data.difference.toStringAsFixed(2)} ر.س'
+              : 'عجز ${data.difference.abs().toStringAsFixed(2)} ر.س',
           font,
           boldFont,
         ),
@@ -164,8 +222,10 @@ Future<Uint8List> buildShiftClosePdf(ShiftCloseReportData data) async {
         pw.SizedBox(height: 16),
         pw.Divider(thickness: 1, borderStyle: pw.BorderStyle.dashed),
         pw.Center(
-          child: pw.Text('دايت كينج شريكك الصحي',
-              style: pw.TextStyle(font: font, fontSize: 10)),
+          child: pw.Text(
+            'دايت كينج شريكك الصحي',
+            style: pw.TextStyle(font: font, fontSize: 10),
+          ),
         ),
       ],
     ),
@@ -174,8 +234,7 @@ Future<Uint8List> buildShiftClosePdf(ShiftCloseReportData data) async {
   return pdf.save();
 }
 
-pw.Widget _infoRow(
-    String label, String value, pw.Font font, pw.Font boldFont) {
+pw.Widget _infoRow(String label, String value, pw.Font font, pw.Font boldFont) {
   return pw.Padding(
     padding: const pw.EdgeInsets.symmetric(vertical: 2),
     child: pw.Row(

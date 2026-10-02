@@ -155,7 +155,7 @@ class LocalDb {
 
     return openDatabase(
       dbPath,
-      version: 1,
+      version: 3,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE IF NOT EXISTS local_records (
@@ -193,6 +193,42 @@ class LocalDb {
             value TEXT NOT NULL
           )
         ''');
+        
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS inventory_cache (
+            key         TEXT PRIMARY KEY,
+            data        TEXT NOT NULL,
+            stamp       INTEGER NOT NULL DEFAULT 0,
+            synced_up_to TEXT,
+            updated_at  TEXT NOT NULL
+          )
+        ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS inventory_cache (
+              key         TEXT PRIMARY KEY,
+              data        TEXT NOT NULL,
+              stamp       INTEGER NOT NULL DEFAULT 0,
+              synced_up_to TEXT,
+              updated_at  TEXT NOT NULL
+            )
+          ''');
+        }
+        if (oldVersion < 3) {
+          // أضف الأعمدة الجديدة لو الجدول موجود بدون stamp
+          try {
+            await db.execute(
+              'ALTER TABLE inventory_cache ADD COLUMN stamp INTEGER NOT NULL DEFAULT 0',
+            );
+          } catch (_) {} // العمود موجود مسبقاً
+          try {
+            await db.execute(
+              'ALTER TABLE inventory_cache ADD COLUMN synced_up_to TEXT',
+            );
+          } catch (_) {}
+        }
       },
     );
   }

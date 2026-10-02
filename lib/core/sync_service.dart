@@ -17,18 +17,23 @@ class SyncService {
 
   bool get isSyncing => _isSyncing;
 
-  /// تشغيل دورة مزامنة واحدة للمستخدم الحالي
-  Future<void> runOnce(String userId) async {
-    if (_isSyncing) return;
+  /// تشغيل دورة مزامنة واحدة للمستخدم الحالي.
+  ///
+  /// يُرسل كل سجل في طلب منفصل.
+  /// عند فشل الشبكة: يوقف الدورة فوراً (لا يجرب بقية السجلات).
+  ///
+  /// يُرجع [true] لو حدث خطأ شبكة، و[false] لو اكتملت الدورة بدون مشاكل شبكية.
+  Future<bool> runOnce(String userId) async {
+    if (_isSyncing) return false;
     _isSyncing = true;
 
     final repo = LocalRecordsRepository();
+    bool hadNetworkError = false;
 
     try {
       final pending = await repo.getPending(userId);
 
       for (final record in pending) {
-        // إعادة التحقق أننا لم نُصادف خطأ شبكة يمنع المتابعة
         try {
           final dynamic response;
 
@@ -62,14 +67,17 @@ class SyncService {
           }
         } on SocketException catch (_) {
           // خطأ شبكة — وقّف الدورة، السجلات تبقى pending
+          hadNetworkError = true;
           break;
         } on TimeoutException catch (_) {
+          hadNetworkError = true;
           break;
         } catch (e) {
           final msg = e.toString();
           // ClientException (HTTP)
           if (msg.contains('ClientException') ||
               msg.contains('Connection refused')) {
+            hadNetworkError = true;
             break;
           }
 
@@ -82,7 +90,7 @@ class SyncService {
               newAttempts: newAttempts,
             );
           }
-          // استمر بالسجل التالي
+          // استمر بالسجل التالي (هذا خطأ من السيرفر ليس من الشبكة)
         }
       }
     } finally {
@@ -94,5 +102,7 @@ class SyncService {
         onCountsChanged!(p, f);
       }
     }
+
+    return hadNetworkError;
   }
 }

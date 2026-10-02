@@ -8,10 +8,14 @@ import 'core/theme/app_colors.dart';
 import 'core/cubits/held_orders_cubit.dart';
 import 'cubits/branches/branches_cubit.dart';
 import 'cubits/catalog/catalog_cubit.dart';
+import 'cubits/pos_settings/pos_settings_cubit.dart';
 import 'cubits/sales/sales_cubit.dart';
 import 'cubits/session/session_cubit.dart';
 import 'cubits/sync/sync_cubit.dart';
+import 'cubits/admin_access/admin_access_cubit.dart';
+import 'core/repositories/admin_access_repository.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
+import 'repositories/pos_settings_repository.dart';
 import 'repositories/sales_repository.dart';
 
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -42,10 +46,17 @@ Future<void> main() async {
         BlocProvider(create: (_) => BranchesCubit()),
         // SessionCubit — بيانات الجلسة الثابتة بعد تسجيل الدخول
         BlocProvider(create: (_) => SessionCubit()),
+        // PosSettingsCubit — إعدادات نقطة البيع (نسبة الضريبة)
+        // تُحمَّل مرة واحدة بعد تسجيل الدخول وتظل طوال الجلسة
+        BlocProvider(create: (_) => PosSettingsCubit(
+          repository: PosSettingsRepository(),
+        )),
         // SalesCubit — لإتمام المبيعات وحفظها
         BlocProvider(create: (_) => SalesCubit(SalesRepository())),
         // SyncCubit — مزامنة الخلفية
         BlocProvider(create: (_) => SyncCubit()),
+        // AdminAccessCubit — التحقق من باسورد الإدارة
+        BlocProvider(create: (_) => AdminAccessCubit(AdminAccessRepository())),
       ],
       child: const DietKingApp(),
     ),

@@ -6,10 +6,15 @@ import 'package:printing/printing.dart';
 import '../../../../core/local_db.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
+import '../../../../core/widgets/pos_status_footer.dart';
+import '../../../../cubits/admin_access/admin_access_cubit.dart';
+import '../../../../cubits/admin_access/admin_access_state.dart';
 import '../../../../cubits/catalog/catalog_cubit.dart';
 import '../../../../cubits/session/session_cubit.dart';
 import '../../../../cubits/sync/sync_cubit.dart';
+import '../../../../cubits/pos_settings/pos_settings_cubit.dart';
 import '../../../../features/auth/presentation/screens/login_screen.dart';
+import '../../../meal_sales/presentation/widgets/meal_sales_app_bar.dart';
 import '../../services/shift_close_pdf_builder.dart';
 
 // ── الأقسام ───────────────────────────────────────────────────────────────────
@@ -61,16 +66,57 @@ class _AdminScreenState extends State<AdminScreen> {
         backgroundColor: AppColors.background,
         body: Column(
           children: [
-            // ── هيدر شاشة الإدارة ─────────────────────────────────────────
+            // ── الهيدر الرئيسي المتصل ────────────────────────────────────
+            const MealSalesAppBar(initialIndex: 2),
+
+            const SizedBox(height: AppDimens.spaceLg),
+
+            // ── شريط التحقق دون اتصال (لو offlineGranted) ────────────────
+            BlocBuilder<AdminAccessCubit, AdminAccessState>(
+              builder: (context, accessState) {
+                if (accessState.status == AdminAccessStatus.offlineGranted) {
+                  return Container(
+                    width: double.infinity,
+                    color: AppColors.tertiary.withValues(alpha: 0.15),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceXs,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.wifi_off_rounded,
+                          size: AppDimens.iconSm,
+                          color: AppColors.tertiary,
+                        ),
+                        const SizedBox(width: AppDimens.spaceXs),
+                        Text(
+                          'تم التحقق دون اتصال',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            fontSize: AppDimens.fontXs,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.tertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+
+            // ── هيدر شاشة الإدارة (التبويبات الفرعية) ───────────────────
             _AdminHeader(
               selectedTab: _selectedTab,
               onTabSelected: (tab) => setState(() => _selectedTab = tab),
             ),
 
             // ── المحتوى ─────────────────────────────────────────────────────
-            Expanded(
-              child: _buildContent(),
-            ),
+            Expanded(child: _buildContent()),
+
+            // ── شريط الحالة ─────────────────────────────────────────────────
+            const PosStatusFooter(),
           ],
         ),
       ),
@@ -101,127 +147,85 @@ class _AdminHeader extends StatelessWidget {
   final _AdminTab selectedTab;
   final ValueChanged<_AdminTab> onTabSelected;
 
-  const _AdminHeader({
-    required this.selectedTab,
-    required this.onTabSelected,
-  });
+  const _AdminHeader({required this.selectedTab, required this.onTabSelected});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.surfaceContainer,
-      child: Column(
-        children: [
-          // ── شريط العنوان ────────────────────────────────────────────────
-          Container(
-            height: 48,
-            color: AppColors.surfaceContainerLow,
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-            child: Row(
-              children: [
-                const Icon(Icons.assessment_outlined,
-                    color: AppColors.primary, size: 20),
-                const SizedBox(width: AppDimens.spaceSm),
-                Text(
-                  'لوحة الإدارة',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                    fontSize: AppDimens.fontLg,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.onSurface,
-                  ),
-                ),
-                const Spacer(),
-                // ── مؤشر المزامنة ───────────────────────────────────────
-                BlocBuilder<SyncCubit, SyncState>(
-                  builder: (context, syncState) {
-                    return _SyncIndicator(syncState: syncState);
-                  },
-                ),
-                const SizedBox(width: AppDimens.spaceMd),
-                // ── معلومات الجلسة ───────────────────────────────────────
-                BlocBuilder<SessionCubit, SessionState>(
-                  builder: (context, session) {
-                    return Text(
-                      '${session.cashierName} | ${session.branchName} | ${session.shift}',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: AppDimens.fontXs,
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          // ── تبويبات التنقل ──────────────────────────────────────────────
-          Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimens.spaceMd,
-              vertical: AppDimens.spaceXs,
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _AdminTab.values.map((tab) {
-                  final isSelected = tab == selectedTab;
-                  return Padding(
-                    padding: const EdgeInsets.only(left: AppDimens.spaceSm),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => onTabSelected(tab),
-                        borderRadius:
-                            BorderRadius.circular(AppDimens.radiusSm),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimens.spaceMd,
-                            vertical: AppDimens.spaceXs,
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.spaceMd,
+          vertical: AppDimens.spaceXs,
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              ..._AdminTab.values.map((tab) {
+                final isSelected = tab == selectedTab;
+                return Padding(
+                  padding: const EdgeInsets.only(left: AppDimens.spaceSm),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => onTabSelected(tab),
+                      borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.spaceMd,
+                          vertical: AppDimens.spaceXs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primaryContainer
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(
+                            AppDimens.radiusSm,
                           ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.primaryContainer
-                                : Colors.transparent,
-                            borderRadius:
-                                BorderRadius.circular(AppDimens.radiusSm),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _tabIcons[tab]!,
-                                size: AppDimens.iconSm,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _tabIcons[tab]!,
+                              size: AppDimens.iconSm,
+                              color: isSelected
+                                  ? AppColors.onPrimary
+                                  : AppColors.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _tabLabels[tab]!,
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                fontSize: AppDimens.fontSm,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
                                 color: isSelected
                                     ? AppColors.onPrimary
                                     : AppColors.onSurfaceVariant,
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                _tabLabels[tab]!,
-                                style: GoogleFonts.ibmPlexSansArabic(
-                                  fontSize: AppDimens.fontSm,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                                  color: isSelected
-                                      ? AppColors.onPrimary
-                                      : AppColors.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  );
-                }).toList(),
+                  ),
+                );
+              }),
+              const SizedBox(width: AppDimens.spaceLg),
+              // ── مؤشر المزامنة ───────────────────────────────────────
+              BlocBuilder<SyncCubit, SyncState>(
+                builder: (context, syncState) {
+                  return _SyncIndicator(syncState: syncState);
+                },
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -249,13 +253,18 @@ class _SyncIndicator extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.redAccent.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(AppDimens.radiusFull),
-              border: Border.all(color: Colors.redAccent.withValues(alpha: 0.5)),
+              border: Border.all(
+                color: Colors.redAccent.withValues(alpha: 0.5),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline_rounded,
-                    size: 12, color: Colors.redAccent),
+                const Icon(
+                  Icons.error_outline_rounded,
+                  size: 12,
+                  color: Colors.redAccent,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'فشل: ${syncState.failedCount}',
@@ -276,7 +285,8 @@ class _SyncIndicator extends StatelessWidget {
               color: AppColors.primaryContainer.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(AppDimens.radiusFull),
               border: Border.all(
-                  color: AppColors.primaryContainer.withValues(alpha: 0.5)),
+                color: AppColors.primaryContainer.withValues(alpha: 0.5),
+              ),
             ),
             child: Text(
               'فواتير معلقة: ${syncState.pendingCount}',
@@ -299,20 +309,23 @@ class _SyncIndicator extends StatelessWidget {
                     width: 12,
                     height: 12,
                     child: CircularProgressIndicator(
-                        strokeWidth: 1.5, color: AppColors.onPrimary),
+                      strokeWidth: 1.5,
+                      color: AppColors.onPrimary,
+                    ),
                   )
                 : const Icon(Icons.sync_rounded, size: 14),
             label: Text(
               'إرسال الآن',
               style: GoogleFonts.ibmPlexSansArabic(
-                  fontSize: AppDimens.fontXs, fontWeight: FontWeight.w700),
+                fontSize: AppDimens.fontXs,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryContainer,
+              backgroundColor: AppColors.tertiary,
               foregroundColor: AppColors.onPrimary,
               elevation: 0,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppDimens.radiusSm),
               ),
@@ -344,14 +357,14 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
 
   // بيانات مجمَّعة من local_records
   List<LocalRecord> _sessionInvoices = [];
-  bool _loaded = false;
+  bool loaded = false;
 
   @override
   void initState() {
     super.initState();
     _countedCashController.addListener(() {
-      final v = double.tryParse(
-              _countedCashController.text.replaceAll(',', '.')) ??
+      final v =
+          double.tryParse(_countedCashController.text.replaceAll(',', '.')) ??
           0.0;
       setState(() => _countedCash = v);
     });
@@ -372,7 +385,7 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
     if (mounted) {
       setState(() {
         _sessionInvoices = invoices;
-        _loaded = true;
+        loaded = true;
       });
     }
   }
@@ -387,25 +400,25 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
       .fold(0.0, (s, r) => s + (r.total ?? 0.0));
 
   double get _totalVisa => _sessionInvoices
-      .where((r) => r.paymentMethod == 'فيزا')
+      .where((r) => r.paymentMethod == 'شبكة')
       .fold(0.0, (s, r) => s + (r.total ?? 0.0));
 
-  double get _totalOther => _sessionInvoices
-      .where((r) => r.paymentMethod != 'كاش' && r.paymentMethod != 'فيزا')
+  double get totalOther => _sessionInvoices
+      .where((r) => r.paymentMethod != 'كاش' && r.paymentMethod != 'شبكة')
       .fold(0.0, (s, r) => s + (r.total ?? 0.0));
 
   double get _totalDiscount => _sessionInvoices.fold(0.0, (s, r) {
-        final d = (r.payload['discount_amount'] as num?)?.toDouble() ?? 0.0;
-        return s + d;
-      });
+    final d = (r.payload['discount_amount'] as num?)?.toDouble() ?? 0.0;
+    return s + d;
+  });
 
-  double get _totalVat => _sessionInvoices.fold(0.0, (s, r) {
-        final v = (r.payload['vat_amount'] as num?)?.toDouble() ?? 0.0;
-        return s + v;
-      });
+  double get totalVat => _sessionInvoices.fold(0.0, (s, r) {
+    final v = (r.payload['vat_amount'] as num?)?.toDouble() ?? 0.0;
+    return s + v;
+  });
 
-  double get _expectedCash => _totalCash;
-  double get _difference => _countedCash - _expectedCash;
+  double get expectedCash => _totalCash;
+  double get difference => _countedCash - expectedCash;
 
   // ── تنفيذ الإقفال ────────────────────────────────────────────────────────────
 
@@ -446,9 +459,12 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text('إلغاء',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurfaceVariant)),
+              child: Text(
+                'إلغاء',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(ctx).pop(true),
@@ -459,9 +475,12 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
                   borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                 ),
               ),
-              child: Text('إقفال',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      fontWeight: FontWeight.w700)),
+              child: Text(
+                'إقفال',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ],
         ),
@@ -482,28 +501,29 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
 
       // أ) كتابة سجل shift_close
       final clientId = generateUuidV4();
-      await repo.insert(LocalRecord(
-        kind: 'shift_close',
-        clientId: clientId,
-        userId: session.userId,
-        branchId: session.branchId,
-        sessionId: session.sessionId,
-        payload: {
-          'client_id': clientId,
-          'session_id': session.sessionId,
-          'branch_id': session.branchId,
-          'shift': session.shift,
-          'opened_at': session.startedAt?.toUtc().toIso8601String(),
-          'closed_at': now.toUtc().toIso8601String(),
-          'counted_cash':
-              double.parse(_countedCash.toStringAsFixed(2)),
-          'client_invoices_count': _sessionInvoices.length,
-          if (_notesController.text.trim().isNotEmpty)
-            'notes': _notesController.text.trim(),
-        },
-        status: 'pending',
-        createdAt: now,
-      ));
+      await repo.insert(
+        LocalRecord(
+          kind: 'shift_close',
+          clientId: clientId,
+          userId: session.userId,
+          branchId: session.branchId,
+          sessionId: session.sessionId,
+          payload: {
+            'client_id': clientId,
+            'session_id': session.sessionId,
+            'branch_id': session.branchId,
+            'shift': session.shift,
+            'opened_at': session.startedAt?.toUtc().toIso8601String(),
+            'closed_at': now.toUtc().toIso8601String(),
+            'counted_cash': double.parse(_countedCash.toStringAsFixed(2)),
+            'client_invoices_count': _sessionInvoices.length,
+            if (_notesController.text.trim().isNotEmpty)
+              'notes': _notesController.text.trim(),
+          },
+          status: 'pending',
+          createdAt: now,
+        ),
+      );
 
       // ب) محاولة مزامنة بحد أقصى 15 ثانية بدون حجب
       if (mounted) {
@@ -514,8 +534,10 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
       // ج) طباعة التقرير
       if (mounted) {
         // أعِد تحميل الفواتير لأخذ server_number المحدث بعد المزامنة
-        final updatedInvoices =
-            await repo.getBySession(session.sessionId, 'sale');
+        final updatedInvoices = await repo.getBySession(
+          session.sessionId,
+          'sale',
+        );
 
         final reportData = ShiftCloseReportData(
           branchName: session.branchName,
@@ -529,8 +551,8 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
           totalCash: _totalCash,
           totalVisa: _totalVisa,
           totalDiscount: _totalDiscount,
-          totalVat: _totalVat,
-          expectedCash: _expectedCash,
+          totalVat: totalVat,
+          expectedCash: expectedCash,
           countedCash: _countedCash,
           notes: _notesController.text.trim().isEmpty
               ? null
@@ -541,15 +563,16 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
           final pdfBytes = await buildShiftClosePdf(reportData);
           await Printing.layoutPdf(
             onLayout: (format) async => pdfBytes,
-            name:
-                'DietKing_ShiftClose_${session.sessionId.substring(0, 8)}',
+            name: 'DietKing_ShiftClose_${session.sessionId.substring(0, 8)}',
           );
         } catch (printErr) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('فشلت الطباعة: $printErr',
-                    textAlign: TextAlign.right),
+                content: Text(
+                  'فشلت الطباعة: $printErr',
+                  textAlign: TextAlign.right,
+                ),
                 backgroundColor: Colors.orange,
               ),
             );
@@ -560,6 +583,8 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
         if (mounted) {
           context.read<SessionCubit>().end();
           context.read<CatalogCubit>().reset();
+          context.read<AdminAccessCubit>().reset();
+          context.read<PosSettingsCubit>().reset();
           // SyncCubit يواصل المزامنة في الخلفية — لا نعمل signOut الآن
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -593,11 +618,10 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
                 child: Column(
                   children: [
                     _InfoRow(
-                        label: 'الفرع',
-                        value:
-                            '${session.branchName} (${session.branchCode})'),
-                    _InfoRow(
-                        label: 'الكاشير', value: session.cashierName),
+                      label: 'الفرع',
+                      value: '${session.branchName} (${session.branchCode})',
+                    ),
+                    _InfoRow(label: 'الكاشير', value: session.cashierName),
                     _InfoRow(label: 'الوردية', value: session.shift),
                     if (session.startedAt != null)
                       _InfoRow(
@@ -611,64 +635,13 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
           ),
           const SizedBox(height: AppDimens.spaceMd),
 
-          // ── ملخص المبيعات ────────────────────────────────────────────────
-          if (_loaded)
-            _AdminCard(
-              title: 'ملخص مبيعات الوردية',
-              icon: Icons.bar_chart_rounded,
-              child: Column(
-                children: [
-                  _InfoRow(
-                      label: 'عدد الفواتير',
-                      value: '${_sessionInvoices.length}'),
-                  _InfoRow(
-                      label: 'إجمالي المبيعات',
-                      value:
-                          '${_totalSales.toStringAsFixed(2)} ر.س'),
-                  _InfoRow(
-                      label: 'إجمالي النقدي',
-                      value:
-                          '${_totalCash.toStringAsFixed(2)} ر.س'),
-                  _InfoRow(
-                      label: 'إجمالي الفيزا',
-                      value:
-                          '${_totalVisa.toStringAsFixed(2)} ر.س'),
-                  if (_totalOther > 0)
-                    _InfoRow(
-                        label: 'طرق أخرى',
-                        value:
-                            '${_totalOther.toStringAsFixed(2)} ر.س'),
-                  _InfoRow(
-                      label: 'إجمالي الخصومات',
-                      value:
-                          '${_totalDiscount.toStringAsFixed(2)} ر.س'),
-                  _InfoRow(
-                      label: 'إجمالي ض.ق.م',
-                      value:
-                          '${_totalVat.toStringAsFixed(2)} ر.س'),
-                ],
-              ),
-            ),
-          if (!_loaded)
-            const Center(
-                child: Padding(
-              padding: EdgeInsets.all(16),
-              child: CircularProgressIndicator(),
-            )),
-          const SizedBox(height: AppDimens.spaceMd),
-
-          // ── مقارنة الكاش ─────────────────────────────────────────────────
+          // ── أدخل الكاش ─────────────────────────────────────────────────
           _AdminCard(
-            title: 'مقارنة الكاش',
+            title: 'أدخل مبلغ الكاش',
             icon: Icons.account_balance_wallet_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _InfoRow(
-                  label: 'المبلغ المتوقع في الدرج',
-                  value: '${_expectedCash.toStringAsFixed(2)} ر.س',
-                ),
-                const SizedBox(height: AppDimens.spaceSm),
                 Text(
                   'المبلغ الموجود بالكاش',
                   style: GoogleFonts.ibmPlexSansArabic(
@@ -682,7 +655,8 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
                   child: TextField(
                     controller: _countedCashController,
                     keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
+                      decimal: true,
+                    ),
                     style: GoogleFonts.ibmPlexSansArabic(
                       color: AppColors.onSurface,
                       fontSize: AppDimens.fontMd,
@@ -690,26 +664,27 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
                     decoration: InputDecoration(
                       hintText: '0.00',
                       hintStyle: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurfaceVariant
-                              .withValues(alpha: 0.5)),
+                        color: AppColors.onSurfaceVariant.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
                       filled: true,
                       fillColor: AppColors.surfaceContainerHigh,
                       border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppDimens.radiusSm),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       suffixText: 'ر.س',
                       suffixStyle: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurfaceVariant),
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: AppDimens.spaceSm),
-                // الفرق
-                _DifferenceIndicator(difference: _difference),
               ],
             ),
           ),
@@ -729,8 +704,8 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
               decoration: InputDecoration(
                 hintText: 'أي ملاحظات خاصة بالوردية...',
                 hintStyle: GoogleFonts.ibmPlexSansArabic(
-                    color:
-                        AppColors.onSurfaceVariant.withValues(alpha: 0.5)),
+                  color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+                ),
                 filled: true,
                 fillColor: AppColors.surfaceContainerHigh,
                 border: OutlineInputBorder(
@@ -752,19 +727,24 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
                 color: Colors.redAccent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                 border: Border.all(
-                    color: Colors.redAccent.withValues(alpha: 0.3)),
+                  color: Colors.redAccent.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline_rounded,
-                      color: Colors.redAccent, size: 16),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Colors.redAccent,
+                    size: 16,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _errorMsg!,
                       style: GoogleFonts.ibmPlexSansArabic(
-                          color: Colors.redAccent,
-                          fontSize: AppDimens.fontSm),
+                        color: Colors.redAccent,
+                        fontSize: AppDimens.fontSm,
+                      ),
                     ),
                   ),
                 ],
@@ -782,7 +762,9 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Icon(Icons.lock_clock_outlined, size: 22),
               label: Text(
@@ -812,71 +794,16 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
   }
 }
 
-// ── مؤشر الفرق ──────────────────────────────────────────────────────────────
-
-class _DifferenceIndicator extends StatelessWidget {
-  final double difference;
-
-  const _DifferenceIndicator({required this.difference});
-
-  @override
-  Widget build(BuildContext context) {
-    final String label;
-    final Color color;
-    final IconData icon;
-
-    if (difference == 0) {
-      label = 'مطابق';
-      color = AppColors.tertiary;
-      icon = Icons.check_circle_outline_rounded;
-    } else if (difference > 0) {
-      label = 'زيادة ${difference.toStringAsFixed(2)} ر.س';
-      color = AppColors.tertiaryContainer;
-      icon = Icons.trending_up_rounded;
-    } else {
-      label = 'عجز ${difference.abs().toStringAsFixed(2)} ر.س';
-      color = Colors.redAccent;
-      icon = Icons.trending_down_rounded;
-    }
-
-    return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: GoogleFonts.ibmPlexSansArabic(
-              fontSize: AppDimens.fontMd,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // الخطوة 7: المصروفات
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const _expenseCategories = [
   'مستلزمات تشغيل',
-  'صيانة',
   'نظافة',
   'كهرباء ومياه',
   'مواصلات',
-  'نثريات',
+  'مرتجعات',
   'أخرى',
 ];
 
@@ -901,10 +828,8 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
 
   List<LocalRecord> _sessionExpenses = [];
 
-  double get _vatAmount =>
-      double.tryParse(_vatController.text) ?? 0.0;
-  double get _amount =>
-      double.tryParse(_amountController.text) ?? 0.0;
+  double get _vatAmount => double.tryParse(_vatController.text) ?? 0.0;
+  double get _amount => double.tryParse(_amountController.text) ?? 0.0;
   double get _total => _amount + _vatAmount;
 
   @override
@@ -949,7 +874,8 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
       final repo = LocalRecordsRepository();
       final clientId = generateUuidV4();
       final localNumber = await repo.nextLocalNumber(
-          session.branchCode.isNotEmpty ? session.branchCode : 'DK');
+        session.branchCode.isNotEmpty ? session.branchCode : 'DK',
+      );
       final now = DateTime.now();
 
       final payload = {
@@ -973,19 +899,21 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
             : _notesController.text.trim(),
       };
 
-      await repo.insert(LocalRecord(
-        kind: 'expense',
-        clientId: clientId,
-        userId: session.userId,
-        branchId: session.branchId,
-        sessionId: session.sessionId,
-        localNumber: localNumber,
-        paymentMethod: _paymentMethod,
-        total: _total,
-        payload: payload,
-        status: 'pending',
-        createdAt: now,
-      ));
+      await repo.insert(
+        LocalRecord(
+          kind: 'expense',
+          clientId: clientId,
+          userId: session.userId,
+          branchId: session.branchId,
+          sessionId: session.sessionId,
+          localNumber: localNumber,
+          paymentMethod: _paymentMethod,
+          total: _total,
+          payload: payload,
+          status: 'pending',
+          createdAt: now,
+        ),
+      );
 
       if (mounted) {
         context.read<SyncCubit>().triggerSync();
@@ -1039,8 +967,9 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                   initialValue: _category,
                   dropdownColor: AppColors.surfaceContainerLow,
                   style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurface,
-                      fontSize: AppDimens.fontMd),
+                    color: AppColors.onSurface,
+                    fontSize: AppDimens.fontMd,
+                  ),
                   decoration: _inputDecoration(),
                   items: _expenseCategories
                       .map((c) => DropdownMenuItem(value: c, child: Text(c)))
@@ -1057,8 +986,10 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _FormLabel('المستفيد / المورد (اختياري)'),
-                          _TextInput(controller: _payeeController,
-                              hint: 'اسم المستفيد'),
+                          _TextInput(
+                            controller: _payeeController,
+                            hint: 'اسم المستفيد',
+                          ),
                         ],
                       ),
                     ),
@@ -1068,8 +999,10 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _FormLabel('الوصف (اختياري)'),
-                          _TextInput(controller: _descController,
-                              hint: 'وصف المصروف'),
+                          _TextInput(
+                            controller: _descController,
+                            hint: 'وصف المصروف',
+                          ),
                         ],
                       ),
                     ),
@@ -1114,12 +1047,16 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                         _FormLabel('الإجمالي'),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryContainer
-                                .withValues(alpha: 0.15),
-                            borderRadius:
-                                BorderRadius.circular(AppDimens.radiusSm),
+                            color: AppColors.primaryContainer.withValues(
+                              alpha: 0.15,
+                            ),
+                            borderRadius: BorderRadius.circular(
+                              AppDimens.radiusSm,
+                            ),
                           ),
                           child: Text(
                             '${_total.toStringAsFixed(2)} ر.س',
@@ -1186,17 +1123,23 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.surfaceContainerHigh,
-                              borderRadius:
-                                  BorderRadius.circular(AppDimens.radiusSm),
+                              borderRadius: BorderRadius.circular(
+                                AppDimens.radiusSm,
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.calendar_today_rounded,
-                                    size: 16, color: AppColors.primary),
+                                const Icon(
+                                  Icons.calendar_today_rounded,
+                                  size: 16,
+                                  color: AppColors.primary,
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
                                   '${_expenseDate.year}-${_expenseDate.month.toString().padLeft(2, '0')}-${_expenseDate.day.toString().padLeft(2, '0')}',
@@ -1223,9 +1166,12 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                 if (_errorMsg != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
-                    child: Text(_errorMsg!,
-                        style: GoogleFonts.ibmPlexSansArabic(
-                            color: Colors.redAccent)),
+                    child: Text(
+                      _errorMsg!,
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: Colors.redAccent,
+                      ),
+                    ),
                   ),
 
                 SizedBox(
@@ -1238,19 +1184,23 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Icon(Icons.save_rounded, size: 18),
-                    label: Text('حفظ الفاتورة',
-                        style: GoogleFonts.ibmPlexSansArabic(
-                            fontWeight: FontWeight.w700)),
+                    label: Text(
+                      'حفظ الفاتورة',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryContainer,
                       foregroundColor: AppColors.onPrimary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppDimens.radiusMd),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                       ),
                     ),
                   ),
@@ -1271,7 +1221,8 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                       child: Text(
                         'لا توجد مصروفات مسجلة في هذه الوردية',
                         style: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.onSurfaceVariant),
+                          color: AppColors.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   )
@@ -1279,9 +1230,11 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
                       headingRowColor: WidgetStateProperty.all(
-                          AppColors.surfaceContainerHigh),
-                      dataRowColor: WidgetStateProperty.resolveWith((states) =>
-                          AppColors.surfaceContainerLow),
+                        AppColors.surfaceContainerHigh,
+                      ),
+                      dataRowColor: WidgetStateProperty.resolveWith(
+                        (states) => AppColors.surfaceContainerLow,
+                      ),
                       border: TableBorder.all(
                         color: AppColors.outlineVariant.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(AppDimens.radiusSm),
@@ -1294,36 +1247,54 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                         _col('الحالة'),
                       ],
                       rows: _sessionExpenses.map((r) {
-                        final number = r.serverNumber ??
-                            r.localNumber ??
-                            '-';
+                        final number = r.serverNumber ?? r.localNumber ?? '-';
                         final category =
                             (r.payload['category'] as String?) ?? '-';
                         final amount =
                             (r.payload['amount'] as num?)?.toDouble() ?? 0.0;
                         final total = r.total ?? 0.0;
-                        return DataRow(cells: [
-                          DataCell(Text(number,
-                              style: GoogleFonts.ibmPlexSansArabic(
+                        return DataRow(
+                          cells: [
+                            DataCell(
+                              Text(
+                                number,
+                                style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: AppDimens.fontXs,
-                                  color: AppColors.onSurface))),
-                          DataCell(Text(category,
-                              style: GoogleFonts.ibmPlexSansArabic(
+                                  color: AppColors.onSurface,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                category,
+                                style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: AppDimens.fontXs,
-                                  color: AppColors.onSurface))),
-                          DataCell(Text(
-                              '${amount.toStringAsFixed(2)} ر.س',
-                              style: GoogleFonts.ibmPlexSansArabic(
+                                  color: AppColors.onSurface,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                '${amount.toStringAsFixed(2)} ر.س',
+                                style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: AppDimens.fontXs,
-                                  color: AppColors.onSurface))),
-                          DataCell(Text(
-                              '${total.toStringAsFixed(2)} ر.س',
-                              style: GoogleFonts.ibmPlexSansArabic(
+                                  color: AppColors.onSurface,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                '${total.toStringAsFixed(2)} ر.س',
+                                style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: AppDimens.fontXs,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.onSurface))),
-                          DataCell(_StatusBadge(status: r.status)),
-                        ]);
+                                  color: AppColors.onSurface,
+                                ),
+                              ),
+                            ),
+                            DataCell(_StatusBadge(status: r.status)),
+                          ],
+                        );
                       }).toList(),
                     ),
                   ),
@@ -1334,15 +1305,15 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
   }
 
   DataColumn _col(String label) => DataColumn(
-        label: Text(
-          label,
-          style: GoogleFonts.ibmPlexSansArabic(
-            fontSize: AppDimens.fontXs,
-            fontWeight: FontWeight.w700,
-            color: AppColors.onSurface,
-          ),
-        ),
-      );
+    label: Text(
+      label,
+      style: GoogleFonts.ibmPlexSansArabic(
+        fontSize: AppDimens.fontXs,
+        fontWeight: FontWeight.w700,
+        color: AppColors.onSurface,
+      ),
+    ),
+  );
 }
 
 // ── Badge حالة السجل ──────────────────────────────────────────────────────────
@@ -1421,8 +1392,7 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
                 ...List.generate(_employees.length, (i) {
                   final emp = _employees[i];
                   return Padding(
-                    padding:
-                        const EdgeInsets.only(bottom: AppDimens.spaceSm),
+                    padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
                     child: Row(
                       children: [
                         SizedBox(
@@ -1440,11 +1410,14 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
                           value: emp['status'],
                           dropdownColor: AppColors.surfaceContainerLow,
                           style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurface),
+                            color: AppColors.onSurface,
+                          ),
                           underline: const SizedBox(),
                           items: ['حاضر', 'غائب', 'متأخر']
-                              .map((s) => DropdownMenuItem(
-                                  value: s, child: Text(s)))
+                              .map(
+                                (s) =>
+                                    DropdownMenuItem(value: s, child: Text(s)),
+                              )
                               .toList(),
                           onChanged: (v) =>
                               setState(() => _employees[i]['status'] = v!),
@@ -1453,23 +1426,29 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
                         Expanded(
                           child: TextField(
                             style: GoogleFonts.ibmPlexSansArabic(
-                                color: AppColors.onSurface,
-                                fontSize: AppDimens.fontSm),
+                              color: AppColors.onSurface,
+                              fontSize: AppDimens.fontSm,
+                            ),
                             decoration: InputDecoration(
                               hintText: 'ملاحظة',
                               hintStyle: GoogleFonts.ibmPlexSansArabic(
-                                  color: AppColors.onSurfaceVariant
-                                      .withValues(alpha: 0.5),
-                                  fontSize: AppDimens.fontSm),
+                                color: AppColors.onSurfaceVariant.withValues(
+                                  alpha: 0.5,
+                                ),
+                                fontSize: AppDimens.fontSm,
+                              ),
                               filled: true,
                               fillColor: AppColors.surfaceContainerHigh,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(
-                                    AppDimens.radiusSm),
+                                  AppDimens.radiusSm,
+                                ),
                                 borderSide: BorderSide.none,
                               ),
                               contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 8),
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
                               isDense: true,
                             ),
                             onChanged: (v) => _employees[i]['note'] = v,
@@ -1485,20 +1464,26 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
                     padding: const EdgeInsets.all(AppDimens.spaceSm),
                     decoration: BoxDecoration(
                       color: AppColors.tertiary.withValues(alpha: 0.1),
-                      borderRadius:
-                          BorderRadius.circular(AppDimens.radiusSm),
+                      borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                       border: Border.all(
-                          color: AppColors.tertiary.withValues(alpha: 0.3)),
+                        color: AppColors.tertiary.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.check_circle_outline_rounded,
-                            color: AppColors.tertiary, size: 16),
+                        const Icon(
+                          Icons.check_circle_outline_rounded,
+                          color: AppColors.tertiary,
+                          size: 16,
+                        ),
                         const SizedBox(width: 6),
-                        Text('تم الحفظ (تجريبي)',
-                            style: GoogleFonts.ibmPlexSansArabic(
-                                color: AppColors.tertiary,
-                                fontWeight: FontWeight.w700)),
+                        Text(
+                          'تم الحفظ (تجريبي)',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: AppColors.tertiary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1509,16 +1494,18 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
                   child: ElevatedButton.icon(
                     onPressed: () => setState(() => _saved = true),
                     icon: const Icon(Icons.save_rounded, size: 18),
-                    label: Text('حفظ',
-                        style: GoogleFonts.ibmPlexSansArabic(
-                            fontWeight: FontWeight.w700)),
+                    label: Text(
+                      'حفظ',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryContainer,
                       foregroundColor: AppColors.onPrimary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppDimens.radiusMd),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                       ),
                     ),
                   ),
@@ -1598,7 +1585,8 @@ class _DeductionsSectionState extends State<_DeductionsSection>
                 TabBar(
                   controller: _tabCtrl,
                   labelStyle: GoogleFonts.ibmPlexSansArabic(
-                      fontWeight: FontWeight.w700),
+                    fontWeight: FontWeight.w700,
+                  ),
                   labelColor: AppColors.primary,
                   unselectedLabelColor: AppColors.onSurfaceVariant,
                   indicatorColor: AppColors.primary,
@@ -1639,7 +1627,13 @@ class _DeductionsSectionState extends State<_DeductionsSection>
                           _deductionNoteCtrl.clear();
                         }),
                         items: _deductions,
-                        columns: ['الموظف', 'النوع', 'القيمة', 'السبب', 'التاريخ'],
+                        columns: [
+                          'الموظف',
+                          'النوع',
+                          'القيمة',
+                          'السبب',
+                          'التاريخ',
+                        ],
                         rowBuilder: (d) => [
                           d['name'],
                           d['type'],
@@ -1714,54 +1708,65 @@ class _DeductionForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
-          Expanded(
+        Row(
+          children: [
+            Expanded(
               child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _FormLabel('الموظف'),
-              _TextInput(controller: nameCtrl, hint: 'اسم الموظف'),
-            ],
-          )),
-          const SizedBox(width: 12),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _FormLabel('النوع'),
-            DropdownButton<String>(
-              value: selectedType,
-              dropdownColor: AppColors.surfaceContainerLow,
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.onSurface),
-              items: ['خصم', 'عجز']
-                  .map((t) =>
-                      DropdownMenuItem(value: t, child: Text(t)))
-                  .toList(),
-              onChanged: (v) => onTypeChanged(v!),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _FormLabel('الموظف'),
+                  _TextInput(controller: nameCtrl, hint: 'اسم الموظف'),
+                ],
+              ),
             ),
-          ]),
-        ]),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _FormLabel('النوع'),
+                DropdownButton<String>(
+                  value: selectedType,
+                  dropdownColor: AppColors.surfaceContainerLow,
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurface,
+                  ),
+                  items: ['خصم', 'عجز']
+                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                      .toList(),
+                  onChanged: (v) => onTypeChanged(v!),
+                ),
+              ],
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
-        Row(children: [
-          Expanded(
+        Row(
+          children: [
+            Expanded(
               child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _FormLabel('القيمة'),
-              _TextInput(
-                  controller: amountCtrl,
-                  hint: '0.00',
-                  isNumber: true),
-            ],
-          )),
-          const SizedBox(width: 12),
-          Expanded(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _FormLabel('القيمة'),
+                  _TextInput(
+                    controller: amountCtrl,
+                    hint: '0.00',
+                    isNumber: true,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _FormLabel('السبب'),
-              _TextInput(controller: reasonCtrl, hint: 'سبب الخصم'),
-            ],
-          )),
-        ]),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _FormLabel('السبب'),
+                  _TextInput(controller: reasonCtrl, hint: 'سبب الخصم'),
+                ],
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         _FormLabel('ملاحظات'),
         _TextInput(controller: noteCtrl, hint: 'ملاحظات'),
@@ -1772,16 +1777,17 @@ class _DeductionForm extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add, size: 18),
-            label: Text('إضافة',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    fontWeight: FontWeight.w700)),
+            label: Text(
+              'إضافة',
+              style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w700),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryContainer,
               foregroundColor: AppColors.onPrimary,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusMd)),
+                borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+              ),
             ),
           ),
         ),
@@ -1817,28 +1823,33 @@ class _BonusForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
-          Expanded(
+        Row(
+          children: [
+            Expanded(
               child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _FormLabel('الموظف'),
-              _TextInput(controller: nameCtrl, hint: 'اسم الموظف'),
-            ],
-          )),
-          const SizedBox(width: 12),
-          Expanded(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _FormLabel('الموظف'),
+                  _TextInput(controller: nameCtrl, hint: 'اسم الموظف'),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _FormLabel('القيمة (ر.س)'),
-              _TextInput(
-                  controller: amountCtrl,
-                  hint: '0.00',
-                  isNumber: true),
-            ],
-          )),
-        ]),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _FormLabel('القيمة (ر.س)'),
+                  _TextInput(
+                    controller: amountCtrl,
+                    hint: '0.00',
+                    isNumber: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         _FormLabel('السبب'),
         _TextInput(controller: reasonCtrl, hint: 'سبب المكافأة'),
@@ -1852,16 +1863,17 @@ class _BonusForm extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add, size: 18),
-            label: Text('إضافة',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    fontWeight: FontWeight.w700)),
+            label: Text(
+              'إضافة',
+              style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w700),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.tertiaryContainer,
               foregroundColor: Colors.black87,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusMd)),
+                borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+              ),
             ),
           ),
         ),
@@ -1870,12 +1882,14 @@ class _BonusForm extends StatelessWidget {
           _MiniTable(
             columns: ['الموظف', 'القيمة', 'السبب', 'التاريخ'],
             rows: items
-                .map((d) => [
-                      d['name'] as String,
-                      d['amount'] as String,
-                      d['reason'] as String,
-                      '${(d['date'] as DateTime).year}-${(d['date'] as DateTime).month.toString().padLeft(2, '0')}-${(d['date'] as DateTime).day.toString().padLeft(2, '0')}',
-                    ])
+                .map(
+                  (d) => [
+                    d['name'] as String,
+                    d['amount'] as String,
+                    d['reason'] as String,
+                    '${(d['date'] as DateTime).year}-${(d['date'] as DateTime).month.toString().padLeft(2, '0')}-${(d['date'] as DateTime).day.toString().padLeft(2, '0')}',
+                  ],
+                )
                 .toList(),
           ),
         ],
@@ -1924,18 +1938,19 @@ class _VacationSectionState extends State<_VacationSection> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [
-                  Expanded(
+                Row(
+                  children: [
+                    Expanded(
                       child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _FormLabel('الموظف'),
-                      _TextInput(
-                          controller: _nameCtrl, hint: 'اسم الموظف'),
-                    ],
-                  )),
-                  const SizedBox(width: 12),
-                  Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _FormLabel('الموظف'),
+                          _TextInput(controller: _nameCtrl, hint: 'اسم الموظف'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _FormLabel('نوع الإجازة'),
@@ -1943,40 +1958,49 @@ class _VacationSectionState extends State<_VacationSection> {
                           value: _vacationType,
                           dropdownColor: AppColors.surfaceContainerLow,
                           style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurface),
+                            color: AppColors.onSurface,
+                          ),
                           items: ['اعتيادية', 'مرضية', 'عارضة', 'بدون مرتب']
-                              .map((t) => DropdownMenuItem(
-                                  value: t, child: Text(t)))
+                              .map(
+                                (t) =>
+                                    DropdownMenuItem(value: t, child: Text(t)),
+                              )
                               .toList(),
-                          onChanged: (v) =>
-                              setState(() => _vacationType = v!),
+                          onChanged: (v) => setState(() => _vacationType = v!),
                         ),
-                      ]),
-                ]),
+                      ],
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 8),
-                Row(children: [
-                  _DatePickerButton(
-                    label: 'تاريخ البداية',
-                    date: _startDate,
-                    onPicked: (d) => setState(() => _startDate = d),
-                  ),
-                  const SizedBox(width: 12),
-                  _DatePickerButton(
-                    label: 'تاريخ النهاية',
-                    date: _endDate,
-                    onPicked: (d) => setState(() => _endDate = d),
-                    minDate: _startDate,
-                  ),
-                ]),
+                Row(
+                  children: [
+                    _DatePickerButton(
+                      label: 'تاريخ البداية',
+                      date: _startDate,
+                      onPicked: (d) => setState(() => _startDate = d),
+                    ),
+                    const SizedBox(width: 12),
+                    _DatePickerButton(
+                      label: 'تاريخ النهاية',
+                      date: _endDate,
+                      onPicked: (d) => setState(() => _endDate = d),
+                      minDate: _startDate,
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 8),
                 _FormLabel('السبب'),
                 _TextInput(controller: _reasonCtrl, hint: 'سبب الإجازة'),
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: Text(_error!,
-                        style: GoogleFonts.ibmPlexSansArabic(
-                            color: Colors.redAccent)),
+                    child: Text(
+                      _error!,
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: Colors.redAccent,
+                      ),
+                    ),
                   ),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -1985,18 +2009,20 @@ class _VacationSectionState extends State<_VacationSection> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       if (_nameCtrl.text.isEmpty) {
-                        setState(() =>
-                            _error = 'يرجى إدخال اسم الموظف');
+                        setState(() => _error = 'يرجى إدخال اسم الموظف');
                         return;
                       }
                       if (_startDate == null || _endDate == null) {
-                        setState(() =>
-                            _error = 'يرجى تحديد تاريخ البداية والنهاية');
+                        setState(
+                          () => _error = 'يرجى تحديد تاريخ البداية والنهاية',
+                        );
                         return;
                       }
                       if (_endDate!.isBefore(_startDate!)) {
-                        setState(() =>
-                            _error = 'تاريخ النهاية يجب أن يكون بعد البداية');
+                        setState(
+                          () =>
+                              _error = 'تاريخ النهاية يجب أن يكون بعد البداية',
+                        );
                         return;
                       }
                       setState(() {
@@ -2016,23 +2042,33 @@ class _VacationSectionState extends State<_VacationSection> {
                       });
                     },
                     icon: const Icon(Icons.send_rounded, size: 18),
-                    label: Text('إرسال الطلب',
-                        style: GoogleFonts.ibmPlexSansArabic(
-                            fontWeight: FontWeight.w700)),
+                    label: Text(
+                      'إرسال الطلب',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryContainer,
                       foregroundColor: AppColors.onPrimary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppDimens.radiusMd)),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                      ),
                     ),
                   ),
                 ),
                 if (_requests.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _MiniTable(
-                    columns: ['الموظف', 'النوع', 'البداية', 'النهاية', 'السبب', 'الحالة'],
+                    columns: [
+                      'الموظف',
+                      'النوع',
+                      'البداية',
+                      'النهاية',
+                      'السبب',
+                      'الحالة',
+                    ],
                     rows: _requests.map((r) {
                       String d(DateTime dt) =>
                           '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
@@ -2103,8 +2139,7 @@ class _SuppliesSectionState extends State<_SuppliesSection> {
                 ...List.generate(_items.length, (i) {
                   final item = _items[i];
                   return Padding(
-                    padding:
-                        const EdgeInsets.only(bottom: AppDimens.spaceSm),
+                    padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
                     child: Row(
                       children: [
                         SizedBox(
@@ -2121,27 +2156,32 @@ class _SuppliesSectionState extends State<_SuppliesSection> {
                         SizedBox(
                           width: 100,
                           child: TextField(
-                            controller:
-                                item['qty'] as TextEditingController,
+                            controller: item['qty'] as TextEditingController,
                             keyboardType: TextInputType.number,
                             style: GoogleFonts.ibmPlexSansArabic(
-                                color: AppColors.onSurface,
-                                fontSize: AppDimens.fontMd),
+                              color: AppColors.onSurface,
+                              fontSize: AppDimens.fontMd,
+                            ),
                             decoration: InputDecoration(
                               hintText: 'الكمية',
                               hintStyle: GoogleFonts.ibmPlexSansArabic(
-                                  color: AppColors.onSurfaceVariant
-                                      .withValues(alpha: 0.5),
-                                  fontSize: AppDimens.fontSm),
+                                color: AppColors.onSurfaceVariant.withValues(
+                                  alpha: 0.5,
+                                ),
+                                fontSize: AppDimens.fontSm,
+                              ),
                               filled: true,
                               fillColor: AppColors.surfaceContainerHigh,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(
-                                    AppDimens.radiusSm),
+                                  AppDimens.radiusSm,
+                                ),
                                 borderSide: BorderSide.none,
                               ),
                               contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 8),
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
                               isDense: true,
                             ),
                           ),
@@ -2160,16 +2200,17 @@ class _SuppliesSectionState extends State<_SuppliesSection> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       final ordered = _items
-                          .where((it) =>
-                              (it['qty'] as TextEditingController)
-                                  .text
-                                  .isNotEmpty)
-                          .map((it) => {
-                                'name': it['name'] as String,
-                                'qty': (it['qty']
-                                        as TextEditingController)
-                                    .text,
-                              })
+                          .where(
+                            (it) => (it['qty'] as TextEditingController)
+                                .text
+                                .isNotEmpty,
+                          )
+                          .map(
+                            (it) => {
+                              'name': it['name'] as String,
+                              'qty': (it['qty'] as TextEditingController).text,
+                            },
+                          )
                           .toList();
                       if (ordered.isEmpty) return;
                       setState(() {
@@ -2186,16 +2227,19 @@ class _SuppliesSectionState extends State<_SuppliesSection> {
                       });
                     },
                     icon: const Icon(Icons.send_rounded, size: 18),
-                    label: Text('إرسال الطلب',
-                        style: GoogleFonts.ibmPlexSansArabic(
-                            fontWeight: FontWeight.w700)),
+                    label: Text(
+                      'إرسال الطلب',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryContainer,
                       foregroundColor: AppColors.onPrimary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppDimens.radiusMd)),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                      ),
                     ),
                   ),
                 ),
@@ -2212,25 +2256,23 @@ class _SuppliesSectionState extends State<_SuppliesSection> {
                   ..._orders.map((order) {
                     final date = order['date'] as DateTime;
                     return Container(
-                      margin:
-                          const EdgeInsets.only(bottom: AppDimens.spaceSm),
+                      margin: const EdgeInsets.only(bottom: AppDimens.spaceSm),
                       padding: const EdgeInsets.all(AppDimens.spaceSm),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceContainerHigh,
-                        borderRadius:
-                            BorderRadius.circular(AppDimens.radiusSm),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                       ),
                       child: Row(
                         children: [
                           Expanded(
                             child: Text(
                               (order['items'] as List)
-                                  .map((i) =>
-                                      '${i['name']} (${i['qty']})')
+                                  .map((i) => '${i['name']} (${i['qty']})')
                                   .join('، '),
                               style: GoogleFonts.ibmPlexSansArabic(
-                                  fontSize: AppDimens.fontSm,
-                                  color: AppColors.onSurface),
+                                fontSize: AppDimens.fontSm,
+                                color: AppColors.onSurface,
+                              ),
                             ),
                           ),
                           _StatusBadge(status: 'pending'),
@@ -2238,8 +2280,9 @@ class _SuppliesSectionState extends State<_SuppliesSection> {
                           Text(
                             '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
                             style: GoogleFonts.ibmPlexSansArabic(
-                                fontSize: AppDimens.fontXs,
-                                color: AppColors.onSurfaceVariant),
+                              fontSize: AppDimens.fontXs,
+                              color: AppColors.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),
@@ -2401,16 +2444,19 @@ class _TextInput extends StatelessWidget {
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: GoogleFonts.ibmPlexSansArabic(
-            color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
-            fontSize: AppDimens.fontMd),
+          color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+          fontSize: AppDimens.fontMd,
+        ),
         filled: true,
         fillColor: AppColors.surfaceContainerHigh,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusSm),
           borderSide: BorderSide.none,
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
         isDense: true,
       ),
     );
@@ -2425,8 +2471,7 @@ InputDecoration _inputDecoration() {
       borderRadius: BorderRadius.circular(AppDimens.radiusSm),
       borderSide: BorderSide.none,
     ),
-    contentPadding:
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     isDense: true,
   );
 }
@@ -2438,18 +2483,24 @@ class _DemoBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd, vertical: AppDimens.spaceXs),
+        horizontal: AppDimens.spaceMd,
+        vertical: AppDimens.spaceXs,
+      ),
       decoration: BoxDecoration(
         color: AppColors.primaryContainer.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppDimens.radiusSm),
         border: Border.all(
-            color: AppColors.primaryContainer.withValues(alpha: 0.3)),
+          color: AppColors.primaryContainer.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.science_outlined,
-              size: 14, color: AppColors.primary),
+          const Icon(
+            Icons.science_outlined,
+            size: 14,
+            color: AppColors.primary,
+          ),
           const SizedBox(width: 6),
           Text(
             'وضع تجريبي — البيانات في الذاكرة فقط',
@@ -2476,37 +2527,46 @@ class _MiniTable extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
-        headingRowColor:
-            WidgetStateProperty.all(AppColors.surfaceContainerHigh),
+        headingRowColor: WidgetStateProperty.all(
+          AppColors.surfaceContainerHigh,
+        ),
         dataRowColor: WidgetStateProperty.all(AppColors.surfaceContainerLow),
         border: TableBorder.all(
           color: AppColors.outlineVariant.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(AppDimens.radiusSm),
         ),
         columns: columns
-            .map((c) => DataColumn(
-                  label: Text(
-                    c,
-                    style: GoogleFonts.ibmPlexSansArabic(
-                      fontSize: AppDimens.fontXs,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.onSurface,
-                    ),
+            .map(
+              (c) => DataColumn(
+                label: Text(
+                  c,
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    fontSize: AppDimens.fontXs,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.onSurface,
                   ),
-                ))
+                ),
+              ),
+            )
             .toList(),
         rows: rows
-            .map((row) => DataRow(
-                  cells: row
-                      .map((cell) => DataCell(Text(
-                            cell,
-                            style: GoogleFonts.ibmPlexSansArabic(
-                              fontSize: AppDimens.fontXs,
-                              color: AppColors.onSurface,
-                            ),
-                          )))
-                      .toList(),
-                ))
+            .map(
+              (row) => DataRow(
+                cells: row
+                    .map(
+                      (cell) => DataCell(
+                        Text(
+                          cell,
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            fontSize: AppDimens.fontXs,
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            )
             .toList(),
       ),
     );
@@ -2552,8 +2612,7 @@ class _DatePickerButton extends StatelessWidget {
             if (picked != null) onPicked(picked);
           },
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: AppColors.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(AppDimens.radiusSm),
@@ -2561,8 +2620,11 @@ class _DatePickerButton extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.calendar_today_rounded,
-                    size: 14, color: AppColors.primary),
+                const Icon(
+                  Icons.calendar_today_rounded,
+                  size: 14,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   date != null

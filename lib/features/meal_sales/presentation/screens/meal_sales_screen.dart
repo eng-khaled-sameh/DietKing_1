@@ -12,6 +12,7 @@ import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/widgets/pos_status_footer.dart';
 import '../../../../cubits/catalog/catalog_cubit.dart';
 import '../../../../cubits/catalog/catalog_state.dart';
+import '../../../../cubits/pos_settings/pos_settings_cubit.dart';
 import '../../../../cubits/session/session_cubit.dart';
 import '../cubits/cart_cubit.dart';
 import '../widgets/invoice_preview_dialog.dart';
@@ -42,7 +43,16 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
   @override
   void initState() {
     super.initState();
-    _cartCubit = CartCubit();
+
+    // نهيّئ CartCubit بنسبة الضريبة الحالية من PosSettingsCubit
+    // لو لم تُحمَّل بعد (initial/failure) نبدأ بـ 0
+    final posSettings = context.read<PosSettingsCubit>().state;
+    final initialVatRate = posSettings.status == PosSettingsStatus.loaded
+        ? posSettings.currentVatRate
+        : 0.0;
+
+    _cartCubit = CartCubit(initialVatRate: initialVatRate);
+
     if (widget.initialCartLines != null) {
       _cartCubit.restoreCart(widget.initialCartLines!);
     }
@@ -73,7 +83,7 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
     );
 
     context.read<HeldOrdersCubit>().holdOrder(order);
-    _cartCubit.clearAll();
+    _cartCubit.clearAll(keepVatRate: _cartCubit.state.vatValue);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -85,11 +95,41 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
 
   /// يبني [InvoiceData] من الحالة الحالية لـ [CartCubit] ويفتح Dialog المعاينة
   void _handleCheckout() {
-    final state = _cartCubit.state;
+    final cartState = _cartCubit.state;
     final sessionState = context.read<SessionCubit>().state;
+    final posSettings = context.read<PosSettingsCubit>().state;
+
+    // لو PosSettingsCubit في حالة failure (لا توجد نسبة ضريبة): امنع الإتمام
+    if (posSettings.status == PosSettingsStatus.failure) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.warning_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'تعذر تحميل نسبة الضريبة. يُرجى إعادة المحاولة قبل إتمام الفاتورة.',
+                  textAlign: TextAlign.right,
+                  style: GoogleFonts.ibmPlexSansArabic(fontSize: AppDimens.fontSm),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.deepOrange,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'إعادة المحاولة',
+            textColor: Colors.white,
+            onPressed: () => context.read<PosSettingsCubit>().retry(),
+          ),
+        ),
+      );
+      return;
+    }
 
     // لو السلة فارغة، اعرض Snackbar ولا تفتح Dialog
-    if (state.lines.isEmpty) {
+    if (cartState.lines.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('لا يوجد طلب لإتمامه', textAlign: TextAlign.right),
@@ -104,7 +144,7 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
     final orderNumber = '#${_orderCounter.toString().padLeft(4, '0')}';
 
     // تحويل CartLine → InvoiceLineItem
-    final invoiceItems = state.lines
+    final invoiceItems = cartState.lines
         .map(
           (line) => InvoiceLineItem(
             name: line.variantLabel.isNotEmpty
@@ -126,10 +166,10 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
       orderNumber: orderNumber,
       dateTime: DateTime.now(),
       items: invoiceItems,
-      subtotal: state.subtotal,
-      discountAmount: state.discountAmount,
-      vatAmount: state.vatAmount,
-      grandTotal: state.grandTotal,
+      subtotal: cartState.subtotal,
+      discountAmount: cartState.discountAmount,
+      vatAmount: cartState.vatAmount,
+      grandTotal: cartState.grandTotal,
     );
 
     showDialog(
@@ -137,10 +177,12 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
       barrierDismissible: false,
       builder: (_) => InvoicePreviewDialog(
         invoiceData: invoiceData,
-        cartState: state,
+        cartState: cartState,
         sessionState: sessionState,
         onPaymentComplete: () {
-          _cartCubit.clearAll();
+          // إعادة ضبط السلة — الخصم يرجع 0، الضريبة ترجع للقيمة الحالية من PosSettingsCubit
+          final currentVat = context.read<PosSettingsCubit>().state.currentVatRate;
+          _cartCubit.clearAll(keepVatRate: currentVat);
           context.read<SalesCubit>().reset();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -171,7 +213,7 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
               _handleHoldOrder();
             } else if (event.logicalKey == LogicalKeyboardKey.escape &&
                 !isTextFieldFocused) {
-              _cartCubit.clearAll();
+              _cartCubit.clearAll(keepVatRate: _cartCubit.state.vatValue);
             } else if ((event.logicalKey == LogicalKeyboardKey.enter ||
                     event.logicalKey == LogicalKeyboardKey.numpadEnter) &&
                 !isTextFieldFocused) {

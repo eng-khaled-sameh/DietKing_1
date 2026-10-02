@@ -8,7 +8,9 @@ import 'meal_sales_nav_tabs.dart';
 /// الهيدر الكامل لشاشة البيع بالوجبة:
 /// يجمع شريط عنوان النافذة + شريط معلومات الجلسة + تبويبات التنقل وشارات الاختصارات
 class MealSalesAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const MealSalesAppBar({super.key});
+  final int initialIndex;
+
+  const MealSalesAppBar({super.key, this.initialIndex = 0});
 
   /// مجموع ارتفاع الصفوف:
   /// titleBarHeight(40) + sessionInfoRow(48) + navBarRow(44) = 132
@@ -19,17 +21,17 @@ class MealSalesAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         // ── 1. شريط عنوان النافذة ──────────────────────────────────────────
-        PosWindowTitleRow(),
+        const PosWindowTitleRow(),
 
         // ── 2. شريط معلومات الجلسة والكاشير ────────────────────────────────
-        PosSessionInfoRow(),
+        const PosSessionInfoRow(),
 
         // ── 3. تبويبات التنقل المتطابقة مع شارات الاختصارات ────────────────
-        MealSalesNavTabs(initialIndex: 0),
+        MealSalesNavTabs(initialIndex: initialIndex),
       ],
     );
   }

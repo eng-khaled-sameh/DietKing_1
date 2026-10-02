@@ -123,9 +123,13 @@ class CartLine extends Equatable {
 // ── Cubit ─────────────────────────────────────────────────────────────────────
 
 /// Cubit بسيط لإدارة سلة الطلب الحالي — محلي بالكامل (In-Memory)
-/// TODO: sync cart with Supabase / persist order once backend phase starts.
 class CartCubit extends Cubit<CartState> {
-  CartCubit() : super(const CartState());
+  /// يُهيَّأ بنسبة الضريبة الحالية من PosSettingsCubit
+  CartCubit({double initialVatRate = 0.0})
+      : super(CartState(
+          vatValue: initialVatRate,
+          isVatPercentage: true,
+        ));
 
   /// إضافة صنف: إن كان موجودًا بنفس المتغير تُزاد الكمية،
   /// وإلا يضاف سطر جديد بكمية 1.
@@ -184,8 +188,14 @@ class CartCubit extends Cubit<CartState> {
     emit(state.copyWith(lines: lines));
   }
 
-  /// مسح الكل
-  void clearAll() => emit(const CartState());
+  /// مسح الكل — يُعيد vatValue للقيمة الأولية لكن الخصم يرجع 0
+  /// [resetVatRate]: لو true يُعيد vatValue للقيمة التي أُنشئ بها الـ Cubit
+  void clearAll({double? keepVatRate}) {
+    emit(CartState(
+      vatValue: keepVatRate ?? state.vatValue,
+      isVatPercentage: true,
+    ));
+  }
 
   /// تحديد الخصم
   void setDiscount(double value, {required bool isPercentage}) {
@@ -195,12 +205,18 @@ class CartCubit extends Cubit<CartState> {
     ));
   }
 
-  /// تحديد الضريبة المضافة
+  /// تحديد الضريبة المضافة (يُستدعى بعد إذن المدير)
   void setVat(double value, {required bool isPercentage}) {
     emit(state.copyWith(
       vatValue: value,
       isVatPercentage: isPercentage,
     ));
+  }
+
+  /// تحديث نسبة الضريبة في السلة لتعكس قيمة PosSettingsCubit الجديدة
+  /// (يُستدعى عند تغيير currentVatRate في PosSettingsCubit)
+  void syncVatRate(double rate) {
+    emit(state.copyWith(vatValue: rate, isVatPercentage: true));
   }
 
   /// استرجاع سلة معلقة

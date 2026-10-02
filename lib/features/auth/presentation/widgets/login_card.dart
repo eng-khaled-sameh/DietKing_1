@@ -36,7 +36,14 @@ class LoginCard extends StatelessWidget {
     this.errorMessage,
     this.usernameError,
     this.passwordError,
+    required this.step,
+    required this.onNext,
+    required this.onBack,
   });
+
+  final int step;
+  final VoidCallback onNext;
+  final VoidCallback onBack;
 
   final LoginBranch? selectedBranch;
   final String? branchError;
@@ -56,13 +63,9 @@ class LoginCard extends StatelessWidget {
   final String? errorMessage;
   final String? usernameError;
   final String? passwordError;
-
-  @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(
-        maxWidth: AppDimens.loginCardMaxWidth,
-      ),
+      constraints: const BoxConstraints(maxWidth: AppDimens.loginCardMaxWidth),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppDimens.radiusXl),
         child: BackdropFilter(
@@ -103,64 +106,132 @@ class LoginCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 1. هيدر اللوجو
-                      const LoginLogoHeader(),
+                      const Center(child: LoginLogoHeader()),
                       const SizedBox(height: AppDimens.spaceXl),
 
-                      // 2. اختيار الفرع
-                      _BranchDropdown(
-                        selectedBranch: selectedBranch,
-                        errorText: branchError,
-                        onChanged: onBranchChanged,
-                        onRetry: onBranchRetry,
-                      ),
-                      const SizedBox(height: AppDimens.spaceLg),
+                      if (step == 1) ...[
+                        // 4. حقل اسم المستخدم
+                        LoginTextField(
+                          label: 'اسم المستخدم / الرقم الوظيفي',
+                          hintText: 'أدخل اسم المستخدم أو الرقم الوظيفي',
+                          icon: Icons.badge_outlined,
+                          controller: cashierController,
+                          focusNode: cashierFocusNode,
+                          nextFocusNode: passwordFocusNode,
+                          textInputAction: TextInputAction.next,
+                          errorText: usernameError,
+                        ),
+                        const SizedBox(height: AppDimens.spaceLg),
 
-                      // 3. اختيار الوردية
-                      _ShiftSelector(
-                        selectedShift: selectedShift,
-                        errorText: shiftError,
-                        onChanged: onShiftChanged,
-                      ),
-                      const SizedBox(height: AppDimens.spaceLg),
+                        // 5. حقل كلمة المرور
+                        LoginTextField(
+                          label: 'كلمة السر',
+                          hintText: '••••••••',
+                          icon: Icons.lock_outline_rounded,
+                          isPassword: true,
+                          controller: passwordController,
+                          focusNode: passwordFocusNode,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: isLoading ? null : () => onNext(),
+                          errorText: passwordError,
+                        ),
+                        const SizedBox(height: AppDimens.spaceMd),
 
-                      // 4. حقل اسم المستخدم
-                      LoginTextField(
-                        label: 'اسم المستخدم / الرقم الوظيفي',
-                        hintText: 'أدخل اسم المستخدم أو الرقم الوظيفي',
-                        icon: Icons.badge_outlined,
-                        controller: cashierController,
-                        focusNode: cashierFocusNode,
-                        nextFocusNode: passwordFocusNode,
-                        textInputAction: TextInputAction.next,
-                        errorText: usernameError,
-                      ),
-                      const SizedBox(height: AppDimens.spaceLg),
+                        // 6. رسالة خطأ المصادقة
+                        if (errorMessage != null && errorMessage!.isNotEmpty)
+                          _AuthErrorBanner(message: errorMessage!),
 
-                      // 5. حقل كلمة المرور
-                      LoginTextField(
-                        label: 'كلمة السر',
-                        hintText: '••••••••',
-                        icon: Icons.lock_outline_rounded,
-                        isPassword: true,
-                        controller: passwordController,
-                        focusNode: passwordFocusNode,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: isLoading ? null : onSubmit,
-                        errorText: passwordError,
-                      ),
-                      const SizedBox(height: AppDimens.spaceMd),
+                        const SizedBox(height: AppDimens.spaceMd),
 
-                      // 6. رسالة خطأ المصادقة
-                      if (errorMessage != null && errorMessage!.isNotEmpty)
-                        _AuthErrorBanner(message: errorMessage!),
+                        // 7. زر التالي
+                        SizedBox(
+                          width: double.infinity,
+                          height: AppDimens.buttonHeight,
+                          child: FilledButton(
+                            onPressed: onNext,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: AppColors.onPrimary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppDimens.radiusMd,
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              'التالي',
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                fontSize: AppDimens.fontLg,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        // 2. اختيار الفرع
+                        _BranchDropdown(
+                          selectedBranch: selectedBranch,
+                          errorText: branchError,
+                          onChanged: onBranchChanged,
+                          onRetry: onBranchRetry,
+                        ),
+                        const SizedBox(height: AppDimens.spaceLg),
 
-                      const SizedBox(height: AppDimens.spaceMd),
+                        // 3. اختيار الوردية
+                        _ShiftSelector(
+                          selectedShift: selectedShift,
+                          errorText: shiftError,
+                          onChanged: onShiftChanged,
+                        ),
+                        const SizedBox(height: AppDimens.spaceMd),
 
-                      // 7. زر تسجيل الدخول
-                      LoginSubmitButton(
-                        onPressed: isLoading ? null : onSubmit,
-                        isLoading: isLoading,
-                      ),
+                        // رسالة خطأ المصادقة في الخطوة 2
+                        if (errorMessage != null && errorMessage!.isNotEmpty)
+                          _AuthErrorBanner(message: errorMessage!),
+
+                        const SizedBox(height: AppDimens.spaceMd),
+
+                        // أزرار الرجوع وتسجيل الدخول
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 1,
+                              child: SizedBox(
+                                height: AppDimens.buttonHeight,
+                                child: OutlinedButton(
+                                  onPressed: isLoading ? null : onBack,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.onSurface,
+                                    side: BorderSide(
+                                      color: AppColors.outlineVariant,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AppDimens.radiusMd,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'رجوع',
+                                    style: GoogleFonts.ibmPlexSansArabic(
+                                      fontSize: AppDimens.fontMd,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppDimens.spaceMd),
+                            Expanded(
+                              flex: 2,
+                              child: LoginSubmitButton(
+                                onPressed: isLoading ? null : onSubmit,
+                                isLoading: isLoading,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: AppDimens.spaceLg),
 
                       // 8. إرشاد Enter
@@ -235,7 +306,9 @@ class _BranchDropdown extends StatelessWidget {
                       'جارٍ تحميل الفروع...',
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: AppDimens.fontMd,
-                        color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+                        color: AppColors.onSurfaceVariant.withValues(
+                          alpha: 0.5,
+                        ),
                       ),
                     ),
                   ],
@@ -271,8 +344,9 @@ class _BranchDropdown extends StatelessWidget {
                         // زر إعادة المحاولة مدمج
                         InkWell(
                           onTap: onRetry,
-                          borderRadius:
-                              BorderRadius.circular(AppDimens.radiusSm),
+                          borderRadius: BorderRadius.circular(
+                            AppDimens.radiusSm,
+                          ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: AppDimens.spaceSm,
@@ -312,7 +386,8 @@ class _BranchDropdown extends StatelessWidget {
                   ),
                   hint: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceSm),
+                      horizontal: AppDimens.spaceSm,
+                    ),
                     child: Row(
                       children: [
                         Icon(
@@ -329,8 +404,9 @@ class _BranchDropdown extends StatelessWidget {
                               : 'اختر الفرع',
                           style: GoogleFonts.ibmPlexSansArabic(
                             fontSize: AppDimens.fontMd,
-                            color: AppColors.onSurfaceVariant
-                                .withValues(alpha: 0.4),
+                            color: AppColors.onSurfaceVariant.withValues(
+                              alpha: 0.4,
+                            ),
                           ),
                         ),
                       ],
@@ -346,7 +422,8 @@ class _BranchDropdown extends StatelessWidget {
                       value: branch,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimens.spaceSm),
+                          horizontal: AppDimens.spaceSm,
+                        ),
                         child: Row(
                           children: [
                             Icon(
@@ -377,7 +454,8 @@ class _BranchDropdown extends StatelessWidget {
                       alignment: Alignment.centerRight,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimens.spaceSm),
+                          horizontal: AppDimens.spaceSm,
+                        ),
                         child: Row(
                           children: [
                             Icon(
@@ -412,8 +490,11 @@ class _BranchDropdown extends StatelessWidget {
           const SizedBox(height: 4),
           Row(
             children: [
-              const Icon(Icons.error_outline,
-                  size: 14, color: Color(0xFFCF6679)),
+              const Icon(
+                Icons.error_outline,
+                size: 14,
+                color: Color(0xFFCF6679),
+              ),
               const SizedBox(width: 4),
               Text(
                 errorText!,
@@ -554,8 +635,11 @@ class _ShiftSelector extends StatelessWidget {
           const SizedBox(height: 4),
           Row(
             children: [
-              const Icon(Icons.error_outline,
-                  size: 14, color: Color(0xFFCF6679)),
+              const Icon(
+                Icons.error_outline,
+                size: 14,
+                color: Color(0xFFCF6679),
+              ),
               const SizedBox(width: 4),
               Text(
                 errorText!,
