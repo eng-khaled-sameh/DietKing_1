@@ -67,6 +67,13 @@ class InventorySidebar extends StatelessWidget {
                       badgeText: state.activeBranchOrdersCount > 0 ? state.activeBranchOrdersCount.toString() : null,
                       badgeColor: AppColors.secondaryContainer,
                     ),
+                    const SizedBox(height: 8),
+                    const Divider(color: AppColors.surfaceContainerHigh),
+                    const SizedBox(height: 8),
+                    _SidebarItem(
+                      section: InventorySection.reports,
+                      isActive: state.section == InventorySection.reports,
+                    ),
                   ],
                 );
               },

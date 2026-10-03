@@ -10,6 +10,7 @@ import 'sections/stock_audit_section.dart';
 import 'sections/kitchen_issue_section.dart';
 import 'sections/kitchen_receipts_section.dart';
 import 'sections/branch_orders_section.dart';
+import 'sections/reports_section.dart';
 import 'widgets/inventory_sidebar.dart';
 
 class InventoryShell extends StatelessWidget {
@@ -40,6 +41,8 @@ class InventoryShell extends StatelessWidget {
                   return const KitchenReceiptsSection();
                 case InventorySection.branchOrders:
                   return const BranchOrdersSection();
+                case InventorySection.reports:
+                  return const ReportsSection();
               }
             },
           ),

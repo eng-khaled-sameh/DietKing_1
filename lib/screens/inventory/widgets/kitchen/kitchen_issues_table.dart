@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../cubit/inventory_cubit.dart';
 import '../../cubit/inventory_state.dart';
+import '../read_error_state.dart';
 import 'kitchen_issue_row.dart';
 
 class KitchenIssuesTable extends StatelessWidget {
@@ -24,6 +25,14 @@ class KitchenIssuesTable extends StatelessWidget {
             child: BlocBuilder<InventoryCubit, InventoryState>(
               builder: (context, state) {
                 if (state.kitchenIssues.isEmpty) {
+                  if (state.error != null) {
+                    return ReadErrorState(
+                      message: state.error!,
+                      onRetry: () => context
+                          .read<InventoryCubit>()
+                          .loadKitchenIssues(),
+                    );
+                  }
                   return Center(
                     child: Text(
                       'لا توجد صرفيات مطبخ حالياً',
@@ -31,11 +40,16 @@ class KitchenIssuesTable extends StatelessWidget {
                     ),
                   );
                 }
+                final itemsById = state.catalogItemsById;
                 return ListView.builder(
                   itemCount: state.kitchenIssues.length,
                   itemBuilder: (context, index) {
                     final issue = state.kitchenIssues[index];
-                    return KitchenIssueRow(key: ValueKey(issue.id), issue: issue);
+                    return KitchenIssueRow(
+                      key: ValueKey(issue.id),
+                      issue: issue,
+                      itemsById: itemsById,
+                    );
                   },
                 );
               },

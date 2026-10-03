@@ -17,6 +17,10 @@ import 'core/repositories/admin_access_repository.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'repositories/pos_settings_repository.dart';
 import 'repositories/sales_repository.dart';
+import 'data/inventory/inventory_api.dart';
+import 'data/inventory/inventory_cache.dart';
+import 'data/inventory/inventory_sync.dart';
+import 'screens/inventory/cubit/inventory_cubit.dart';
 
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -57,6 +61,18 @@ Future<void> main() async {
         BlocProvider(create: (_) => SyncCubit()),
         // AdminAccessCubit — التحقق من باسورد الإدارة
         BlocProvider(create: (_) => AdminAccessCubit(AdminAccessRepository())),
+        // InventoryCubit — وحدة المخزون، حياة طوال الجلسة
+        BlocProvider(
+          create: (_) {
+            final client = supabase;
+            final cache = InventoryCache();
+            return InventoryCubit(
+              InventoryApi(client),
+              InventorySync(client, cache),
+            );
+          },
+          lazy: true, // لا يُنشَأ حتى أول استخدام
+        ),
       ],
       child: const DietKingApp(),
     ),

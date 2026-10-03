@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:excel/excel.dart';
 import '../models/inventory_category.dart';
+import '../models/inventory_item.dart';
 import '../models/inventory_unit.dart';
 
 class InventoryExcelService {
@@ -62,7 +63,13 @@ class InventoryExcelService {
   }
 
   /// توليد نموذج الجرد
-  List<int> generateStocktakeTemplate(List<Map<String, dynamic>> itemsStock) {
+  /// يقبل قائمة الأصناف النشطة + خريطة أرصدتها + التصنيفات
+  List<int> generateStocktakeTemplate({
+    required List<InventoryItem> items,
+    required Map<String, double> stockMap,
+    required List<InventoryCategory> categories,
+  }) {
+    final catMap = {for (final c in categories) c.id: c};
     var excel = Excel.createExcel();
     final sheet = excel['الجرد'];
     excel.setDefaultSheet('الجرد');
@@ -71,18 +78,27 @@ class InventoryExcelService {
     }
 
     final headers = [
-      'كود الصنف (SKU)', 'اسم الصنف', 'رصيد النظام', 'الكمية المعدودة', 'الكمية التالفة', 'ملاحظات'
+      'رمز SKU',
+      'اسم الصنف',
+      'التصنيف',
+      'الرصيد الدفتري',
+      'العدد المعدود فعلياً',
+      'التالف',
+      'ملاحظات',
     ];
     sheet.appendRow(headers.map((h) => TextCellValue(h)).toList());
 
-    for (var item in itemsStock) {
+    for (final item in items) {
+      final sysQty = stockMap[item.id] ?? 0.0;
+      final catName = catMap[item.categoryId]?.name ?? '';
       sheet.appendRow([
-        TextCellValue(item['sku'] ?? ''),
-        TextCellValue(item['name'] ?? ''),
-        DoubleCellValue(double.tryParse(item['system_qty'].toString()) ?? 0),
-        TextCellValue(''),
-        TextCellValue(''),
-        TextCellValue(''),
+        TextCellValue(item.sku),
+        TextCellValue(item.name),
+        TextCellValue(catName),
+        DoubleCellValue(sysQty),
+        TextCellValue(''),   // العدد المعدود — يملأه المستخدم
+        TextCellValue(''),   // التالف
+        TextCellValue(''),   // ملاحظات
       ]);
     }
 

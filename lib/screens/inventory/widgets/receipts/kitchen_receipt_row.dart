@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../../core/theme/app_colors.dart';
-import '../../../../../data/inventory/models/kitchen_models.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../data/inventory/models/inventory_item.dart';
+import '../../../../data/inventory/models/kitchen_models.dart';
+import '../catalog_item_details.dart';
 import '../inventory_snack.dart';
 
 class KitchenReceiptRow extends StatelessWidget {
   final KitchenBatch batch;
+  final InventoryItem? item;
 
-  const KitchenReceiptRow({super.key, required this.batch});
+  const KitchenReceiptRow({super.key, required this.batch, required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -29,15 +32,12 @@ class KitchenReceiptRow extends StatelessWidget {
           ),
           Expanded(
             flex: 3,
-            child: Text(
-              batch.itemId,
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.w500),
-            ),
+            child: CatalogItemDetails(item: item),
           ),
           Expanded(
             flex: 2,
             child: Text(
-              '${batch.quantity}',
+              formatCatalogQuantity(batch.quantity, item),
               style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
             ),
           ),

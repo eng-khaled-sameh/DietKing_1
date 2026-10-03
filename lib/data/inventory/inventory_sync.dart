@@ -7,11 +7,6 @@ import 'models/inventory_item.dart';
 import 'models/inventory_unit.dart';
 import 'models/stock_entry.dart';
 
-// هامش أمان للـ delta: نطلب الصفوف منذ (synced_up_to - 10 ثواني) لتجنب
-// ضياع صفوف بسبب فارق الساعة بين السيرفر والجهاز
-const _kDeltaSlackSeconds = 10;
-
-
 /// طبقة المزامنة بالبصمات (Stamps + Delta)
 ///
 /// آلية العمل عند أول فتح للقسم في الجلسة:
@@ -52,53 +47,18 @@ class InventorySync {
       return _catalogFromCache();
     }
 
-    // جلب كامل أو delta
+    // جلب كامل أو delta — السيرفر يضيف هامش 10 ثوانٍ على p_since
     final cached = await _cache.get(CacheKey.catalog);
-    final since = cached?.syncedUpTo != null
-        ? DateTime.parse(cached!.syncedUpTo!)
-            .subtract(const Duration(seconds: _kDeltaSlackSeconds))
-            .toUtc()
-            .toIso8601String()
-        : null;
+    final since = cached?.syncedUpTo;
 
-    // جلب بدفعات
-    final allItems = <Map<String, dynamic>>[];
-    final allCats = <Map<String, dynamic>>[];
-    final allUnits = <Map<String, dynamic>>[];
-    String? latestUpdatedAt;
-
-    // وحدات (عادةً أقل من 20)
-    final unitsRes = await _client.rpc('inventory_get_catalog', params: {
-      'p_part': 'units',
-      if (since != null) 'p_since': since,
-    }) as Map<String, dynamic>;
-    allUnits.addAll(_toMaps(unitsRes['units']));
-    latestUpdatedAt = _maxDate(latestUpdatedAt, unitsRes['synced_up_to'] as String?);
-
-    // تصنيفات
-    final catsRes = await _client.rpc('inventory_get_catalog', params: {
-      'p_part': 'categories',
-      if (since != null) 'p_since': since,
-    }) as Map<String, dynamic>;
-    allCats.addAll(_toMaps(catsRes['categories']));
-    latestUpdatedAt = _maxDate(latestUpdatedAt, catsRes['synced_up_to'] as String?);
-
-    // أصناف بدفعات 1000
-    int offset = 0;
-    while (true) {
-      final itemsRes = await _client.rpc('inventory_get_catalog', params: {
-        'p_part': 'items',
-        if (since != null) 'p_since': since,
-        'p_offset': offset,
-        'p_limit': 1000,
-      }) as Map<String, dynamic>;
-      final batch = _toMaps(itemsRes['items']);
-      allItems.addAll(batch);
-      latestUpdatedAt =
-          _maxDate(latestUpdatedAt, itemsRes['synced_up_to'] as String?);
-      if (batch.length < 1000) break;
-      offset += 1000;
-    }
+    final catalogRes = await _client.rpc('inventory_get_catalog', params: {
+      'p_since': ?since,
+    });
+    final catalogMap = _asMap(catalogRes);
+    final allItems = _toMaps(catalogMap['items']);
+    final allCats = _toMaps(catalogMap['categories']);
+    final allUnits = _toMaps(catalogMap['units']);
+    final latestUpdatedAt = _syncTimestamp(catalogMap);
 
     // دمج مع الكاش الموجود
     if (since != null) {
@@ -189,20 +149,16 @@ class InventorySync {
     }
 
     final cached = await _cache.get(cacheKey);
-    final since = cached?.syncedUpTo != null
-        ? DateTime.parse(cached!.syncedUpTo!)
-            .subtract(const Duration(seconds: _kDeltaSlackSeconds))
-            .toUtc()
-            .toIso8601String()
-        : null;
+    final since = cached?.syncedUpTo;
 
     final res = await _client.rpc('inventory_get_stock', params: {
-      if (warehouseId != null) 'p_warehouse_id': warehouseId,
-      if (since != null) 'p_since': since,
-    }) as Map<String, dynamic>;
+      'p_warehouse_id': ?warehouseId,
+      'p_since': ?since,
+    });
+    final stockMap = _asMap(res);
 
-    final delta = _toMaps(res['stock']);
-    final latestUpdatedAt = res['synced_up_to'] as String?;
+    final delta = _toMaps(stockMap['stock']);
+    final latestUpdatedAt = _syncTimestamp(stockMap);
 
     await _cache.mergeList(
       key: cacheKey,
@@ -210,6 +166,7 @@ class InventorySync {
       delta: delta,
       newStamp: serverStamp,
       newSyncedUpTo: latestUpdatedAt ?? DateTime.now().toUtc().toIso8601String(),
+      idField: 'item_id',
     );
 
     return _stockFromCache(cacheKey, serverStamp);
@@ -251,6 +208,7 @@ class InventorySync {
         delta: stockDelta,
         newStamp: stockStamp,
         newSyncedUpTo: latestUpdatedAt,
+        idField: 'item_id',
       );
     }
 
@@ -286,8 +244,18 @@ class InventorySync {
   List<Map<String, dynamic>> _toMaps(dynamic list) {
     if (list == null) return [];
     return (list as List<dynamic>)
-        .cast<Map<String, dynamic>>();
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
   }
+
+  Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return {};
+  }
+
+  String? _syncTimestamp(Map<String, dynamic> res) =>
+      (res['synced_up_to'] ?? res['fetched_at']) as String?;
 
   List<Map<String, dynamic>> _mergeById({
     required List<Map<String, dynamic>> existing,
@@ -309,11 +277,5 @@ class InventorySync {
       map[r['code'] as String] = r;
     }
     return map.values.toList();
-  }
-
-  String? _maxDate(String? a, String? b) {
-    if (a == null) return b;
-    if (b == null) return a;
-    return a.compareTo(b) >= 0 ? a : b;
   }
 }

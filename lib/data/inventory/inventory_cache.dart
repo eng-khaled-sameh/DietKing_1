@@ -88,25 +88,34 @@ class InventoryCache {
     );
   }
 
-  /// دمج قوائم delta بالكاش الموجود بحسب معرّف الصف (id)
+  /// دمج قوائم delta بالكاش الموجود بحسب معرّف الصف
   Future<void> mergeList({
     required String key,
     required String listField,
     required List<Map<String, dynamic>> delta,
     required int newStamp,
     required String newSyncedUpTo,
+    String idField = 'id',
   }) async {
     final existing = await get(key);
     final List<dynamic> current =
         (existing?.data[listField] as List<dynamic>?) ?? [];
 
-    final Map<String, Map<String, dynamic>> byId = {
-      for (final row in current.cast<Map<String, dynamic>>())
-        (row['id'] as String): row,
-    };
+    String? rowId(Map<String, dynamic> row) {
+      final v = row[idField] ?? row['id'] ?? row['item_id'];
+      return v?.toString();
+    }
+
+    final Map<String, Map<String, dynamic>> byId = {};
+    for (final raw in current) {
+      final row = Map<String, dynamic>.from(raw as Map);
+      final id = rowId(row);
+      if (id != null) byId[id] = row;
+    }
 
     for (final row in delta) {
-      byId[row['id'] as String] = row;
+      final id = rowId(row);
+      if (id != null) byId[id] = row;
     }
 
     final merged = <String, dynamic>{

@@ -1,33 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../../../core/theme/app_colors.dart';
 import '../../cubit/inventory_state.dart';
-import '../inventory_snack.dart';
 import 'raw_status_badge.dart';
 
+/// صف صنف في جدول الخامات — يدعم زر حركات وزر تعديل، ويدعم تمييز مؤقت
 class RawMaterialRow extends StatelessWidget {
   final InventoryItemWithStock item;
+  final VoidCallback? onViewMovements;
+  final VoidCallback? onEdit;
+  final bool highlighted;
 
-  const RawMaterialRow({super.key, required this.item});
+  const RawMaterialRow({
+    super.key,
+    required this.item,
+    this.onViewMovements,
+    this.onEdit,
+    this.highlighted = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        border: Border(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      decoration: BoxDecoration(
+        color: highlighted
+            ? AppColors.primary.withValues(alpha: 0.08)
+            : Colors.transparent,
+        border: const Border(
           bottom: BorderSide(color: AppColors.surfaceContainerHigh),
         ),
       ),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
         children: [
+          // SKU
           Expanded(
             flex: 2,
             child: Text(
               item.item.sku,
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 12,
+              ),
             ),
           ),
+          // الاسم
           Expanded(
             flex: 3,
             child: Text(
@@ -36,85 +55,88 @@ class RawMaterialRow extends StatelessWidget {
                 color: AppColors.onSurface,
                 fontWeight: FontWeight.w500,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
+          // التصنيف
           Expanded(
             flex: 2,
             child: Text(
               item.categoryLabel,
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
+          // الرصيد
           Expanded(
             flex: 2,
             child: Text(
-              '${item.stockQty} ${item.item.unitCode}',
+              '${_formatQty(item.stockQty)} ${item.item.unitCode}',
               style: GoogleFonts.ibmPlexSansArabic(
                 color: item.isLow ? AppColors.statusRed : AppColors.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
+          // الحد الأدنى
+          Expanded(
+            flex: 2,
+            child: Text(
+              item.item.minLevel > 0
+                  ? 'حد: ${_formatQty(item.item.minLevel)}'
+                  : '—',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          // حالة
           Expanded(
             flex: 2,
             child: Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerStart,
               child: RawStatusBadge(isLow: item.isLow),
             ),
           ),
-          Expanded(
-            flex: 3,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Tooltip(
-                  message: 'تعديل الرصيد',
-                  child: IconButton(
-                    icon: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 20),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          backgroundColor: AppColors.surfaceContainer,
-                          title: Text('تعديل رصيد ${item.item.name}',
-                              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface)),
-                          content: Text('استخدم أزرار +/- لتعديل الرصيد',
-                              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant)),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(ctx).pop(),
-                              child: Text('إغلاق',
-                                  style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant)),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Tooltip(
-                  message: 'خصم 10',
-                  child: IconButton(
-                    icon: const Icon(Icons.remove_circle_outline, color: AppColors.statusRed, size: 20),
-                    onPressed: () {
-                      showInventorySnack(context, 'تم خصم 10 من ${item.item.name}');
-                    },
-                  ),
-                ),
-                Tooltip(
-                  message: 'إضافة 10',
-                  child: IconButton(
-                    icon: const Icon(Icons.add_circle_outline, color: AppColors.statusGreen, size: 20),
-                    onPressed: () {
-                      showInventorySnack(context, 'تم إضافة 10 إلى ${item.item.name}');
-                    },
-                  ),
-                ),
-              ],
+          // زر تعديل
+          Tooltip(
+            message: 'تعديل الصنف',
+            child: IconButton(
+              icon: const Icon(
+                Icons.edit_outlined,
+                color: AppColors.onSurfaceVariant,
+                size: 18,
+              ),
+              onPressed: onEdit,
+            ),
+          ),
+          // زر حركات الصنف
+          Tooltip(
+            message: 'عرض حركات الصنف',
+            child: IconButton(
+              icon: const Icon(
+                Icons.history_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              onPressed: onViewMovements,
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _formatQty(double qty) {
+    if (qty == qty.roundToDouble()) return qty.toInt().toString();
+    return qty
+        .toStringAsFixed(3)
+        .replaceAll(RegExp(r'0+$'), '')
+        .replaceAll(RegExp(r'\.$'), '');
   }
 }

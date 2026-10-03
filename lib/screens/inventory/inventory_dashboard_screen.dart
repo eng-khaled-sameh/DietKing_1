@@ -1,31 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:my_desktop_app/screens/inventory/cubit/inventory_cubit.dart';
+
 import '../../core/theme/app_colors.dart';
-import '../../core/supabase_client.dart';
-import '../../data/inventory/inventory_api.dart';
-import '../../data/inventory/inventory_sync.dart';
-import '../../data/inventory/inventory_cache.dart';
+import 'cubit/inventory_cubit.dart';
 import 'inventory_shell.dart';
 
-class InventoryDashboardScreen extends StatelessWidget {
+/// شاشة المخزون الرئيسية
+/// تستخدم InventoryCubit المسجّل في MultiBlocProvider (main.dart)
+/// وتستدعي initModule عند أول فتح لتحميل الكتالوج والأرصدة
+class InventoryDashboardScreen extends StatefulWidget {
   const InventoryDashboardScreen({super.key});
 
   @override
+  State<InventoryDashboardScreen> createState() =>
+      _InventoryDashboardScreenState();
+}
+
+class _InventoryDashboardScreenState extends State<InventoryDashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // تحميل الكتالوج والأرصدة عند أول فتح للشاشة
+    context.read<InventoryCubit>().initModule();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) {
-        final api = InventoryApi(supabase);
-        final cache = InventoryCache();
-        final sync = InventorySync(supabase, cache);
-        return InventoryCubit(api, sync)..loadInitialData();
-      },
-      child: const Directionality(
-        textDirection: TextDirection.rtl,
-        child: Scaffold(
-          backgroundColor: AppColors.background,
-          body: InventoryShell(),
-        ),
+    return const Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: InventoryShell(),
       ),
     );
   }

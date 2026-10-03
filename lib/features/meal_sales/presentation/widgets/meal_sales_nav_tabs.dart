@@ -64,7 +64,7 @@ class _MealSalesNavTabsState extends State<MealSalesNavTabs> {
     } else if (index == 2) {
       // ── التحقق من باسورد الإدارة قبل الانتقال ──
       final granted = await showAdminPasswordDialog(context);
-      if (!context.mounted) return;
+      if (!mounted) return;
       if (!granted) return;
 
       Navigator.of(context).pushReplacement(

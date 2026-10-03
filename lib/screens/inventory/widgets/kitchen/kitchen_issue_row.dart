@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../../core/theme/app_colors.dart';
-import '../../../../../data/inventory/models/kitchen_models.dart';
+
+import '../../../../core/theme/app_colors.dart';
+import '../../../../data/inventory/models/inventory_item.dart';
+import '../../../../data/inventory/models/kitchen_models.dart';
+import '../catalog_item_details.dart';
 
 class KitchenIssueRow extends StatelessWidget {
   final KitchenIssue issue;
+  final Map<String, InventoryItem> itemsById;
 
-  const KitchenIssueRow({super.key, required this.issue});
+  const KitchenIssueRow({
+    super.key,
+    required this.issue,
+    required this.itemsById,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,11 +45,26 @@ class KitchenIssueRow extends StatelessWidget {
           ),
           Expanded(
             flex: 3,
-            child: Text(
-              '${issue.lines.length} خامات',
-              style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurfaceVariant,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: issue.lines.map((line) {
+                final item = itemsById[line.itemId];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      Expanded(child: CatalogItemDetails(item: item)),
+                      const SizedBox(width: 8),
+                      Text(
+                        formatCatalogQuantity(line.qty, item),
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ),
           Expanded(

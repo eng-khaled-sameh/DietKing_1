@@ -20,7 +20,7 @@ begin;
 do $$
 declare
   -- ─── بيانات الاختبار ───────────────────────────────────────────────────────
-  v_test_user_id    uuid := gen_random_uuid();
+  v_test_user_id    uuid := 'a6ed11e3-1bad-4976-999a-6ef6c3099af8'::uuid;
   v_test_branch_id  uuid;
   v_cat_prt_id      uuid;
   v_cat_crb_id      uuid;
@@ -71,15 +71,13 @@ begin
   raise notice 'المستودع الرئيسي: %', v_main_wh_id;
 
   -- ─── إنشاء أصناف اختبارية ────────────────────────────────────────────────
-  insert into public.inventory_items (sku, name, category_id, unit_code, min_level, avg_cost, created_by)
-  values
-    ('TST-PRT-0001', 'صنف اختبار بروتين', v_cat_prt_id, v_unit_kg, 50, 45.00, v_test_user_id),
-    ('TST-CRB-0001', 'صنف اختبار نشويات', v_cat_crb_id, v_unit_kg, 100, 12.00, v_test_user_id)
+    insert into public.inventory_items (sku, name, category_id, unit_code, min_level, avg_cost, created_by)
+  values ('TST-PRT-0001', 'صنف اختبار بروتين', v_cat_prt_id, v_unit_kg, 50, 45.00, v_test_user_id)
   returning id into v_item1_id;
 
-  -- اقرأ الـ id الثاني
-  select id into v_item2_id from public.inventory_items where sku = 'TST-CRB-0001';
-
+  insert into public.inventory_items (sku, name, category_id, unit_code, min_level, avg_cost, created_by)
+  values ('TST-CRB-0001', 'صنف اختبار نشويات', v_cat_crb_id, v_unit_kg, 100, 12.00, v_test_user_id)
+  returning id into v_item2_id;
   raise notice 'الأصناف: item1=%, item2=%', v_item1_id, v_item2_id;
 
   -- ─── اختبار _post_movement مباشرة: رصيد افتتاحي ─────────────────────────

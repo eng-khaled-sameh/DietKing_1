@@ -79,7 +79,7 @@ class _OrderTotalsBreakdownState extends State<OrderTotalsBreakdown> {
                         final approved = await _requestApproval(context);
                         if (!approved) return;
                       }
-                      if (mounted) {
+                      if (context.mounted) {
                         _showDiscountDialog(context, state);
                       }
                     },
@@ -298,7 +298,7 @@ class _OrderTotalsBreakdownState extends State<OrderTotalsBreakdown> {
             final approved = await _requestApproval(context);
             if (!approved) return;
           }
-          if (mounted) {
+          if (context.mounted) {
             _showVatDialog(context, state);
           }
         },

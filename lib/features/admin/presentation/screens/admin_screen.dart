@@ -918,6 +918,7 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
       if (mounted) {
         context.read<SyncCubit>().triggerSync();
         await _loadExpenses();
+        if (!mounted) return;
         // إعادة التعيين
         _amountController.clear();
         _vatController.text = '0';

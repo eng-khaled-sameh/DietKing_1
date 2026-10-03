@@ -63,6 +63,7 @@ class LoginCard extends StatelessWidget {
   final String? errorMessage;
   final String? usernameError;
   final String? passwordError;
+  @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: AppDimens.loginCardMaxWidth),

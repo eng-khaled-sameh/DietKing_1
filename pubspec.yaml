@@ -32,6 +32,7 @@ dependencies:
   excel: ^4.0.3
   # File picker — فتح ملفات Excel
   file_picker: ^8.3.7
+  mocktail: ^1.0.5
 
 dev_dependencies:
   flutter_test:

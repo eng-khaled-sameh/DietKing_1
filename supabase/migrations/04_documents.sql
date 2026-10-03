@@ -88,10 +88,10 @@ create or replace function create_supply_order(
   p_client_id     uuid,
   p_supplier_name text,
   p_supplier_phone text default null,
-  p_expected_date date,
+  p_expected_date date default null,
   p_priority      text default 'normal',
   p_notes         text default null,
-  p_lines         jsonb  -- [{item_id, qty_requested, unit_cost?}]
+  p_lines         jsonb default null -- [{item_id, qty_requested, unit_cost?}]
 )
 returns jsonb
 language plpgsql
@@ -113,6 +113,13 @@ begin
 
   if not _has_role('storekeeper') then
     raise exception 'إنشاء طلبات التوريد لأمين المخزن فقط';
+  end if;
+
+  if p_expected_date is null then
+    raise exception 'تاريخ التوريد المتوقع مطلوب';
+  end if;
+  if p_lines is null or jsonb_typeof(p_lines) != 'array' or jsonb_array_length(p_lines) = 0 then
+    raise exception 'يجب إضافة أصناف لطلب التوريد';
   end if;
 
   -- تحقق من التكرار (idempotency)
@@ -310,7 +317,7 @@ create or replace function receive_supply_order(
   p_order_id         uuid,
   p_expected_version bigint,
   p_general_note     text  default null,
-  p_lines            jsonb         -- [{line_id, qty_received, note?}]
+  p_lines            jsonb default null         -- [{line_id, qty_received, note?}]
 )
 returns jsonb
 language plpgsql
@@ -336,6 +343,10 @@ begin
 
   if not _has_role('storekeeper') then
     raise exception 'استلام التوريد لأمين المخزن فقط';
+  end if;
+
+  if p_lines is null or jsonb_typeof(p_lines) != 'array' or jsonb_array_length(p_lines) = 0 then
+    raise exception 'يجب إضافة أصناف للاستلام';
   end if;
 
   -- تحقق من التكرار
@@ -507,10 +518,10 @@ alter table public.kitchen_issue_lines enable row level security;
 create or replace function create_kitchen_issue(
   p_client_id uuid,
   p_cook_plan text    default null,
-  p_chef_name text,
-  p_shift     text,
+  p_chef_name text    default null,
+  p_shift     text    default null,
   p_notes     text    default null,
-  p_lines     jsonb   -- [{item_id, qty}]
+  p_lines     jsonb   default null   -- [{item_id, qty}]
 )
 returns jsonb
 language plpgsql
@@ -535,6 +546,16 @@ begin
 
   if not _has_role('storekeeper') then
     raise exception 'صرف الخامات لأمين المخزن فقط';
+  end if;
+
+  if p_chef_name is null or trim(p_chef_name) = '' then
+    raise exception 'اسم الشيف مطلوب';
+  end if;
+  if p_shift is null or trim(p_shift) = '' then
+    raise exception 'الوردية مطلوبة';
+  end if;
+  if p_lines is null or jsonb_typeof(p_lines) != 'array' or jsonb_array_length(p_lines) = 0 then
+    raise exception 'يجب إضافة أصناف للصرف';
   end if;
 
   -- idempotency
@@ -645,10 +666,10 @@ create or replace function create_kitchen_batch(
   p_item_id         uuid    default null,  -- null = إنشاء صنف جديد
   p_new_item_name   text    default null,  -- اسم الصنف الجديد لو item_id null
   p_new_item_unit   text    default 'عبوة',
-  p_quantity        numeric,
+  p_quantity        numeric default null,
   p_production_line text    default null,
-  p_produced_at     timestamptz,
-  p_finished_at     timestamptz,
+  p_produced_at     timestamptz default null,
+  p_finished_at     timestamptz default null,
   p_quality_note    text    default null
 )
 returns jsonb
@@ -675,6 +696,16 @@ begin
 
   if not _has_role('storekeeper') then
     raise exception 'استلام إنتاج المطبخ لأمين المخزن فقط';
+  end if;
+
+  if p_quantity is null or p_quantity <= 0 then
+    raise exception 'الكمية المنتجة مطلوبة ويجب أن تكون أكبر من صفر';
+  end if;
+  if p_produced_at is null then
+    raise exception 'تاريخ الإنتاج مطلوب';
+  end if;
+  if p_finished_at is null then
+    raise exception 'تاريخ الانتهاء مطلوب';
   end if;
 
   -- idempotency
@@ -831,7 +862,7 @@ create or replace function apply_stocktake(
   p_dry_run      boolean  default false,
   p_warehouse_id uuid     default null,  -- null = الرئيسي
   p_notes        text     default null,
-  p_lines        jsonb    -- [{sku, counted_qty, damaged_qty?, note?}]
+  p_lines        jsonb    default null    -- [{sku, counted_qty, damaged_qty?, note?}]
 )
 returns jsonb
 language plpgsql
@@ -865,6 +896,10 @@ begin
 
   if not _has_role('storekeeper') then
     raise exception 'تطبيق الجرد لأمين المخزن فقط';
+  end if;
+
+  if p_lines is null or jsonb_typeof(p_lines) != 'array' or jsonb_array_length(p_lines) = 0 then
+    raise exception 'يجب توفير أصناف للجرد';
   end if;
 
   -- التصريح إجباري للتطبيق الفعلي
@@ -905,7 +940,7 @@ begin
     v_damaged := coalesce((v_line->>'damaged_qty')::numeric, 0);
 
     -- ابحث عن الصنف بالـ SKU
-    select i.id, i.name, i.unit_code, i.avg_cost
+    select i.id, i.sku, i.name, i.unit_code, i.avg_cost
     into v_item
     from public.inventory_items i
     where upper(trim(i.sku)) = upper(trim(v_line->>'sku'))
@@ -1173,7 +1208,7 @@ create or replace function create_branch_order(
   p_client_id uuid,
   p_branch_id uuid,
   p_notes     text  default null,
-  p_lines     jsonb  -- [{item_id, qty_requested}]
+  p_lines     jsonb default null  -- [{item_id, qty_requested}]
 )
 returns jsonb
 language plpgsql
@@ -1198,6 +1233,10 @@ begin
 
   if not _can_act_for_branch(p_branch_id) then
     raise exception 'ليس لديك صلاحية لهذا الفرع';
+  end if;
+
+  if p_lines is null or jsonb_typeof(p_lines) != 'array' or jsonb_array_length(p_lines) = 0 then
+    raise exception 'يجب إضافة أصناف للطلبية';
   end if;
 
   -- idempotency
@@ -1257,7 +1296,7 @@ create or replace function update_branch_order(
   p_order_id        uuid,
   p_expected_version bigint,
   p_notes           text  default null,
-  p_lines           jsonb  -- [{item_id, qty_requested}]
+  p_lines           jsonb default null  -- [{item_id, qty_requested}]
 )
 returns jsonb
 language plpgsql
@@ -1284,6 +1323,10 @@ begin
 
   if not _can_act_for_branch(v_order.branch_id) then
     raise exception 'ليس لديك صلاحية لهذا الفرع';
+  end if;
+
+  if p_lines is null or jsonb_typeof(p_lines) != 'array' or jsonb_array_length(p_lines) = 0 then
+    raise exception 'يجب إضافة أصناف للطلبية';
   end if;
 
   if v_order.status != 'submitted' then
@@ -1586,7 +1629,7 @@ create or replace function import_inventory_items(
   p_client_id uuid,
   p_token     uuid,    -- تصريح الإدارة
   p_dry_run   boolean  default false,
-  p_rows      jsonb    -- [{sku?, name, category_name, unit_code, min_level?, opening_qty?, unit_cost?, branch_orderable?, is_active?, note?}]
+  p_rows      jsonb    default null    -- [{sku?, name, category_name, unit_code, min_level?, opening_qty?, unit_cost?, branch_orderable?, is_active?, note?}]
 )
 returns jsonb
 language plpgsql
@@ -1626,6 +1669,10 @@ begin
 
   if not _has_role('storekeeper') then
     raise exception 'الاستيراد لأمين المخزن فقط';
+  end if;
+
+  if p_rows is null or jsonb_typeof(p_rows) != 'array' or jsonb_array_length(p_rows) = 0 then
+    raise exception 'يجب توفير أصناف للاستيراد';
   end if;
 
   -- التصريح إجباري للتطبيق
