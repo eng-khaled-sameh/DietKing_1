@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'cubit/inventory_cubit.dart';
 import 'cubit/inventory_state.dart';
 import 'models/enums.dart';
-import 'sections/dashboard_section.dart';
 import 'sections/raw_materials_section.dart';
 import 'sections/supply_requests_section.dart';
 import 'sections/stock_audit_section.dart';
@@ -26,8 +25,6 @@ class InventoryShell extends StatelessWidget {
                 previous.section != current.section,
             builder: (context, state) {
               switch (state.section) {
-                case InventorySection.dashboard:
-                  return const DashboardSection();
                 case InventorySection.rawMaterials:
                   return const RawMaterialsSection();
                 case InventorySection.supplyRequests:

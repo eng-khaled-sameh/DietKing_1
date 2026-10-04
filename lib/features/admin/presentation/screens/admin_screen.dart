@@ -10,6 +10,7 @@ import '../../../../core/widgets/pos_status_footer.dart';
 import '../../../../cubits/admin_access/admin_access_cubit.dart';
 import '../../../../cubits/admin_access/admin_access_state.dart';
 import '../../../../cubits/catalog/catalog_cubit.dart';
+import '../../../../cubits/auth/auth_cubit.dart';
 import '../../../../cubits/session/session_cubit.dart';
 import '../../../../cubits/sync/sync_cubit.dart';
 import '../../../../cubits/pos_settings/pos_settings_cubit.dart';
@@ -421,7 +422,8 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
     return s + v;
   });
 
-  double get expectedCash => _totalCash;
+  double get expectedCash =>
+      _totalCash + context.read<SessionCubit>().state.openingCash;
   double get difference => _countedCash - expectedCash;
 
   // ── تنفيذ الإقفال ────────────────────────────────────────────────────────────
@@ -500,6 +502,10 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
 
     try {
       final session = context.read<SessionCubit>().state;
+      final branchId = session.branchId;
+      if (branchId == null) {
+        throw StateError('لا يمكن إقفال وردية بلا فرع');
+      }
       final repo = LocalRecordsRepository();
       final now = DateTime.now();
 
@@ -510,16 +516,19 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
           kind: 'shift_close',
           clientId: clientId,
           userId: session.userId,
-          branchId: session.branchId,
+          branchId: branchId,
           sessionId: session.sessionId,
           payload: {
             'client_id': clientId,
             'session_id': session.sessionId,
-            'branch_id': session.branchId,
+            'branch_id': branchId,
             'shift': session.shift,
             'opened_at': session.startedAt?.toUtc().toIso8601String(),
             'closed_at': now.toUtc().toIso8601String(),
             'counted_cash': double.parse(_countedCash.toStringAsFixed(2)),
+            'opening_cash': double.parse(
+              session.openingCash.toStringAsFixed(2),
+            ),
             'client_invoices_count': _sessionInvoices.length,
             if (_notesController.text.trim().isNotEmpty)
               'notes': _notesController.text.trim(),
@@ -556,6 +565,7 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
           totalVisa: _totalVisa,
           totalDiscount: _totalDiscount,
           totalVat: totalVat,
+          openingCash: session.openingCash,
           expectedCash: expectedCash,
           countedCash: _countedCash,
           notes: _notesController.text.trim().isEmpty
@@ -585,6 +595,8 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
 
         // د) إنهاء الجلسة والانتقال لشاشة الدخول
         if (mounted) {
+          await context.read<AuthCubit>().signOut();
+          if (!mounted) return;
           context.read<SessionCubit>().end();
           context.read<CatalogCubit>().reset();
           context.read<AdminAccessCubit>().reset();
@@ -627,6 +639,10 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
                     ),
                     _InfoRow(label: 'الكاشير', value: session.cashierName),
                     _InfoRow(label: 'الوردية', value: session.shift),
+                    _InfoRow(
+                      label: 'الرصيد الافتتاحي',
+                      value: session.openingCash.toStringAsFixed(2),
+                    ),
                     if (session.startedAt != null)
                       _InfoRow(
                         label: 'بداية الوردية',
@@ -875,6 +891,14 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
 
     try {
       final session = context.read<SessionCubit>().state;
+      final branchId = session.branchId;
+      if (branchId == null) {
+        setState(() {
+          _isSaving = false;
+          _errorMsg = 'هذا الإجراء يتطلب فرعاً';
+        });
+        return;
+      }
       final repo = LocalRecordsRepository();
       final clientId = generateUuidV4();
       final localNumber = await repo.nextLocalNumber(
@@ -884,7 +908,7 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
 
       final payload = {
         'client_id': clientId,
-        'branch_id': session.branchId,
+        'branch_id': branchId,
         'session_id': session.sessionId,
         'category': _category,
         'payee': _payeeController.text.trim().isEmpty
@@ -908,7 +932,7 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
           kind: 'expense',
           clientId: clientId,
           userId: session.userId,
-          branchId: session.branchId,
+          branchId: branchId,
           sessionId: session.sessionId,
           localNumber: localNumber,
           paymentMethod: _paymentMethod,
@@ -2232,6 +2256,11 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
     }
 
     final session = context.read<SessionCubit>().state;
+    final branchId = session.branchId;
+    if (branchId == null) {
+      _showSnack('هذا الإجراء يتطلب فرعاً', isError: true);
+      return;
+    }
     final linesData = _lines.map((l) {
       final v =
           double.tryParse(
@@ -2249,7 +2278,7 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
     try {
       final cubit = _InventoryCubitProvider.of(context);
       await cubit.createBranchOrderForBranch(
-        branchId: session.branchId,
+        branchId: branchId,
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         lines: linesData,
       );
@@ -2824,14 +2853,15 @@ class _MyBranchOrdersTabState extends State<_MyBranchOrdersTab> {
 
   Future<void> _fetchOrders() async {
     final session = context.read<SessionCubit>().state;
-    if (session.branchId.isEmpty) return;
+    final branchId = session.branchId;
+    if (branchId == null || branchId.isEmpty) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final invCubit = _InventoryCubitProvider.of(context);
-      final result = await invCubit.getBranchOrdersForBranch(session.branchId);
+      final result = await invCubit.getBranchOrdersForBranch(branchId);
       if (mounted) {
         setState(() {
           _orders = result.cast<BranchOrder>();
@@ -3035,284 +3065,503 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
   @override
   Widget build(BuildContext context) {
     final lines = _o.lines;
-    final catalog = _InventoryCubitProvider.of(context).state.catalogItemsById;
+    // تعيد هذه البطاقة البناء بعد انتهاء تحميل الكتالوج، فتظهر أسماء
+    // الأصناف في الطلبات السابقة بدل معرّفات UUID المخزنة في السطور.
+    final catalog = context.select(
+      (InventoryCubit cubit) => cubit.state.catalogItemsById,
+    );
 
     return Container(
-      margin: const EdgeInsetsDirectional.only(bottom: 12),
+      margin: const EdgeInsetsDirectional.only(bottom: 16),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-        border: Border.all(color: _statusColor.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // رأس الكارت
-          Padding(
-            padding: const EdgeInsetsDirectional.all(14),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    _arabicStatus,
-                    style: GoogleFonts.ibmPlexSansArabic(
-                      color: _statusColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'رقم: ${_o.number}',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  _fmtDate(_o.createdAt.toIso8601String()),
-                  style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
+        borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+        border: Border.all(color: _statusColor.withValues(alpha: 0.42)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
           ),
-
-          // جدول السطور
-          if (lines.isNotEmpty) ...[
-            const Divider(height: 1, color: AppColors.surfaceContainerHigh),
-            ...lines.map((l) {
-              final lm = l;
-              final qtyReq = lm.qtyRequested;
-              final qtyAppr = lm.qtyApproved;
-
-              final item = catalog[lm.itemId];
-              final itemName = item?.name ?? lm.itemId;
-              final unitCode = item?.unitCode ?? '';
-
-              return Padding(
-                padding: const EdgeInsetsDirectional.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // رأس الفاتورة: يوضح هوية الطلب وحالته فوراً.
+            Container(
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 16, 13),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: AlignmentDirectional.topStart,
+                  end: AlignmentDirectional.bottomEnd,
+                  colors: [
+                    _statusColor.withValues(alpha: 0.22),
+                    AppColors.surfaceContainerLow,
+                  ],
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        itemName,
-                        style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurface,
-                          fontSize: 13,
+                border: Border(
+                  bottom: BorderSide(
+                    color: _statusColor.withValues(alpha: 0.24),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: _statusColor.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Icon(
+                      Icons.receipt_long_outlined,
+                      size: 20,
+                      color: _statusColor,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'طلب مستلزمات',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: AppColors.onSurface,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
                         ),
+                        const SizedBox(height: 1),
+                        Text(
+                          _o.number,
+                          textDirection: TextDirection.ltr,
+                          style: GoogleFonts.robotoMono(
+                            color: AppColors.onSurfaceVariant,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _statusColor.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _statusColor.withValues(alpha: 0.34),
                       ),
                     ),
-                    Text(
-                      _fmtQty(qtyReq, unitCode),
+                    child: Text(
+                      _arabicStatus,
                       style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurfaceVariant,
-                        fontSize: 12,
+                        color: _statusColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
                       ),
                     ),
-                    if (_o.status == BranchOrderStatus.approved &&
-                        qtyAppr != null) ...[
-                      const SizedBox(width: 8),
-                      const Text(
-                        '→',
-                        style: TextStyle(color: AppColors.onSurfaceVariant),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _fmtQty(qtyAppr, unitCode),
+                  ),
+                ],
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 16, 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    color: AppColors.onSurfaceVariant,
+                    size: 13,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    _fmtDate(_o.createdAt.toIso8601String()),
+                    textDirection: TextDirection.ltr,
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${lines.length} ${lines.length == 1 ? 'صنف' : 'أصناف'}',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Container(
+              margin: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                border: Border.all(color: AppColors.surfaceContainerHigh),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 12, 7),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'الأصناف المطلوبة',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              color: AppColors.onSurfaceVariant,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'الكمية',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: AppColors.onSurfaceVariant,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (_o.status == BranchOrderStatus.approved)
+                          Padding(
+                            padding: const EdgeInsetsDirectional.only(
+                              start: 20,
+                            ),
+                            child: Text(
+                              'المعتمد',
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                color: AppColors.onSurfaceVariant,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const Divider(
+                    height: 1,
+                    color: AppColors.surfaceContainerHigh,
+                  ),
+                  if (lines.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'لا توجد أصناف في هذا الطلب',
                         style: GoogleFonts.ibmPlexSansArabic(
-                          color: qtyAppr < qtyReq
-                              ? AppColors.secondary
-                              : AppColors.statusGreen,
-                          fontWeight: FontWeight.bold,
+                          color: AppColors.onSurfaceVariant,
                           fontSize: 12,
                         ),
                       ),
-                    ],
-                  ],
-                ),
-              );
-            }),
-          ],
+                    )
+                  else
+                    ...List.generate(lines.length, (index) {
+                      final line = lines[index];
+                      final item = catalog[line.itemId];
+                      final itemName = item?.name ?? 'صنف غير متاح';
+                      final unitCode = item?.unitCode ?? '';
+                      final approvedQty = line.qtyApproved;
+                      final showApproved =
+                          _o.status == BranchOrderStatus.approved &&
+                          approvedQty != null;
 
-          // سبب الرفض
-          if (_o.status == BranchOrderStatus.rejected &&
-              _o.rejectionReason != null) ...[
-            const Divider(height: 1, color: AppColors.surfaceContainerHigh),
-            Padding(
-              padding: const EdgeInsetsDirectional.all(12),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.info_outline,
-                    color: AppColors.statusRed,
-                    size: 14,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      '${_o.rejectionReason}',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.statusRed,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          // الأزرار
-          if (_o.status == BranchOrderStatus.submitted) ...[
-            const Divider(height: 1, color: AppColors.surfaceContainerHigh),
-            Padding(
-              padding: const EdgeInsetsDirectional.all(12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // زر الإلغاء فقط — تم إزالة زر التعديل
-                  TextButton.icon(
-                    onPressed: _actioning
-                        ? null
-                        : () async {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => Directionality(
-                                textDirection: TextDirection.rtl,
-                                child: AlertDialog(
-                                  backgroundColor:
-                                      AppColors.surfaceContainerLow,
-                                  title: Text(
-                                    'إلغاء الطلب',
-                                    style: GoogleFonts.ibmPlexSansArabic(
-                                      color: AppColors.onSurface,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                      return Container(
+                        decoration: BoxDecoration(
+                          border: index == lines.length - 1
+                              ? null
+                              : const Border(
+                                  bottom: BorderSide(
+                                    color: AppColors.surfaceContainerHigh,
                                   ),
-                                  content: Text(
-                                    'هل تريد إلغاء الطلب رقم ${_o.number}؟',
-                                    style: GoogleFonts.ibmPlexSansArabic(
-                                      color: AppColors.onSurface,
-                                    ),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(ctx, false),
-                                      child: Text(
-                                        'لا',
-                                        style: GoogleFonts.ibmPlexSansArabic(
-                                          color: AppColors.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    ),
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.statusRed,
-                                        foregroundColor: AppColors.onPrimary,
-                                      ),
-                                      onPressed: () => Navigator.pop(ctx, true),
-                                      child: Text(
-                                        'إلغاء الطلب',
-                                        style: GoogleFonts.ibmPlexSansArabic(),
-                                      ),
-                                    ),
-                                  ],
+                                ),
+                        ),
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          12,
+                          10,
+                          12,
+                          10,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceContainerHigh,
+                                borderRadius: BorderRadius.circular(7),
+                              ),
+                              child: Text(
+                                '${index + 1}',
+                                textDirection: TextDirection.ltr,
+                                style: GoogleFonts.robotoMono(
+                                  color: AppColors.onSurfaceVariant,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            );
-                            if (confirmed != true || !mounted) return;
-                            setState(() => _actioning = true);
-                            try {
-                              final cubit = _InventoryCubitProvider.of(context);
-                              await cubit.cancelBranchOrderForBranch(
-                                orderId: _o.id,
-                                expectedVersion: _o.version,
-                              );
-                              if (mounted) {
-                                _showSnack('تم إلغاء الطلب');
-                                widget.onRefresh();
-                              }
-                            } catch (e) {
-                              if (mounted) {
-                                setState(() => _actioning = false);
-                                _showSnack(e.toString(), isError: true);
-                              }
-                            }
-                          },
-                    icon: const Icon(
-                      Icons.cancel_outlined,
-                      size: 14,
-                      color: AppColors.statusRed,
-                    ),
-                    label: Text(
-                      'إلغاء الطلب',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.statusRed,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    itemName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.ibmPlexSansArabic(
+                                      color: AppColors.onSurface,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  if (item != null)
+                                    Text(
+                                      item.sku,
+                                      textDirection: TextDirection.ltr,
+                                      style: GoogleFonts.robotoMono(
+                                        color: AppColors.onSurfaceVariant,
+                                        fontSize: 9,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _fmtQty(line.qtyRequested, unitCode),
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                color: AppColors.onSurface,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                            if (showApproved) ...[
+                              const SizedBox(width: 14),
+                              Text(
+                                _fmtQty(approvedQty, unitCode),
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                  color: approvedQty < line.qtyRequested
+                                      ? AppColors.secondary
+                                      : AppColors.statusGreen,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }),
                 ],
               ),
             ),
-          ],
 
-          if (_o.status == BranchOrderStatus.approved) ...[
-            const Divider(height: 1, color: AppColors.surfaceContainerHigh),
-            Padding(
-              padding: const EdgeInsetsDirectional.all(12),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _actioning ? null : _confirmReceive,
-                  icon: _actioning
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.onPrimary,
-                          ),
-                        )
-                      : const Icon(Icons.check_circle_outline, size: 16),
-                  label: Text(
-                    _actioning ? 'جاري...' : 'تأكيد الاستلام',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                      fontWeight: FontWeight.w700,
+            if (_o.notes?.trim().isNotEmpty == true)
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.notes_outlined,
+                      color: AppColors.onSurfaceVariant,
+                      size: 16,
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.statusGreen,
-                    foregroundColor: AppColors.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _o.notes!,
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // سبب الرفض
+            if (_o.status == BranchOrderStatus.rejected &&
+                _o.rejectionReason != null) ...[
+              const Divider(height: 1, color: AppColors.surfaceContainerHigh),
+              Padding(
+                padding: const EdgeInsetsDirectional.all(12),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      color: AppColors.statusRed,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${_o.rejectionReason}',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.statusRed,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // الأزرار
+            if (_o.status == BranchOrderStatus.submitted) ...[
+              const Divider(height: 1, color: AppColors.surfaceContainerHigh),
+              Padding(
+                padding: const EdgeInsetsDirectional.all(12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // زر الإلغاء فقط — تم إزالة زر التعديل
+                    TextButton.icon(
+                      onPressed: _actioning
+                          ? null
+                          : () async {
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => Directionality(
+                                  textDirection: TextDirection.rtl,
+                                  child: AlertDialog(
+                                    backgroundColor:
+                                        AppColors.surfaceContainerLow,
+                                    title: Text(
+                                      'إلغاء الطلب',
+                                      style: GoogleFonts.ibmPlexSansArabic(
+                                        color: AppColors.onSurface,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    content: Text(
+                                      'هل تريد إلغاء الطلب رقم ${_o.number}؟',
+                                      style: GoogleFonts.ibmPlexSansArabic(
+                                        color: AppColors.onSurface,
+                                      ),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, false),
+                                        child: Text(
+                                          'لا',
+                                          style: GoogleFonts.ibmPlexSansArabic(
+                                            color: AppColors.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.statusRed,
+                                          foregroundColor: AppColors.onPrimary,
+                                        ),
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, true),
+                                        child: Text(
+                                          'إلغاء الطلب',
+                                          style:
+                                              GoogleFonts.ibmPlexSansArabic(),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                              if (confirmed != true || !mounted) return;
+                              setState(() => _actioning = true);
+                              try {
+                                final cubit = _InventoryCubitProvider.of(
+                                  context,
+                                );
+                                await cubit.cancelBranchOrderForBranch(
+                                  orderId: _o.id,
+                                  expectedVersion: _o.version,
+                                );
+                                if (mounted) {
+                                  _showSnack('تم إلغاء الطلب');
+                                  widget.onRefresh();
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  setState(() => _actioning = false);
+                                  _showSnack(e.toString(), isError: true);
+                                }
+                              }
+                            },
+                      icon: const Icon(
+                        Icons.cancel_outlined,
+                        size: 14,
+                        color: AppColors.statusRed,
+                      ),
+                      label: Text(
+                        'إلغاء الطلب',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.statusRed,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            if (_o.status == BranchOrderStatus.approved) ...[
+              const Divider(height: 1, color: AppColors.surfaceContainerHigh),
+              Padding(
+                padding: const EdgeInsetsDirectional.all(12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _actioning ? null : _confirmReceive,
+                    icon: _actioning
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.onPrimary,
+                            ),
+                          )
+                        : const Icon(Icons.check_circle_outline, size: 16),
+                    label: Text(
+                      _actioning ? 'جاري...' : 'تأكيد الاستلام',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.statusGreen,
+                      foregroundColor: AppColors.onPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ],
-      ),
-    );
+            ],
+          ], // Column
+        ), // ClipRRect
+      ), // Container الداخلي/الـ structure
+    ); // Container الخارجي
   }
 
   String _fmtQty(double qty, String unit) {

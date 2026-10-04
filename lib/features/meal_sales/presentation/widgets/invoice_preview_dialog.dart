@@ -56,6 +56,10 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
     try {
       final repo = LocalRecordsRepository();
       final session = widget.sessionState;
+      final branchId = session.branchId;
+      if (branchId == null) {
+        throw StateError('لا يمكن إنشاء بيع بلا فرع');
+      }
       final cart = widget.cartState;
       final now = DateTime.now();
 
@@ -70,7 +74,7 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
       // بناء payload كامل
       final payload = <String, dynamic>{
         'client_id': clientId,
-        'branch_id': session.branchId,
+        'branch_id': branchId,
         'shift': session.shift,
         'payment_method': paymentMethod,
         'local_number': localNumber,
@@ -132,7 +136,7 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
           kind: 'sale',
           clientId: clientId,
           userId: session.userId,
-          branchId: session.branchId,
+          branchId: branchId,
           sessionId: session.sessionId,
           localNumber: localNumber,
           paymentMethod: paymentMethod,

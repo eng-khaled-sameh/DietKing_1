@@ -58,4 +58,6 @@ class BranchesCubit extends Cubit<BranchesState> {
       ));
     }
   }
+
+  void reset() => emit(const BranchesState());
 }

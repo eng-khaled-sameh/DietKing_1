@@ -13,6 +13,7 @@ import 'cubits/sales/sales_cubit.dart';
 import 'cubits/session/session_cubit.dart';
 import 'cubits/sync/sync_cubit.dart';
 import 'cubits/admin_access/admin_access_cubit.dart';
+import 'cubits/auth/auth_cubit.dart';
 import 'core/repositories/admin_access_repository.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'repositories/pos_settings_repository.dart';
@@ -44,6 +45,7 @@ Future<void> main() async {
     MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => HeldOrdersCubit()),
+        BlocProvider(create: (_) => AuthCubit()),
         // CatalogCubit على مستوى التطبيق — يبقى حياً طوال الجلسة
         BlocProvider(create: (_) => CatalogCubit()),
         // BranchesCubit — يُحمَّل مرة واحدة ويبقى طوال الجلسة

@@ -5,10 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_modules.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
-import '../../cubits/catalog/catalog_cubit.dart';
-import '../../cubits/pos_settings/pos_settings_cubit.dart';
-import '../../features/meal_sales/presentation/screens/meal_sales_screen.dart';
-import '../inventory/inventory_dashboard_screen.dart';
+import '../../cubits/auth/auth_cubit.dart';
+import 'module_launcher.dart';
 
 class ModulesScreen extends StatefulWidget {
   const ModulesScreen({super.key});
@@ -20,97 +18,45 @@ class ModulesScreen extends StatefulWidget {
 class _ModulesScreenState extends State<ModulesScreen> {
   bool _isNavigating = false;
 
-  void _handleModuleTap(AppModule module) {
+  Future<void> _open(AppModule module) async {
     if (_isNavigating) return;
-
-    if (module == AppModule.cashier) {
-      setState(() {
-        _isNavigating = true;
-      });
-
-      // تحميل بيانات الكاشير عند الدخول للقسم فقط
-      context.read<CatalogCubit>().load();
-      context.read<PosSettingsCubit>().load();
-
-      // الانتقال بالـ push العادي للتمكن من الرجوع لاحقاً لشاشة الكروت
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => const MealSalesScreen(),
-        ),
-      ).then((_) {
-        if (mounted) {
-          setState(() {
-            _isNavigating = false;
-          });
-        }
-      });
-    } else if (module == AppModule.inventory) {
-      setState(() {
-        _isNavigating = true;
-      });
-
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => const InventoryDashboardScreen(),
-        ),
-      ).then((_) {
-        if (mounted) {
-          setState(() {
-            _isNavigating = false;
-          });
-        }
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'هذا القسم قيد التطوير',
-            style: GoogleFonts.ibmPlexSansArabic(),
-          ),
-          backgroundColor: AppColors.surfaceContainerHigh,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    final profile = context.read<AuthCubit>().state.profile;
+    if (profile == null) return;
+    if (!allowedModules(profile.role).contains(module)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ليس لديك صلاحية لهذا القسم')));
+      return;
     }
+    setState(() => _isNavigating = true);
+    await startAndOpenModule(context, module, profile);
+    if (mounted) setState(() => _isNavigating = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final modules = allowedModules();
-
+    final role = context.select((AuthCubit cubit) => cubit.state.profile?.role);
+    final modules = role == null ? const <AppModule>[] : allowedModules(role);
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-        ),
+        appBar: AppBar(backgroundColor: Colors.transparent),
         body: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppDimens.spaceLg),
+            padding: const EdgeInsetsDirectional.all(AppDimens.spaceLg),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  'اختر القسم',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                    fontSize: AppDimens.fontXxl,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.onSurface,
-                  ),
-                ),
+                Text('اختر القسم', style: GoogleFonts.ibmPlexSansArabic(fontSize: AppDimens.fontXxl, fontWeight: FontWeight.bold)),
                 const SizedBox(height: AppDimens.spaceXxl),
                 Wrap(
                   spacing: AppDimens.spaceLg,
                   runSpacing: AppDimens.spaceLg,
                   alignment: WrapAlignment.center,
-                  children: modules.map((module) {
-                    return _ModuleCard(
-                      module: module,
-                      onTap: () => _handleModuleTap(module),
-                    );
-                  }).toList(),
+                  children: AppModule.values.map((module) => _ModuleCard(
+                    key: ValueKey(module),
+                    module: module,
+                    unlocked: modules.contains(module),
+                    onTap: () => _open(module),
+                  )).toList(),
                 ),
               ],
             ),
@@ -121,131 +67,35 @@ class _ModulesScreenState extends State<ModulesScreen> {
   }
 }
 
-class _ModuleCard extends StatefulWidget {
+class _ModuleCard extends StatelessWidget {
+  const _ModuleCard({super.key, required this.module, required this.unlocked, required this.onTap});
+
   final AppModule module;
+  final bool unlocked;
   final VoidCallback onTap;
-
-  const _ModuleCard({
-    required this.module,
-    required this.onTap,
-  });
-
-  @override
-  State<_ModuleCard> createState() => _ModuleCardState();
-}
-
-class _ModuleCardState extends State<_ModuleCard> {
-  bool _isHovered = false;
-  bool _isFocused = false;
 
   @override
   Widget build(BuildContext context) {
-    final isHoveredOrFocused = _isHovered || _isFocused;
-
     return FocusableActionDetector(
-      onShowHoverHighlight: (isHovered) {
-        setState(() {
-          _isHovered = isHovered;
-        });
-      },
-      onShowFocusHighlight: (isFocused) {
-        setState(() {
-          _isFocused = isFocused;
-        });
-      },
-      actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (intent) {
-            widget.onTap();
-            return null;
-          },
-        ),
-      },
       mouseCursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 170,
-          height: 150,
-          padding: const EdgeInsets.all(AppDimens.spaceMd),
-          decoration: BoxDecoration(
-            color: isHoveredOrFocused
-                ? AppColors.surfaceContainerHigh
-                : AppColors.surfaceContainer,
-            borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-            border: Border.all(
-              color: isHoveredOrFocused
-                  ? AppColors.primary
-                  : AppColors.outlineVariant.withValues(alpha: 0.3),
-              width: isHoveredOrFocused ? 2 : 1,
-            ),
-            boxShadow: isHoveredOrFocused
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : [],
-          ),
-          child: Stack(
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                      ),
-                      child: Icon(
-                        widget.module.icon,
-                        color: AppColors.primary,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(height: AppDimens.spaceMd),
-                    Text(
-                      widget.module.arabicName,
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: AppDimens.fontMd,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.onSurface,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-              if (!widget.module.isImplemented)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                    ),
-                    child: Text(
-                      'قريباً',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: AppDimens.fontXs,
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+      actions: {ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) { onTap(); return null; })},
+      child: InkWell(
+        onTap: unlocked ? onTap : () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ليس لديك صلاحية لهذا القسم'))),
+        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+        child: Opacity(
+          opacity: unlocked ? 1 : .45,
+          child: Container(
+            width: 170,
+            height: 150,
+            padding: const EdgeInsetsDirectional.all(AppDimens.spaceMd),
+            decoration: BoxDecoration(color: AppColors.surfaceContainer, borderRadius: BorderRadius.circular(AppDimens.radiusMd)),
+            child: Stack(children: [
+              Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(module.icon, color: AppColors.primary, size: 36),
+                const SizedBox(height: AppDimens.spaceMd), Text(module.arabicName),
+              ])),
+              if (!unlocked) const PositionedDirectional(top: 0, end: 0, child: Icon(Icons.lock_outline)),
+            ]),
           ),
         ),
       ),

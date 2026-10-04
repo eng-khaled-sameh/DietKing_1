@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 enum InventorySection {
-  dashboard('لوحة المخزون الرئيسية', Icons.dashboard),
   rawMaterials('الخامات في المخزون', Icons.grain),
   supplyRequests('طلبات المخزون والتوريد', Icons.shopping_cart_checkout),
   stockAudit('جرد ومطابقة المخزون', Icons.fact_check),

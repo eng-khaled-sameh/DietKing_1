@@ -27,27 +27,33 @@ class InventorySidebar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildHeader(),
-          Divider(color: AppColors.outlineVariant.withValues(alpha: 0.3), height: 1),
+          Divider(
+            color: AppColors.outlineVariant.withValues(alpha: 0.3),
+            height: 1,
+          ),
           const SizedBox(height: AppDimens.spaceMd),
           Expanded(
             child: BlocBuilder<InventoryCubit, InventoryState>(
               builder: (context, state) {
                 return ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                  ),
                   children: [
-                    _SidebarItem(
-                      section: InventorySection.dashboard,
-                      isActive: state.section == InventorySection.dashboard,
-                    ),
                     _SidebarItem(
                       section: InventorySection.rawMaterials,
                       isActive: state.section == InventorySection.rawMaterials,
-                      badgeText: state.rawMaterialsCount > 0 ? state.rawMaterialsCount.toString() : null,
+                      badgeText: state.rawMaterialsCount > 0
+                          ? state.rawMaterialsCount.toString()
+                          : null,
                     ),
                     _SidebarItem(
                       section: InventorySection.supplyRequests,
-                      isActive: state.section == InventorySection.supplyRequests,
-                      badgeText: state.pendingSupplyCount > 0 ? state.pendingSupplyCount.toString() : null,
+                      isActive:
+                          state.section == InventorySection.supplyRequests,
+                      badgeText: state.pendingSupplyCount > 0
+                          ? state.pendingSupplyCount.toString()
+                          : null,
                     ),
                     _SidebarItem(
                       section: InventorySection.stockAudit,
@@ -59,25 +65,20 @@ class InventorySidebar extends StatelessWidget {
                     ),
                     _SidebarItem(
                       section: InventorySection.kitchenReceipts,
-                      isActive: state.section == InventorySection.kitchenReceipts,
+                      isActive:
+                          state.section == InventorySection.kitchenReceipts,
                     ),
                     _SidebarItem(
                       section: InventorySection.branchOrders,
                       isActive: state.section == InventorySection.branchOrders,
-                      badgeText: state.activeBranchOrdersCount > 0 ? state.activeBranchOrdersCount.toString() : null,
+                      badgeText: state.activeBranchOrdersCount > 0
+                          ? state.activeBranchOrdersCount.toString()
+                          : null,
                       badgeColor: AppColors.secondaryContainer,
                     ),
                   ],
                 );
               },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppDimens.spaceMd),
-            child: _SidebarItem(
-              icon: Icons.arrow_forward,
-              label: 'رجوع للأقسام',
-              onTap: () => Navigator.of(context).pop(),
             ),
           ),
         ],
@@ -145,13 +146,12 @@ class _SidebarItem extends StatefulWidget {
 
   const _SidebarItem({
     this.section,
-    this.label,
-    this.icon,
     this.isActive = false,
     this.badgeText,
     this.badgeColor,
-    this.onTap,
-  });
+  }) : onTap = null,
+       icon = null,
+       label = null;
 
   @override
   State<_SidebarItem> createState() => _SidebarItemState();
@@ -183,20 +183,25 @@ class _SidebarItemState extends State<_SidebarItem> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           margin: const EdgeInsets.only(bottom: AppDimens.spaceXs),
-          padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd, vertical: AppDimens.spaceMd),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.spaceMd,
+            vertical: AppDimens.spaceMd,
+          ),
           decoration: BoxDecoration(
             color: widget.isActive
                 ? AppColors.primaryContainer
                 : (_isHovered || _isFocused)
-                    ? AppColors.surfaceContainerHigh
-                    : Colors.transparent,
+                ? AppColors.surfaceContainerHigh
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(AppDimens.radiusMd),
           ),
           child: Row(
             children: [
               Icon(
                 iconData,
-                color: widget.isActive ? AppColors.onPrimaryContainer : AppColors.onSurfaceVariant,
+                color: widget.isActive
+                    ? AppColors.onPrimaryContainer
+                    : AppColors.onSurfaceVariant,
                 size: AppDimens.iconMd,
               ),
               const SizedBox(width: AppDimens.spaceMd),
@@ -205,8 +210,12 @@ class _SidebarItemState extends State<_SidebarItem> {
                   title,
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: AppDimens.fontMd,
-                    fontWeight: widget.isActive ? FontWeight.bold : FontWeight.normal,
-                    color: widget.isActive ? AppColors.onPrimaryContainer : AppColors.onSurface,
+                    fontWeight: widget.isActive
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    color: widget.isActive
+                        ? AppColors.onPrimaryContainer
+                        : AppColors.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -214,16 +223,22 @@ class _SidebarItemState extends State<_SidebarItem> {
               ),
               if (widget.badgeText != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: widget.badgeColor ?? AppColors.surfaceContainerHighest,
+                    color:
+                        widget.badgeColor ?? AppColors.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                   ),
                   child: Text(
                     widget.badgeText!,
                     style: GoogleFonts.ibmPlexSansArabic(
                       fontSize: AppDimens.fontXs,
-                      color: widget.isActive ? AppColors.onPrimaryContainer : AppColors.onSurface,
+                      color: widget.isActive
+                          ? AppColors.onPrimaryContainer
+                          : AppColors.onSurface,
                     ),
                   ),
                 ),

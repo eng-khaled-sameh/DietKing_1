@@ -21,6 +21,7 @@ class ShiftCloseReportData {
   final double totalVisa;
   final double totalDiscount;
   final double totalVat;
+  final double openingCash;
   final double expectedCash;
   final double countedCash;
   final String? notes;
@@ -38,6 +39,7 @@ class ShiftCloseReportData {
     required this.totalVisa,
     required this.totalDiscount,
     required this.totalVat,
+    required this.openingCash,
     required this.expectedCash,
     required this.countedCash,
     required this.notes,
@@ -191,6 +193,12 @@ Future<Uint8List> buildShiftClosePdf(ShiftCloseReportData data) async {
           style: pw.TextStyle(font: boldFont, fontSize: 12),
         ),
         pw.SizedBox(height: 4),
+        _infoRow(
+          'الرصيد الافتتاحي:',
+          '${data.openingCash.toStringAsFixed(2)} ر.س',
+          font,
+          boldFont,
+        ),
         _infoRow(
           'المتوقع في الدرج:',
           '${data.expectedCash.toStringAsFixed(2)} ر.س',

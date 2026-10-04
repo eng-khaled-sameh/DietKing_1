@@ -73,7 +73,7 @@ class InventoryState extends Equatable {
   final String? highlightedItemId;
 
   InventoryState({
-    this.section = InventorySection.dashboard,
+    this.section = InventorySection.rawMaterials,
     this.isLoading = false,
     this.isLoadingDocs = false,
     this.isSubmitting = false,
@@ -137,8 +137,10 @@ class InventoryState extends Equatable {
       isSubmitting:         isSubmitting      ?? this.isSubmitting,
       error:                error, // يُعاد ضبطه صراحةً: null = لا خطأ
       catalog:              nextCatalog,
-      catalogItemsById:     identical(nextCatalog, catalog)
-          ? catalogItemsById
+      // نحتفظ بالفهرس فقط إن كان الكتالوج نفسه لم يتغير؛ أما عند وصول
+      // كتالوج جديد فيُعاد بناؤه حتى يربط item_id باسم الصنف الصحيح.
+      catalogItemsById:     identical(nextCatalog, this.catalog)
+          ? this.catalogItemsById
           : null,
       stock:                stock             ?? this.stock,
       rawQuery:             rawQuery          ?? this.rawQuery,
