@@ -5,12 +5,14 @@ enum BranchOrderStatus {
   submitted,
   approved,
   rejected,
-  cancelled;
+  cancelled,
+  received;
 
   static BranchOrderStatus fromString(String v) => switch (v) {
         'approved'  => BranchOrderStatus.approved,
         'rejected'  => BranchOrderStatus.rejected,
         'cancelled' => BranchOrderStatus.cancelled,
+        'received'  => BranchOrderStatus.received,
         _           => BranchOrderStatus.submitted,
       };
 
@@ -19,6 +21,7 @@ enum BranchOrderStatus {
         BranchOrderStatus.approved  => 'approved',
         BranchOrderStatus.rejected  => 'rejected',
         BranchOrderStatus.cancelled => 'cancelled',
+        BranchOrderStatus.received  => 'received',
       };
 
   String get arabicLabel => switch (this) {
@@ -26,6 +29,7 @@ enum BranchOrderStatus {
         BranchOrderStatus.approved  => 'معتمد',
         BranchOrderStatus.rejected  => 'مرفوض',
         BranchOrderStatus.cancelled => 'ملغي',
+        BranchOrderStatus.received  => 'مستلم',
       };
 }
 

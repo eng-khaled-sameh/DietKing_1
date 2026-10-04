@@ -360,6 +360,19 @@ class InventoryApi {
     );
   }
 
+  Future<BranchOrder> receiveBranchOrder({
+    required String orderId,
+    required int expectedVersion,
+  }) async {
+    final clientId = generateUuidV4();
+    final res = await _client.rpc('receive_branch_order', params: {
+      'p_client_id': clientId,
+      'p_order_id': orderId,
+      'p_expected_version': expectedVersion,
+    }) as Map<String, dynamic>;
+    return BranchOrder.fromJson(res['doc'] as Map<String, dynamic>);
+  }
+
   // ── الجرد ──────────────────────────────────────────────────────────────────
 
   Future<StocktakePreview> applyStocktake({

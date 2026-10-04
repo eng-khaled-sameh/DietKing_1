@@ -321,7 +321,14 @@ class _BranchOrderRow extends StatelessWidget {
       ];
     } else if (order.status == BranchOrderStatus.approved) {
       return [
-        Text('تم الصرف ✓',
+        Text('جاري التحضير',
+            style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.statusGreen,
+                fontWeight: FontWeight.bold)),
+      ];
+    } else if (order.status == BranchOrderStatus.received) {
+      return [
+        Text('مستلم',
             style: GoogleFonts.ibmPlexSansArabic(
                 color: AppColors.statusGreen,
                 fontWeight: FontWeight.bold)),
@@ -353,11 +360,13 @@ class _StatusBadge extends StatelessWidget {
       case BranchOrderStatus.submitted:
         color = AppColors.primary;
       case BranchOrderStatus.approved:
-        color = AppColors.statusGreen;
+        color = AppColors.secondary;
       case BranchOrderStatus.rejected:
         color = AppColors.statusRed;
       case BranchOrderStatus.cancelled:
         color = AppColors.onSurfaceVariant;
+      case BranchOrderStatus.received:
+        color = AppColors.statusGreen;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

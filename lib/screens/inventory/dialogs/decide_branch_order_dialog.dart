@@ -8,6 +8,7 @@ import '../cubit/inventory_cubit.dart';
 import '../cubit/inventory_state.dart';
 import '../widgets/catalog_item_details.dart';
 import '../widgets/inventory_snack.dart';
+import '../utils/formatters.dart';
 
 /// حوار قرار طلب الفرع — أمين المخزن يعدّل الكميات المعتمدة ثم يوافق أو يرفض
 class DecideBranchOrderDialog extends StatefulWidget {
@@ -32,7 +33,7 @@ class _DecideBranchOrderDialogState
     super.initState();
     _lines = widget.order.lines.map((l) {
       final ctrl = TextEditingController(
-        text: (l.qtyApproved ?? l.qtyRequested).toStringAsFixed(0),
+        text: formatQuantity(l.qtyApproved ?? l.qtyRequested),
       );
       return _DecideLine(line: l, approvedCtrl: ctrl);
     }).toList();
@@ -226,7 +227,7 @@ class _DecideBranchOrderDialogState
                     _th('الصنف', flex: 3),
                     _th('مطلوب', flex: 2),
                     _th('متاح', flex: 2),
-                    _th('معتمد', flex: 2),
+                    _th('الفعلية', flex: 3),
                   ],
                 ),
               ),
@@ -234,68 +235,105 @@ class _DecideBranchOrderDialogState
                 final l = _lines[i];
                 final item = itemsById[l.line.itemId];
                 final available = state.stockFor(l.line.itemId);
-                final isInsufficient =
-                    available < l.line.qtyRequested;
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isInsufficient
-                        ? AppColors.statusRed.withValues(alpha: 0.05)
-                        : null,
-                    border: const Border(
-                        bottom: BorderSide(
-                            color: AppColors.surfaceContainerHigh)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: CatalogItemDetails(item: item),
+                
+                return StatefulBuilder(
+                  builder: (context, setStateLine) {
+                    final currentVal = double.tryParse(l.approvedCtrl.text) ?? 0.0;
+                    final isInsufficient = available < currentVal;
+                    
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isInsufficient
+                            ? AppColors.statusRed.withValues(alpha: 0.05)
+                            : null,
+                        border: const Border(
+                            bottom: BorderSide(
+                                color: AppColors.surfaceContainerHigh)),
                       ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                            formatCatalogQuantity(l.line.qtyRequested, item),
-                            style: GoogleFonts.ibmPlexSansArabic(
-                                color: AppColors.onSurfaceVariant)),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          formatCatalogQuantity(available, item),
-                          style: GoogleFonts.ibmPlexSansArabic(
-                            color: isInsufficient
-                                ? AppColors.statusRed
-                                : AppColors.statusGreen,
-                            fontWeight: FontWeight.w600,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: CatalogItemDetails(item: item),
                           ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: TextField(
-                          controller: l.approvedCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurface),
-                          decoration: InputDecoration(
-                            isDense: true,
-                            suffixText: item?.unitCode ?? 'وحدة غير معروفة',
-                            hintStyle: GoogleFonts.ibmPlexSansArabic(
-                                color: AppColors.onSurfaceVariant),
-                            enabledBorder: const UnderlineInputBorder(
-                                borderSide: BorderSide(
-                                    color: AppColors.outlineVariant)),
-                            focusedBorder: const UnderlineInputBorder(
-                                borderSide:
-                                    BorderSide(color: AppColors.primary)),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                                formatCatalogQuantity(l.line.qtyRequested, item),
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                    color: AppColors.onSurfaceVariant)),
                           ),
-                        ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              formatCatalogQuantity(available, item),
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                color: (available < l.line.qtyRequested)
+                                    ? AppColors.statusRed
+                                    : AppColors.statusGreen,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 3,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: l.approvedCtrl,
+                                    keyboardType: const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                    style: GoogleFonts.ibmPlexSansArabic(
+                                        color: isInsufficient ? AppColors.statusRed : AppColors.onSurface),
+                                    onChanged: (val) {
+                                      final v = double.tryParse(val) ?? 0.0;
+                                      if (v > l.line.qtyRequested) {
+                                        l.approvedCtrl.text = l.line.qtyRequested.toStringAsFixed(0);
+                                        l.approvedCtrl.selection = TextSelection.collapsed(offset: l.approvedCtrl.text.length);
+                                      } else if (v < 0) {
+                                        l.approvedCtrl.text = '0';
+                                        l.approvedCtrl.selection = TextSelection.collapsed(offset: 1);
+                                      }
+                                      setStateLine(() {});
+                                    },
+                                    decoration: InputDecoration(
+                                      isDense: true,
+                                      suffixText: item?.unitCode ?? '',
+                                      hintStyle: GoogleFonts.ibmPlexSansArabic(
+                                          color: AppColors.onSurfaceVariant),
+                                      enabledBorder: const UnderlineInputBorder(
+                                          borderSide: BorderSide(
+                                              color: AppColors.outlineVariant)),
+                                      focusedBorder: const UnderlineInputBorder(
+                                          borderSide:
+                                              BorderSide(color: AppColors.primary)),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                TextButton(
+                                  onPressed: () {
+                                    l.approvedCtrl.text = '0';
+                                    setStateLine(() {});
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    minimumSize: Size.zero,
+                                  ),
+                                  child: Text('غير متوفر',
+                                      style: GoogleFonts.ibmPlexSansArabic(
+                                          color: AppColors.statusRed, fontSize: 12)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 );
               }),
             ],

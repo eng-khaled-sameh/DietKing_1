@@ -474,7 +474,65 @@ class InventoryCubit extends Cubit<InventoryState> {
     }
   }
 
-  // ── استيراد الأصناف (Excel) ───────────────────────────────────────────────
+  Future<void> receiveBranchOrder({
+    required String orderId,
+    required int expectedVersion,
+  }) async {
+    emit(state.copyWith(isSubmitting: true, error: null));
+    try {
+      await _api.receiveBranchOrder(
+        orderId: orderId,
+        expectedVersion: expectedVersion,
+      );
+      await loadBranchOrders(force: true);
+      emit(state.copyWith(isSubmitting: false));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, error: _mapError(e)));
+      rethrow;
+    }
+  }
+
+  /// جلب طلبيات الفرع الخاص بالكاشير (branchId من الجلسة)
+  Future<List<dynamic>> getBranchOrdersForBranch(String branchId) async {
+    return _api.getBranchOrders(branchId: branchId);
+  }
+
+  Future<dynamic> createBranchOrderForBranch({
+    required String branchId,
+    String? notes,
+    required List<Map<String, dynamic>> lines,
+  }) async {
+    return _api.createBranchOrder(
+      branchId: branchId,
+      notes: notes,
+      lines: lines,
+    );
+  }
+
+  Future<dynamic> updateBranchOrderForBranch({
+    required String orderId,
+    required int expectedVersion,
+    String? notes,
+    required List<Map<String, dynamic>> lines,
+  }) async {
+    return _api.updateBranchOrder(
+      orderId: orderId,
+      expectedVersion: expectedVersion,
+      notes: notes,
+      lines: lines,
+    );
+  }
+
+  Future<dynamic> cancelBranchOrderForBranch({
+    required String orderId,
+    required int expectedVersion,
+  }) async {
+    return _api.cancelBranchOrder(
+      orderId: orderId,
+      expectedVersion: expectedVersion,
+    );
+  }
+
 
   Future<Map<String, dynamic>> importItems({
     String? token,
