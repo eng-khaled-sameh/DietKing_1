@@ -113,8 +113,8 @@ class SaleResult extends Equatable {
 
   factory SaleResult.fromJson(Map<String, dynamic> json) {
     return SaleResult(
-      id: json['id'] as String,
-      invoiceNumber: json['invoice_number'] as String,
+      id: (json['id'] as String?) ?? '',
+      invoiceNumber: (json['invoice_number'] as String?) ?? '',
       alreadyExists: json['already_exists'] as bool? ?? false,
     );
   }

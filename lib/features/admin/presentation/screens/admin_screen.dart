@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:printing/printing.dart';
-
 import '../../../../core/local_db.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
@@ -20,6 +19,7 @@ import '../../services/shift_close_pdf_builder.dart';
 import '../../../../screens/inventory/cubit/inventory_cubit.dart';
 import '../../../../screens/inventory/cubit/inventory_state.dart';
 import '../../../../screens/inventory/utils/formatters.dart';
+import '../../../../data/inventory/models/branch_order.dart';
 
 // ── الأقسام ───────────────────────────────────────────────────────────────────
 
@@ -2097,7 +2097,6 @@ class _VacationSectionState extends State<_VacationSection> {
   }
 }
 
-
 // ── طلب مستلزمات ──────────────────────────────────────────────────────────────
 
 class _SuppliesSection extends StatefulWidget {
@@ -2148,10 +2147,7 @@ class _SuppliesSectionState extends State<_SuppliesSection>
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: const [
-              _NewBranchOrderTab(),
-              _MyBranchOrdersTab(),
-            ],
+            children: const [_NewBranchOrderTab(), _MyBranchOrdersTab()],
           ),
         ),
       ],
@@ -2198,14 +2194,16 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
     } else {
       final ctrl = TextEditingController(text: '1');
       setState(() {
-        _lines.add(_OrderLine(
-          itemId: itemId,
-          name: name,
-          categoryName: catName,
-          unitCode: unitCode,
-          qtyCtrl: ctrl,
-          qty: 1,
-        ));
+        _lines.add(
+          _OrderLine(
+            itemId: itemId,
+            name: name,
+            categoryName: catName,
+            unitCode: unitCode,
+            qtyCtrl: ctrl,
+            qty: 1,
+          ),
+        );
       });
     }
   }
@@ -2219,16 +2217,27 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
     if (_lines.isEmpty) return;
     // التحقق من الكميات
     for (final l in _lines) {
-      final v = double.tryParse(l.qtyCtrl.text.trim().replaceAll(_arabicToLatin, '')) ?? 0;
+      final v =
+          double.tryParse(
+            l.qtyCtrl.text.trim().replaceAll(_arabicToLatin, ''),
+          ) ??
+          0;
       if (v <= 0) {
-        _showSnack('الكمية يجب أن تكون أكبر من صفر في "${l.name}"', isError: true);
+        _showSnack(
+          'الكمية يجب أن تكون أكبر من صفر في "${l.name}"',
+          isError: true,
+        );
         return;
       }
     }
 
     final session = context.read<SessionCubit>().state;
     final linesData = _lines.map((l) {
-      final v = double.tryParse(l.qtyCtrl.text.trim().replaceAll(_arabicToLatin, '')) ?? 1.0;
+      final v =
+          double.tryParse(
+            l.qtyCtrl.text.trim().replaceAll(_arabicToLatin, ''),
+          ) ??
+          1.0;
       return <String, dynamic>{'item_id': l.itemId, 'qty_requested': v};
     }).toList();
 
@@ -2271,15 +2280,31 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
 
   static final _arabicToLatin = RegExp('[٠١٢٣٤٥٦٧٨٩]');
   static String _normalizeNum(String s) {
-    const map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
-    return s.replaceAllMapped(_arabicToLatin, (m) => map[m.group(0)] ?? m.group(0)!);
+    const map = {
+      '٠': '0',
+      '١': '1',
+      '٢': '2',
+      '٣': '3',
+      '٤': '4',
+      '٥': '5',
+      '٦': '6',
+      '٧': '7',
+      '٨': '8',
+      '٩': '9',
+    };
+    return s.replaceAllMapped(
+      _arabicToLatin,
+      (m) => map[m.group(0)] ?? m.group(0)!,
+    );
   }
 
   void _showSnack(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: GoogleFonts.ibmPlexSansArabic()),
-      backgroundColor: isError ? AppColors.statusRed : AppColors.statusGreen,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: GoogleFonts.ibmPlexSansArabic()),
+        backgroundColor: isError ? AppColors.statusRed : AppColors.statusGreen,
+      ),
+    );
   }
 
   @override
@@ -2294,7 +2319,8 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
         // فلترة
         final filtered = allItems.where((it) {
           final q = _searchQuery.toLowerCase();
-          final matchSearch = q.isEmpty ||
+          final matchSearch =
+              q.isEmpty ||
               it.name.toLowerCase().contains(q) ||
               it.sku.toLowerCase().contains(q);
           final matchCat =
@@ -2314,21 +2340,26 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                     flex: 3,
                     child: TextField(
                       controller: _searchCtrl,
-                      onChanged: (v) =>
-                          setState(() => _searchQuery = v.trim()),
+                      onChanged: (v) => setState(() => _searchQuery = v.trim()),
                       style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurface),
+                        color: AppColors.onSurface,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'ابحث عن صنف...',
                         hintStyle: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.onSurfaceVariant),
-                        prefixIcon: const Icon(Icons.search,
-                            color: AppColors.onSurfaceVariant, size: 18),
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: AppColors.onSurfaceVariant,
+                          size: 18,
+                        ),
                         filled: true,
                         fillColor: AppColors.surfaceContainerHigh,
                         border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppDimens.radiusSm),
+                          borderRadius: BorderRadius.circular(
+                            AppDimens.radiusSm,
+                          ),
                           borderSide: BorderSide.none,
                         ),
                         isDense: true,
@@ -2342,13 +2373,16 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                       value: _filterCatId,
                       dropdownColor: AppColors.surfaceContainerLow,
                       style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurface, fontSize: 13),
+                        color: AppColors.onSurface,
+                        fontSize: 13,
+                      ),
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: AppColors.surfaceContainerHigh,
                         border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppDimens.radiusSm),
+                          borderRadius: BorderRadius.circular(
+                            AppDimens.radiusSm,
+                          ),
                           borderSide: BorderSide.none,
                         ),
                         isDense: true,
@@ -2356,20 +2390,27 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                       items: [
                         DropdownMenuItem<String?>(
                           value: null,
-                          child: Text('كل التصنيفات',
-                              style: GoogleFonts.ibmPlexSansArabic(
-                                  color: AppColors.onSurface)),
+                          child: Text(
+                            'كل التصنيفات',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              color: AppColors.onSurface,
+                            ),
+                          ),
                         ),
-                        ...allCats.map((c) => DropdownMenuItem<String?>(
-                              value: c.id,
-                              child: Text(c.name,
-                                  style: GoogleFonts.ibmPlexSansArabic(
-                                      color: AppColors.onSurface,
-                                      fontSize: 13)),
-                            )),
+                        ...allCats.map(
+                          (c) => DropdownMenuItem<String?>(
+                            value: c.id,
+                            child: Text(
+                              c.name,
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                color: AppColors.onSurface,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
-                      onChanged: (v) =>
-                          setState(() => _filterCatId = v),
+                      onChanged: (v) => setState(() => _filterCatId = v),
                     ),
                   ),
                 ],
@@ -2379,12 +2420,14 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
               // ── كتالوج الأصناف ────────────────────────────────────────────
               if (filtered.isEmpty)
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 24),
+                  padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Center(
-                    child: Text('لا توجد أصناف مطابقة',
-                        style: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.onSurfaceVariant)),
+                    child: Text(
+                      'لا توجد أصناف مطابقة',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 )
               else
@@ -2393,24 +2436,28 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                   runSpacing: 8,
                   children: filtered.map((it) {
                     final catName = allCats
-                            .firstWhere((c) => c.id == it.categoryId,
-                                orElse: () => allCats.first)
-                            .name;
-                    final inCart =
-                        _lines.any((l) => l.itemId == it.id);
+                        .firstWhere(
+                          (c) => c.id == it.categoryId,
+                          orElse: () => allCats.first,
+                        )
+                        .name;
+                    final inCart = _lines.any((l) => l.itemId == it.id);
                     return GestureDetector(
                       onTap: () =>
                           _addItem(it.id, it.name, catName, it.unitCode),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: inCart
                               ? AppColors.primary.withValues(alpha: 0.18)
                               : AppColors.surfaceContainerHigh,
-                          borderRadius:
-                              BorderRadius.circular(AppDimens.radiusSm),
+                          borderRadius: BorderRadius.circular(
+                            AppDimens.radiusSm,
+                          ),
                           border: Border.all(
                             color: inCart
                                 ? AppColors.primary
@@ -2421,16 +2468,20 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(it.name,
-                                style: GoogleFonts.ibmPlexSansArabic(
-                                    color: AppColors.onSurface,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13)),
+                            Text(
+                              it.name,
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                color: AppColors.onSurface,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
                             Text(
                               '${it.unitCode} • $catName',
                               style: GoogleFonts.ibmPlexSansArabic(
-                                  color: AppColors.onSurfaceVariant,
-                                  fontSize: 11),
+                                color: AppColors.onSurfaceVariant,
+                                fontSize: 11,
+                              ),
                             ),
                           ],
                         ),
@@ -2446,46 +2497,60 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                 Container(
                   decoration: BoxDecoration(
                     color: AppColors.surfaceContainerLow,
-                    borderRadius:
-                        BorderRadius.circular(AppDimens.radiusMd),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                     border: Border.all(
-                        color: AppColors.outlineVariant
-                            .withValues(alpha: 0.3)),
+                      color: AppColors.outlineVariant.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Column(
                     children: [
                       // رأس الجدول
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                         decoration: const BoxDecoration(
                           color: AppColors.surfaceContainerHigh,
                           borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(AppDimens.radiusMd)),
+                            top: Radius.circular(AppDimens.radiusMd),
+                          ),
                         ),
                         child: Row(
                           children: [
                             Expanded(
-                                flex: 4,
-                                child: Text('الصنف',
-                                    style: GoogleFonts.ibmPlexSansArabic(
-                                        color: AppColors.onSurface,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13))),
+                              flex: 4,
+                              child: Text(
+                                'الصنف',
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                  color: AppColors.onSurface,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
                             Expanded(
-                                flex: 2,
-                                child: Text('التصنيف',
-                                    style: GoogleFonts.ibmPlexSansArabic(
-                                        color: AppColors.onSurface,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13))),
+                              flex: 2,
+                              child: Text(
+                                'التصنيف',
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                  color: AppColors.onSurface,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
                             Expanded(
-                                flex: 2,
-                                child: Text('الكمية',
-                                    style: GoogleFonts.ibmPlexSansArabic(
-                                        color: AppColors.onSurface,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13))),
+                              flex: 2,
+                              child: Text(
+                                'الكمية',
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                  color: AppColors.onSurface,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
                             const SizedBox(width: 40),
                           ],
                         ),
@@ -2494,27 +2559,36 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                         final l = _lines[i];
                         return Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           decoration: const BoxDecoration(
                             border: Border(
-                                bottom: BorderSide(
-                                    color:
-                                        AppColors.surfaceContainerHigh)),
+                              bottom: BorderSide(
+                                color: AppColors.surfaceContainerHigh,
+                              ),
+                            ),
                           ),
                           child: Row(
                             children: [
                               Expanded(
                                 flex: 4,
-                                child: Text(l.name,
-                                    style: GoogleFonts.ibmPlexSansArabic(
-                                        color: AppColors.onSurface)),
+                                child: Text(
+                                  l.name,
+                                  style: GoogleFonts.ibmPlexSansArabic(
+                                    color: AppColors.onSurface,
+                                  ),
+                                ),
                               ),
                               Expanded(
                                 flex: 2,
-                                child: Text(l.categoryName,
-                                    style: GoogleFonts.ibmPlexSansArabic(
-                                        color: AppColors.onSurfaceVariant,
-                                        fontSize: 12)),
+                                child: Text(
+                                  l.categoryName,
+                                  style: GoogleFonts.ibmPlexSansArabic(
+                                    color: AppColors.onSurfaceVariant,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
                               Expanded(
                                 flex: 2,
@@ -2526,8 +2600,7 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                                         if (l.qty > 1) {
                                           setState(() {
                                             l.qty--;
-                                            l.qtyCtrl.text =
-                                                l.qty.toString();
+                                            l.qtyCtrl.text = l.qty.toString();
                                           });
                                         }
                                       },
@@ -2535,14 +2608,16 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                                         width: 24,
                                         height: 24,
                                         decoration: BoxDecoration(
-                                          color: AppColors
-                                              .surfaceContainerHigh,
-                                          borderRadius:
-                                              BorderRadius.circular(4),
+                                          color: AppColors.surfaceContainerHigh,
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
-                                        child: const Icon(Icons.remove,
-                                            size: 14,
-                                            color: AppColors.onSurface),
+                                        child: const Icon(
+                                          Icons.remove,
+                                          size: 14,
+                                          color: AppColors.onSurface,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 4),
@@ -2552,20 +2627,19 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                                         controller: l.qtyCtrl,
                                         textAlign: TextAlign.center,
                                         keyboardType:
-                                            const TextInputType
-                                                .numberWithOptions(
-                                                decimal: true),
-                                        style:
-                                            GoogleFonts.ibmPlexSansArabic(
-                                                color: AppColors.onSurface,
-                                                fontSize: 13),
+                                            const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
+                                        style: GoogleFonts.ibmPlexSansArabic(
+                                          color: AppColors.onSurface,
+                                          fontSize: 13,
+                                        ),
                                         onChanged: (v) {
                                           final parsed = double.tryParse(
-                                              _normalizeNum(v));
-                                          if (parsed != null &&
-                                              parsed > 0) {
-                                            setState(
-                                                () => l.qty = parsed);
+                                            _normalizeNum(v),
+                                          );
+                                          if (parsed != null && parsed > 0) {
+                                            setState(() => l.qty = parsed);
                                           }
                                         },
                                         decoration: InputDecoration(
@@ -2573,19 +2647,23 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                                           suffixText: l.unitCode,
                                           suffixStyle:
                                               GoogleFonts.ibmPlexSansArabic(
-                                                  color: AppColors
-                                                      .onSurfaceVariant,
-                                                  fontSize: 10),
+                                                color:
+                                                    AppColors.onSurfaceVariant,
+                                                fontSize: 10,
+                                              ),
                                           enabledBorder:
                                               const UnderlineInputBorder(
-                                                  borderSide: BorderSide(
-                                                      color: AppColors
-                                                          .outlineVariant)),
+                                                borderSide: BorderSide(
+                                                  color:
+                                                      AppColors.outlineVariant,
+                                                ),
+                                              ),
                                           focusedBorder:
                                               const UnderlineInputBorder(
-                                                  borderSide: BorderSide(
-                                                      color:
-                                                          AppColors.primary)),
+                                                borderSide: BorderSide(
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
                                         ),
                                       ),
                                     ),
@@ -2595,30 +2673,34 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                                       onTap: () {
                                         setState(() {
                                           l.qty++;
-                                          l.qtyCtrl.text =
-                                              l.qty.toString();
+                                          l.qtyCtrl.text = l.qty.toString();
                                         });
                                       },
                                       child: Container(
                                         width: 24,
                                         height: 24,
                                         decoration: BoxDecoration(
-                                          color: AppColors
-                                              .surfaceContainerHigh,
-                                          borderRadius:
-                                              BorderRadius.circular(4),
+                                          color: AppColors.surfaceContainerHigh,
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
-                                        child: const Icon(Icons.add,
-                                            size: 14,
-                                            color: AppColors.onSurface),
+                                        child: const Icon(
+                                          Icons.add,
+                                          size: 14,
+                                          color: AppColors.onSurface,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline,
-                                    color: AppColors.statusRed, size: 18),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: AppColors.statusRed,
+                                  size: 18,
+                                ),
                                 onPressed: () => _removeLine(i),
                                 tooltip: 'حذف السطر',
                               ),
@@ -2636,16 +2718,17 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                   controller: _notesCtrl,
                   maxLines: 2,
                   style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurface),
+                    color: AppColors.onSurface,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'ملاحظة (اختيارية)...',
                     hintStyle: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurfaceVariant),
+                      color: AppColors.onSurfaceVariant,
+                    ),
                     filled: true,
                     fillColor: AppColors.surfaceContainerHigh,
                     border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppDimens.radiusSm),
+                      borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                       borderSide: BorderSide.none,
                     ),
                     isDense: true,
@@ -2658,29 +2741,30 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                   width: double.infinity,
                   height: 46,
                   child: ElevatedButton.icon(
-                    onPressed:
-                        (_lines.isEmpty || _submitting) ? null : _submit,
+                    onPressed: (_lines.isEmpty || _submitting) ? null : _submit,
                     icon: _submitting
                         ? const SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.onPrimary))
+                              strokeWidth: 2,
+                              color: AppColors.onPrimary,
+                            ),
+                          )
                         : const Icon(Icons.send_rounded, size: 18),
                     label: Text(
                       _submitting ? 'جاري الإرسال...' : 'إرسال الطلب',
                       style: GoogleFonts.ibmPlexSansArabic(
-                          fontWeight: FontWeight.w700),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryContainer,
                       foregroundColor: AppColors.onPrimary,
-                      disabledBackgroundColor:
-                          AppColors.outlineVariant.withValues(alpha: 0.3),
+                      disabledBackgroundColor: AppColors.outlineVariant
+                          .withValues(alpha: 0.3),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppDimens.radiusMd),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                       ),
                     ),
                   ),
@@ -2693,12 +2777,18 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                   child: Center(
                     child: Column(
                       children: [
-                        const Icon(Icons.shopping_cart_outlined,
-                            color: AppColors.onSurfaceVariant, size: 40),
+                        const Icon(
+                          Icons.shopping_cart_outlined,
+                          color: AppColors.onSurfaceVariant,
+                          size: 40,
+                        ),
                         const SizedBox(height: 8),
-                        Text('اضغط على صنف لإضافته للطلب',
-                            style: GoogleFonts.ibmPlexSansArabic(
-                                color: AppColors.onSurfaceVariant)),
+                        Text(
+                          'اضغط على صنف لإضافته للطلب',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -2723,7 +2813,7 @@ class _MyBranchOrdersTab extends StatefulWidget {
 class _MyBranchOrdersTabState extends State<_MyBranchOrdersTab> {
   bool _loading = false;
   String? _error;
-  List<dynamic> _orders = [];
+  List<BranchOrder> _orders = [];
   bool _loaded = false;
 
   @override
@@ -2741,11 +2831,10 @@ class _MyBranchOrdersTabState extends State<_MyBranchOrdersTab> {
     });
     try {
       final invCubit = _InventoryCubitProvider.of(context);
-      final result =
-          await invCubit.getBranchOrdersForBranch(session.branchId);
+      final result = await invCubit.getBranchOrdersForBranch(session.branchId);
       if (mounted) {
         setState(() {
-          _orders = result;
+          _orders = result.cast<BranchOrder>();
           _loading = false;
           _loaded = true;
         });
@@ -2764,25 +2853,28 @@ class _MyBranchOrdersTabState extends State<_MyBranchOrdersTab> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Center(
-          child: CircularProgressIndicator(color: AppColors.primary));
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
     }
     if (_error != null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!,
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.statusRed),
-                textAlign: TextAlign.center),
+            Text(
+              _error!,
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.statusRed),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
               onPressed: _fetchOrders,
               icon: const Icon(Icons.refresh),
               label: const Text('إعادة المحاولة'),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryContainer,
-                  foregroundColor: AppColors.onPrimary),
+                backgroundColor: AppColors.primaryContainer,
+                foregroundColor: AppColors.onPrimary,
+              ),
             ),
           ],
         ),
@@ -2793,12 +2885,18 @@ class _MyBranchOrdersTabState extends State<_MyBranchOrdersTab> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.inventory_outlined,
-                color: AppColors.onSurfaceVariant, size: 48),
+            const Icon(
+              Icons.inventory_outlined,
+              color: AppColors.onSurfaceVariant,
+              size: 48,
+            ),
             const SizedBox(height: 12),
-            Text('لا توجد طلبات مرسلة',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant)),
+            Text(
+              'لا توجد طلبات مرسلة',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       );
@@ -2810,10 +2908,8 @@ class _MyBranchOrdersTabState extends State<_MyBranchOrdersTab> {
       child: ListView.builder(
         padding: const EdgeInsets.all(AppDimens.spaceLg),
         itemCount: _orders.length,
-        itemBuilder: (ctx, i) => _BranchOrderCard(
-          order: _orders[i],
-          onRefresh: _fetchOrders,
-        ),
+        itemBuilder: (ctx, i) =>
+            _BranchOrderCard(order: _orders[i], onRefresh: _fetchOrders),
       ),
     );
   }
@@ -2822,7 +2918,7 @@ class _MyBranchOrdersTabState extends State<_MyBranchOrdersTab> {
 // ── كارت طلب فرع واحد ─────────────────────────────────────────────────────────
 
 class _BranchOrderCard extends StatefulWidget {
-  final dynamic order;
+  final BranchOrder order;
   final VoidCallback onRefresh;
 
   const _BranchOrderCard({required this.order, required this.onRefresh});
@@ -2834,28 +2930,25 @@ class _BranchOrderCard extends StatefulWidget {
 class _BranchOrderCardState extends State<_BranchOrderCard> {
   bool _actioning = false;
 
-  dynamic get _o => widget.order;
+  BranchOrder get _o => widget.order;
 
-  String get _statusStr => (_o['status'] as String?) ?? 'submitted';
   String get _arabicStatus {
-    return switch (_statusStr) {
-      'submitted' => 'مُرسل',
-      'approved'  => 'جاري التحضير',
-      'received'  => 'مستلم',
-      'rejected'  => 'مرفوض',
-      'cancelled' => 'ملغي',
-      _           => _statusStr,
+    return switch (_o.status) {
+      BranchOrderStatus.submitted => 'مُرسَل',
+      BranchOrderStatus.approved => 'جاري التحضير',
+      BranchOrderStatus.received => 'مستلم',
+      BranchOrderStatus.rejected => 'مرفوض',
+      BranchOrderStatus.cancelled => 'ملغي',
     };
   }
 
   Color get _statusColor {
-    return switch (_statusStr) {
-      'submitted' => AppColors.primary,
-      'approved'  => AppColors.secondary,
-      'received'  => AppColors.statusGreen,
-      'rejected'  => AppColors.statusRed,
-      'cancelled' => AppColors.onSurfaceVariant,
-      _           => AppColors.onSurfaceVariant,
+    return switch (_o.status) {
+      BranchOrderStatus.submitted => AppColors.primary,
+      BranchOrderStatus.approved => AppColors.secondary,
+      BranchOrderStatus.received => AppColors.statusGreen,
+      BranchOrderStatus.rejected => AppColors.statusRed,
+      BranchOrderStatus.cancelled => AppColors.onSurfaceVariant,
     };
   }
 
@@ -2867,12 +2960,12 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
   }
 
   void _showSnack(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content:
-          Text(msg, style: GoogleFonts.ibmPlexSansArabic()),
-      backgroundColor:
-          isError ? AppColors.statusRed : AppColors.statusGreen,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: GoogleFonts.ibmPlexSansArabic()),
+        backgroundColor: isError ? AppColors.statusRed : AppColors.statusGreen,
+      ),
+    );
   }
 
   Future<void> _confirmReceive() async {
@@ -2882,28 +2975,37 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           backgroundColor: AppColors.surfaceContainerLow,
-          title: Text('تأكيد الاستلام',
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.onSurface,
-                  fontWeight: FontWeight.bold)),
+          title: Text(
+            'تأكيد الاستلام',
+            style: GoogleFonts.ibmPlexSansArabic(
+              color: AppColors.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           content: Text(
-              'هل استلمت الطلب رقم ${_o['number']}؟ لا يمكن التراجع.',
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.onSurface)),
+            'هل استلمت الطلب رقم ${_o.number}؟ لا يمكن التراجع.',
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('لا',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurfaceVariant)),
+              child: Text(
+                'لا',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.statusGreen,
-                  foregroundColor: AppColors.onPrimary),
+                backgroundColor: AppColors.statusGreen,
+                foregroundColor: AppColors.onPrimary,
+              ),
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text('نعم، استلمت',
-                  style: GoogleFonts.ibmPlexSansArabic()),
+              child: Text(
+                'نعم، استلمت',
+                style: GoogleFonts.ibmPlexSansArabic(),
+              ),
             ),
           ],
         ),
@@ -2915,8 +3017,8 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
     try {
       final cubit = _InventoryCubitProvider.of(context);
       await cubit.receiveBranchOrder(
-        orderId: _o['id'] as String,
-        expectedVersion: (_o['version'] as num).toInt(),
+        orderId: _o.id,
+        expectedVersion: _o.version,
       );
       if (!mounted) return;
       SystemSound.play(SystemSoundType.click);
@@ -2932,7 +3034,7 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
 
   @override
   Widget build(BuildContext context) {
-    final lines = (_o['lines'] as List?) ?? [];
+    final lines = _o.lines;
     final catalog = _InventoryCubitProvider.of(context).state.catalogItemsById;
 
     return Container(
@@ -2940,9 +3042,7 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-        border: Border.all(
-          color: _statusColor.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: _statusColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2954,7 +3054,9 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: _statusColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
@@ -2962,22 +3064,27 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
                   child: Text(
                     _arabicStatus,
                     style: GoogleFonts.ibmPlexSansArabic(
-                        color: _statusColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12),
+                      color: _statusColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  'رقم: ${_o['number'] ?? ''}',
+                  'رقم: ${_o.number}',
                   style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurfaceVariant, fontSize: 12),
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
                 const Spacer(),
                 Text(
-                  _fmtDate(_o['created_at'] as String?),
+                  _fmtDate(_o.createdAt.toIso8601String()),
                   style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurfaceVariant, fontSize: 12),
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -2987,19 +3094,19 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
           if (lines.isNotEmpty) ...[
             const Divider(height: 1, color: AppColors.surfaceContainerHigh),
             ...lines.map((l) {
-              final lm = l as Map<String, dynamic>;
-              final qtyReq =
-                  (lm['qty_requested'] as num?)?.toDouble() ?? 0;
-              final qtyAppr =
-                  (lm['qty_approved'] as num?)?.toDouble();
-              
-              final item = catalog[lm['item_id'] as String? ?? ''];
-              final itemName = item?.name ?? lm['item_name'] as String? ?? lm['item_id'] as String? ?? '';
-              final unitCode = item?.unitCode ?? lm['unit_code'] as String? ?? '';
+              final lm = l;
+              final qtyReq = lm.qtyRequested;
+              final qtyAppr = lm.qtyApproved;
+
+              final item = catalog[lm.itemId];
+              final itemName = item?.name ?? lm.itemId;
+              final unitCode = item?.unitCode ?? '';
 
               return Padding(
                 padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 14, vertical: 6),
+                  horizontal: 14,
+                  vertical: 6,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -3007,21 +3114,25 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
                       child: Text(
                         itemName,
                         style: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.onSurface, fontSize: 13),
+                          color: AppColors.onSurface,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                     Text(
                       _fmtQty(qtyReq, unitCode),
                       style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurfaceVariant,
-                          fontSize: 12),
+                        color: AppColors.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
                     ),
-                    if (_statusStr == 'approved' &&
+                    if (_o.status == BranchOrderStatus.approved &&
                         qtyAppr != null) ...[
                       const SizedBox(width: 8),
-                      const Text('→',
-                          style: TextStyle(
-                              color: AppColors.onSurfaceVariant)),
+                      const Text(
+                        '→',
+                        style: TextStyle(color: AppColors.onSurfaceVariant),
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         _fmtQty(qtyAppr, unitCode),
@@ -3041,21 +3152,26 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
           ],
 
           // سبب الرفض
-          if (_statusStr == 'rejected' &&
-              _o['rejection_reason'] != null) ...[
+          if (_o.status == BranchOrderStatus.rejected &&
+              _o.rejectionReason != null) ...[
             const Divider(height: 1, color: AppColors.surfaceContainerHigh),
             Padding(
               padding: const EdgeInsetsDirectional.all(12),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline,
-                      color: AppColors.statusRed, size: 14),
+                  const Icon(
+                    Icons.info_outline,
+                    color: AppColors.statusRed,
+                    size: 14,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'السبب: ${_o['rejection_reason']}',
+                      '${_o.rejectionReason}',
                       style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.statusRed, fontSize: 12),
+                        color: AppColors.statusRed,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -3064,22 +3180,14 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
           ],
 
           // الأزرار
-          if (_statusStr == 'submitted') ...[
+          if (_o.status == BranchOrderStatus.submitted) ...[
             const Divider(height: 1, color: AppColors.surfaceContainerHigh),
             Padding(
               padding: const EdgeInsetsDirectional.all(12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton.icon(
-                    onPressed: _actioning ? null : () {/* TODO: تعديل */},
-                    icon: const Icon(Icons.edit_outlined,
-                        size: 14, color: AppColors.primary),
-                    label: Text('تعديل',
-                        style: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.primary, fontSize: 12)),
-                  ),
-                  const SizedBox(width: 8),
+                  // زر الإلغاء فقط — تم إزالة زر التعديل
                   TextButton.icon(
                     onPressed: _actioning
                         ? null
@@ -3091,33 +3199,40 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
                                 child: AlertDialog(
                                   backgroundColor:
                                       AppColors.surfaceContainerLow,
-                                  title: Text('إلغاء الطلب',
-                                      style: GoogleFonts.ibmPlexSansArabic(
-                                          color: AppColors.onSurface,
-                                          fontWeight: FontWeight.bold)),
+                                  title: Text(
+                                    'إلغاء الطلب',
+                                    style: GoogleFonts.ibmPlexSansArabic(
+                                      color: AppColors.onSurface,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                   content: Text(
-                                      'هل تريد إلغاء الطلب رقم ${_o['number']}؟',
-                                      style: GoogleFonts.ibmPlexSansArabic(
-                                          color: AppColors.onSurface)),
+                                    'هل تريد إلغاء الطلب رقم ${_o.number}؟',
+                                    style: GoogleFonts.ibmPlexSansArabic(
+                                      color: AppColors.onSurface,
+                                    ),
+                                  ),
                                   actions: [
                                     TextButton(
                                       onPressed: () =>
                                           Navigator.pop(ctx, false),
-                                      child: Text('لا',
-                                          style: GoogleFonts.ibmPlexSansArabic(
-                                              color: AppColors
-                                                  .onSurfaceVariant)),
+                                      child: Text(
+                                        'لا',
+                                        style: GoogleFonts.ibmPlexSansArabic(
+                                          color: AppColors.onSurfaceVariant,
+                                        ),
+                                      ),
                                     ),
                                     ElevatedButton(
                                       style: ElevatedButton.styleFrom(
-                                          backgroundColor:
-                                              AppColors.statusRed,
-                                          foregroundColor:
-                                              AppColors.onPrimary),
-                                      onPressed: () =>
-                                          Navigator.pop(ctx, true),
-                                      child: Text('إلغاء الطلب',
-                                          style: GoogleFonts.ibmPlexSansArabic()),
+                                        backgroundColor: AppColors.statusRed,
+                                        foregroundColor: AppColors.onPrimary,
+                                      ),
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: Text(
+                                        'إلغاء الطلب',
+                                        style: GoogleFonts.ibmPlexSansArabic(),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -3126,12 +3241,10 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
                             if (confirmed != true || !mounted) return;
                             setState(() => _actioning = true);
                             try {
-                              final cubit =
-                                  _InventoryCubitProvider.of(context);
+                              final cubit = _InventoryCubitProvider.of(context);
                               await cubit.cancelBranchOrderForBranch(
-                                orderId: _o['id'] as String,
-                                expectedVersion:
-                                    (_o['version'] as num).toInt(),
+                                orderId: _o.id,
+                                expectedVersion: _o.version,
                               );
                               if (mounted) {
                                 _showSnack('تم إلغاء الطلب');
@@ -3144,18 +3257,25 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
                               }
                             }
                           },
-                    icon: const Icon(Icons.cancel_outlined,
-                        size: 14, color: AppColors.statusRed),
-                    label: Text('إلغاء الطلب',
-                        style: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.statusRed, fontSize: 12)),
+                    icon: const Icon(
+                      Icons.cancel_outlined,
+                      size: 14,
+                      color: AppColors.statusRed,
+                    ),
+                    label: Text(
+                      'إلغاء الطلب',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: AppColors.statusRed,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
           ],
 
-          if (_statusStr == 'approved') ...[
+          if (_o.status == BranchOrderStatus.approved) ...[
             const Divider(height: 1, color: AppColors.surfaceContainerHigh),
             Padding(
               padding: const EdgeInsetsDirectional.all(12),
@@ -3168,20 +3288,23 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
                           width: 14,
                           height: 14,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.onPrimary))
+                            strokeWidth: 2,
+                            color: AppColors.onPrimary,
+                          ),
+                        )
                       : const Icon(Icons.check_circle_outline, size: 16),
                   label: Text(
                     _actioning ? 'جاري...' : 'تأكيد الاستلام',
                     style: GoogleFonts.ibmPlexSansArabic(
-                        fontWeight: FontWeight.w700),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.statusGreen,
                     foregroundColor: AppColors.onPrimary,
                     shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppDimens.radiusMd)),
+                      borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                    ),
                   ),
                 ),
               ),
@@ -3225,7 +3348,8 @@ class _InventoryCubitConsumer extends StatelessWidget {
     BuildContext context,
     InventoryCubit invCubit,
     InventoryState invState,
-  ) builder;
+  )
+  builder;
 
   const _InventoryCubitConsumer({required this.builder});
 
@@ -3243,7 +3367,6 @@ extension _InventoryCubitProvider on BuildContext {
   static InventoryCubit of(BuildContext context) =>
       context.read<InventoryCubit>();
 }
-
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Shared Widgets

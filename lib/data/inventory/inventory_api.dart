@@ -292,49 +292,45 @@ class InventoryApi {
 
   // ── طلبات الفروع ──────────────────────────────────────────────────────────
 
-  Future<BranchOrder> createBranchOrder({
+  Future<void> createBranchOrder({
     required String branchId,
     String? notes,
     required List<Map<String, dynamic>> lines,
   }) async {
     final clientId = generateUuidV4();
-    final res = await _client.rpc('create_branch_order', params: {
+    await _client.rpc('create_branch_order', params: {
       'p_client_id': clientId,
       'p_branch_id': branchId,
       'p_notes': notes,
       'p_lines': lines,
-    }) as Map<String, dynamic>;
-    return BranchOrder.fromJson(res['doc'] as Map<String, dynamic>);
+    });
   }
 
-  Future<BranchOrder> updateBranchOrder({
+  Future<void> updateBranchOrder({
     required String orderId,
     required int expectedVersion,
     String? notes,
     required List<Map<String, dynamic>> lines,
   }) async {
     final clientId = generateUuidV4();
-    final res = await _client.rpc('update_branch_order', params: {
+    await _client.rpc('update_branch_order', params: {
       'p_client_id': clientId,
       'p_order_id': orderId,
       'p_expected_version': expectedVersion,
       'p_notes': notes,
       'p_lines': lines,
-    }) as Map<String, dynamic>;
-    return BranchOrder.fromJson(res['doc'] as Map<String, dynamic>);
+    });
   }
 
-  Future<BranchOrder> cancelBranchOrder({
+  Future<void> cancelBranchOrder({
     required String orderId,
     required int expectedVersion,
   }) async {
-    final clientId = generateUuidV4();
-    final res = await _client.rpc('cancel_branch_order', params: {
-      'p_client_id': clientId,
+    // ملاحظة: الدالة cancel_branch_order تقبل (p_order_id, p_expected_version) فقط بدون p_client_id
+    await _client.rpc('cancel_branch_order', params: {
       'p_order_id': orderId,
       'p_expected_version': expectedVersion,
-    }) as Map<String, dynamic>;
-    return BranchOrder.fromJson(res['doc'] as Map<String, dynamic>);
+    });
   }
 
   /// قرار طلب الفرع — أمين المخزن
@@ -360,17 +356,16 @@ class InventoryApi {
     );
   }
 
-  Future<BranchOrder> receiveBranchOrder({
+  Future<void> receiveBranchOrder({
     required String orderId,
     required int expectedVersion,
   }) async {
     final clientId = generateUuidV4();
-    final res = await _client.rpc('receive_branch_order', params: {
+    await _client.rpc('receive_branch_order', params: {
       'p_client_id': clientId,
       'p_order_id': orderId,
       'p_expected_version': expectedVersion,
-    }) as Map<String, dynamic>;
-    return BranchOrder.fromJson(res['doc'] as Map<String, dynamic>);
+    });
   }
 
   // ── الجرد ──────────────────────────────────────────────────────────────────

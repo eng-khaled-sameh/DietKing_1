@@ -35,17 +35,21 @@ class CatalogState extends Equatable {
 
   // ── Getters مساعدة ─────────────────────────────────────────────────────────
 
-  /// تصنيف "الوجبات"
+  /// تصنيف "الوجبات" — يبحث بالكلمة المفتاحية (مرن)
   ProductCategory? get mealsCategory =>
-      _findCategory('الوجبات');
+      _findCategory(['وجبات', 'meal', 'بروتين', 'protein', 'رئيسي']);
 
-  /// تصنيف "الإضافات"
+  /// تصنيف "الإضافات" — يبحث بالكلمة المفتاحية (مرن)
   ProductCategory? get addonsCategory =>
-      _findCategory('الإضافات');
+      _findCategory(['إضافات', 'إضافة', 'addon', 'extra', 'سناك', 'مشروب', 'إكسترا']);
 
-  ProductCategory? _findCategory(String name) {
+  ProductCategory? _findCategory(List<String> keywords) {
     try {
-      return categories.firstWhere((c) => c.name == name);
+      return categories.firstWhere(
+        (c) => keywords.any(
+          (kw) => c.name.toLowerCase().contains(kw.toLowerCase()),
+        ),
+      );
     } catch (_) {
       return null;
     }
@@ -54,18 +58,34 @@ class CatalogState extends Equatable {
   /// المنتجات النشطة من تصنيف الوجبات (has_variants = true)
   List<Product> get mealProducts {
     final cat = mealsCategory;
-    if (cat == null) return [];
-    return products
-        .where((p) => p.categoryId == cat.id && p.isActive)
-        .toList();
+    if (cat != null) {
+      final catProducts = products
+          .where((p) => p.categoryId == cat.id && p.isActive)
+          .toList();
+      // لو وجدنا تصنيف لكن فيه منتجات نشطة استخدمها
+      if (catProducts.isNotEmpty) return catProducts;
+    }
+    // Fallback: كل المنتجات النشطة التي عندها متغيرات (has_variants=true)
+    return products.where((p) => p.isActive && p.hasVariants).toList();
   }
 
   /// المنتجات النشطة من تصنيف الإضافات (has_variants = false)
   List<Product> get addonProducts {
     final cat = addonsCategory;
-    if (cat == null) return [];
+    if (cat != null) {
+      final catProducts = products
+          .where((p) => p.categoryId == cat.id && p.isActive)
+          .toList();
+      if (catProducts.isNotEmpty) return catProducts;
+    }
+    // Fallback: كل المنتجات النشطة بدون متغيرات (has_variants=false)
+    // فقط لو لم يكن هناك تصنيف مخصص للإضافات
+    final mealCat = mealsCategory;
+    final mealProductIds = mealCat != null
+        ? products.where((p) => p.categoryId == mealCat.id).map((p) => p.id).toSet()
+        : products.where((p) => p.hasVariants).map((p) => p.id).toSet();
     return products
-        .where((p) => p.categoryId == cat.id && p.isActive)
+        .where((p) => p.isActive && !p.hasVariants && !mealProductIds.contains(p.id))
         .toList();
   }
 

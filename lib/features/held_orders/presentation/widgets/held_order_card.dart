@@ -23,6 +23,15 @@ class HeldOrderCard extends StatelessWidget {
     return 'منذ ${diff.inDays} يوم';
   }
 
+  /// يستبدل أي UUID في النص بـ "صنف" لتجنب عرض UUIDs للمستخدم
+  String _cleanSummaryLabel(String label) {
+    final uuidRegex = RegExp(
+      r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
+      caseSensitive: false,
+    );
+    return label.replaceAll(uuidRegex, 'صنف');
+  }
+
   @override
   Widget build(BuildContext context) {
     final isSubscription = order.source == HeldOrderSource.subscription;
@@ -66,7 +75,7 @@ class HeldOrderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      order.summaryLabel,
+                      _cleanSummaryLabel(order.summaryLabel),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.ibmPlexSansArabic(

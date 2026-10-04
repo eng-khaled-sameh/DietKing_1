@@ -69,9 +69,18 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
     final state = _cartCubit.state;
     if (state.lines.isEmpty) return;
 
+    // تنظيف الاسم: لو كان UUID نستبدله بـ "صنف"
+    String cleanName(String name) {
+      final uuidRegex = RegExp(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+        caseSensitive: false,
+      );
+      return uuidRegex.hasMatch(name.trim()) ? 'صنف' : name;
+    }
+
     final summaryLabel = state.lines.length <= 2
-        ? state.lines.map((l) => l.name).join(' + ')
-        : '${state.lines[0].name} + ${state.lines[1].name} و ${state.lines.length - 2} أخرى';
+        ? state.lines.map((l) => cleanName(l.name)).join(' + ')
+        : '${cleanName(state.lines[0].name)} + ${cleanName(state.lines[1].name)} و ${state.lines.length - 2} أخرى';
 
     final order = HeldOrder(
       id: DateTime.now().millisecondsSinceEpoch.toString(),

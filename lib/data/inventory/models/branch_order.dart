@@ -102,9 +102,12 @@ class BranchOrder extends Equatable {
 
   factory BranchOrder.fromJson(Map<String, dynamic> j) {
     final rawLines = j['lines'] as List<dynamic>? ?? [];
+    // number may arrive as int (auto-increment) or String — normalise to String
+    final rawNumber = j['number'];
+    final number = rawNumber == null ? '' : rawNumber.toString();
     return BranchOrder(
       id:              j['id']               as String,
-      number:          j['number']           as String,
+      number:          number,
       branchId:        j['branch_id']        as String,
       branchName:      j['branch_name']      as String? ?? '',
       status:          BranchOrderStatus.fromString(j['status'] as String),
