@@ -472,7 +472,7 @@ class _StocktakePreviewDialogState
     try {
       final cubit = context.read<InventoryCubit>();
       final token =
-          await cubit.requestAdminToken(password, 'stocktake');
+          await cubit.requestAdminToken(password, 'inventory_stocktake');
       if (token == null) {
         if (mounted) {
           setState(() {
@@ -541,7 +541,9 @@ class _StocktakePreviewDialogState
               ),
               const Divider(height: 1, color: AppColors.outlineVariant),
               Expanded(child: _buildBody()),
-              if (_error != null)
+              // خطأ الاعتماد فقط (ظهر بعد المعاينة): يُعرض في الأسفل
+              // خطأ المعاينة يُعرض في الجسم ولا يُعاد هنا
+              if (_error != null && _preview != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 24, vertical: 4),

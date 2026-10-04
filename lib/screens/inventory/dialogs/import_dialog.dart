@@ -9,7 +9,6 @@ import 'package:path_provider/path_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../data/inventory/excel/inventory_excel_service.dart';
 import '../cubit/inventory_cubit.dart';
-import '../cubit/inventory_state.dart';
 import '../widgets/inventory_snack.dart';
 import '../../../../core/utils/file_saved_dialog.dart';
 
@@ -104,37 +103,49 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
         return;
       }
       if (rows.length > _kMaxRows) {
-        _setError('عدد الصفوف (${rows.length}) يتجاوز الحد الأقصى ($_kMaxRows)');
+        _setError(
+          'عدد الصفوف (${rows.length}) يتجاوز الحد الأقصى ($_kMaxRows)',
+        );
         return;
       }
 
       // قراءة ورقة التصنيفات (اختيارية)
-      final catRows = await _excelService.readAndNormalize(
-            path,
-            'التصنيفات',
-            ['اسم التصنيف', 'النوع', 'الكود المختصر'],
-          ) ??
+      final catRows =
+          await _excelService.readAndNormalize(path, 'التصنيفات', [
+            'اسم التصنيف',
+            'النوع',
+            'الكود المختصر',
+          ]) ??
           [];
 
       // 2. تحويل للصيغة التي يفهمها السيرفر (import_inventory_items p_rows)
-      final items = rows.map((r) => <String, dynamic>{
-            'sku': r[_kItemHeaders[0]],
-            'name': r[_kItemHeaders[1]],
-            'category_name': r[_kItemHeaders[2]],  // ← السيرفر يبحث بالاسم
-            'unit_code': r[_kItemHeaders[3]],
-            'min_level': double.tryParse(r[_kItemHeaders[4]].toString()) ?? 0,
-            'opening_qty': double.tryParse(r[_kItemHeaders[5]].toString()) ?? 0,
-            'unit_cost': double.tryParse(r[_kItemHeaders[6]].toString()),
-            'branch_orderable': (r[_kItemHeaders[7]] as String?) != 'لا',
-            'is_active': (r[_kItemHeaders[8]] as String?) != 'لا',
-            'note': r[_kItemHeaders[9]],
-          }).toList();
+      final items = rows
+          .map(
+            (r) => <String, dynamic>{
+              'sku': r[_kItemHeaders[0]],
+              'name': r[_kItemHeaders[1]],
+              'category_name': r[_kItemHeaders[2]], // ← السيرفر يبحث بالاسم
+              'unit_code': r[_kItemHeaders[3]],
+              'min_level': double.tryParse(r[_kItemHeaders[4]].toString()) ?? 0,
+              'opening_qty':
+                  double.tryParse(r[_kItemHeaders[5]].toString()) ?? 0,
+              'unit_cost': double.tryParse(r[_kItemHeaders[6]].toString()),
+              'branch_orderable': (r[_kItemHeaders[7]] as String?) != 'لا',
+              'is_active': (r[_kItemHeaders[8]] as String?) != 'لا',
+              'note': r[_kItemHeaders[9]],
+            },
+          )
+          .toList();
 
-      final cats = catRows.map((r) => <String, dynamic>{
-            'name': r['اسم التصنيف'],
-            'kind': r['النوع'] == 'مستلزمات' ? 'supply' : 'raw',
-            'code': r['الكود المختصر'],
-          }).toList();
+      final cats = catRows
+          .map(
+            (r) => <String, dynamic>{
+              'name': r['اسم التصنيف'],
+              'kind': r['النوع'] == 'مستلزمات' ? 'supply' : 'raw',
+              'code': r['الكود المختصر'],
+            },
+          )
+          .toList();
 
       // 3. dry_run على السيرفر — التحقق الفعلي
       if (!mounted) return;
@@ -205,10 +216,10 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
       );
 
       if (mounted) {
-        final newCount =
-            _previewRows.where((r) => r.status == 'new').length;
-        final updCount =
-            _previewRows.where((r) => r.status == 'updated').length;
+        final newCount = _previewRows.where((r) => r.status == 'new').length;
+        final updCount = _previewRows
+            .where((r) => r.status == 'updated')
+            .length;
         Navigator.of(context).pop();
         showInventorySnack(
           context,
@@ -233,40 +244,48 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
           backgroundColor: AppColors.surfaceContainer,
           title: Text(
             'تصريح الإدارة',
-            style:
-                GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
           ),
           content: TextField(
             controller: ctrl,
             obscureText: true,
             autofocus: true,
             onSubmitted: (v) => Navigator.pop(ctx, v),
-            style:
-                GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
             decoration: InputDecoration(
               labelText: 'كلمة مرور المدير',
               labelStyle: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.onSurfaceVariant),
+                color: AppColors.onSurfaceVariant,
+              ),
               enabledBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.outlineVariant)),
+                borderSide: BorderSide(color: AppColors.outlineVariant),
+              ),
               focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primary)),
+                borderSide: BorderSide(color: AppColors.primary),
+              ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('إلغاء',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurfaceVariant)),
+              child: Text(
+                'إلغاء',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
             ),
             ElevatedButton(
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
               onPressed: () => Navigator.pop(ctx, ctrl.text),
-              child: Text('تأكيد',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onPrimary)),
+              child: Text(
+                'تأكيد',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onPrimary,
+                ),
+              ),
             ),
           ],
         ),
@@ -291,8 +310,9 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
         textDirection: TextDirection.rtl,
         child: Dialog(
           backgroundColor: AppColors.surfaceContainer,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: SizedBox(
             width: _phase == 'preview' ? 820 : 460,
             child: Column(
@@ -304,11 +324,12 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
                     ? const Padding(
                         padding: EdgeInsets.all(40),
                         child: CircularProgressIndicator(
-                            color: AppColors.primary),
+                          color: AppColors.primary,
+                        ),
                       )
                     : _phase == 'preview'
-                        ? _buildPreviewBody()
-                        : _buildInitBody(),
+                    ? _buildPreviewBody()
+                    : _buildInitBody(),
                 if (_errorMsg != null) _buildErrorBanner(),
                 _buildActions(),
               ],
@@ -337,8 +358,7 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.close, color: AppColors.onSurfaceVariant),
-            onPressed:
-                _isLoading ? null : () => Navigator.of(context).pop(),
+            onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
           ),
         ],
       ),
@@ -352,26 +372,40 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            leading: const Icon(Icons.download_outlined,
-                color: AppColors.primary),
-            title: Text('تنزيل نموذج الأصناف',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurface)),
-            subtitle: Text('يشمل التصنيفات والوحدات الحالية',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant, fontSize: 12)),
+            leading: const Icon(
+              Icons.download_outlined,
+              color: AppColors.primary,
+            ),
+            title: Text(
+              'تنزيل نموذج الأصناف',
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+            ),
+            subtitle: Text(
+              'يشمل التصنيفات والوحدات الحالية',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            ),
             onTap: _downloadTemplate,
           ),
           const Divider(color: AppColors.outlineVariant),
           ListTile(
-            leading: const Icon(Icons.upload_file_outlined,
-                color: AppColors.secondary),
-            title: Text('اختيار ملف Excel للاستيراد',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurface)),
-            subtitle: Text('حد أقصى: 2 ميجابايت، 500 صنف',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant, fontSize: 12)),
+            leading: const Icon(
+              Icons.upload_file_outlined,
+              color: AppColors.secondary,
+            ),
+            title: Text(
+              'اختيار ملف Excel للاستيراد',
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+            ),
+            subtitle: Text(
+              'حد أقصى: 2 ميجابايت، 500 صنف',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            ),
             onTap: _pickAndPreview,
           ),
           const SizedBox(height: 8),
@@ -383,8 +417,9 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
   Widget _buildPreviewBody() {
     final newCount = _previewRows.where((r) => r.status == 'new').length;
     final updCount = _previewRows.where((r) => r.status == 'updated').length;
-    final noChangeCount =
-        _previewRows.where((r) => r.status == 'no_change').length;
+    final noChangeCount = _previewRows
+        .where((r) => r.status == 'no_change')
+        .length;
     final errCount = _previewRows.where((r) => r.status == 'error').length;
 
     return ConstrainedBox(
@@ -394,15 +429,18 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
         children: [
           // ملخص
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             child: Row(
               children: [
                 _summaryChip('جديد', newCount, AppColors.statusGreen),
                 const SizedBox(width: 8),
                 _summaryChip('تحديث', updCount, AppColors.primary),
                 const SizedBox(width: 8),
-                _summaryChip('بدون تغيير', noChangeCount, AppColors.onSurfaceVariant),
+                _summaryChip(
+                  'بدون تغيير',
+                  noChangeCount,
+                  AppColors.onSurfaceVariant,
+                ),
                 const SizedBox(width: 8),
                 if (errCount > 0)
                   _summaryChip('خطأ', errCount, AppColors.statusRed),
@@ -457,57 +495,78 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
             ? AppColors.statusRed.withValues(alpha: 0.06)
             : null,
         border: const Border(
-            bottom: BorderSide(color: AppColors.surfaceContainerHigh)),
+          bottom: BorderSide(color: AppColors.surfaceContainerHigh),
+        ),
       ),
       child: Row(
         children: [
           Expanded(
             flex: 1,
-            child: Text('${index + 1}',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant, fontSize: 12)),
+            child: Text(
+              '${index + 1}',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            ),
           ),
           Expanded(
             flex: 2,
-            child: Text(row.sku,
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant, fontSize: 12)),
+            child: Text(
+              row.sku,
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            ),
           ),
           Expanded(
             flex: 3,
-            child: Text(row.name,
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurface),
-                overflow: TextOverflow.ellipsis),
+            child: Text(
+              row.name,
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           Expanded(
             flex: 2,
-            child: Text(row.category,
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant, fontSize: 12),
-                overflow: TextOverflow.ellipsis),
+            child: Text(
+              row.category,
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 12,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           Expanded(
             flex: 2,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: statusColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Text(statusLabel,
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: statusColor, fontSize: 12),
-                  textAlign: TextAlign.center),
+              child: Text(
+                statusLabel,
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: statusColor,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
           Expanded(
             flex: 4,
-            child: Text(row.message,
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: statusColor, fontSize: 12),
-                overflow: TextOverflow.ellipsis),
+            child: Text(
+              row.message,
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: statusColor,
+                fontSize: 12,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -522,19 +581,23 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
         decoration: BoxDecoration(
           color: AppColors.statusRed.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-              color: AppColors.statusRed.withValues(alpha: 0.4)),
+          border: Border.all(color: AppColors.statusRed.withValues(alpha: 0.4)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.error_outline,
-                color: AppColors.statusRed, size: 16),
+            const Icon(
+              Icons.error_outline,
+              color: AppColors.statusRed,
+              size: 16,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 _errorMsg!,
                 style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.statusRed, fontSize: 13),
+                  color: AppColors.statusRed,
+                  fontSize: 13,
+                ),
               ),
             ),
           ],
@@ -551,33 +614,45 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
         children: [
           TextButton(
             onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-            child: Text('إغلاق',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant)),
+            child: Text(
+              'إغلاق',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ),
           if (_phase == 'preview') ...[
             const SizedBox(width: 8),
             TextButton(
-              onPressed: _isLoading ? null : () => setState(() => _phase = null),
-              child: Text('إعادة اختيار الملف',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.primary)),
+              onPressed: _isLoading
+                  ? null
+                  : () => setState(() => _phase = null),
+              child: Text(
+                'إعادة اختيار الملف',
+                style: GoogleFonts.ibmPlexSansArabic(color: AppColors.primary),
+              ),
             ),
             const SizedBox(width: 8),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 12)),
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+              ),
               onPressed:
                   (_isLoading || _previewRows.any((r) => r.status == 'error'))
-                      ? null
-                      : _confirmAndApply,
+                  ? null
+                  : _confirmAndApply,
               icon: const Icon(Icons.check, color: AppColors.onPrimary),
-              label: Text('تطبيق الاستيراد',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onPrimary,
-                      fontWeight: FontWeight.bold)),
+              label: Text(
+                'تطبيق الاستيراد',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ],
@@ -602,11 +677,14 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
   Widget _th(String label, {int flex = 1}) {
     return Expanded(
       flex: flex,
-      child: Text(label,
-          style: GoogleFonts.ibmPlexSansArabic(
-              color: AppColors.onSurface,
-              fontWeight: FontWeight.bold,
-              fontSize: 13)),
+      child: Text(
+        label,
+        style: GoogleFonts.ibmPlexSansArabic(
+          color: AppColors.onSurface,
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+        ),
+      ),
     );
   }
 }
@@ -628,10 +706,10 @@ class _PreviewRow {
   });
 
   factory _PreviewRow.fromJson(Map<String, dynamic> j) => _PreviewRow(
-        sku: j['sku'] as String? ?? '',
-        name: j['name'] as String? ?? '',
-        category: j['category'] as String? ?? '',
-        status: j['status'] as String? ?? 'no_change',
-        message: j['message'] as String? ?? '',
-      );
+    sku: j['sku'] as String? ?? '',
+    name: j['name'] as String? ?? '',
+    category: j['category'] as String? ?? '',
+    status: j['status'] as String? ?? 'no_change',
+    message: j['message'] as String? ?? '',
+  );
 }

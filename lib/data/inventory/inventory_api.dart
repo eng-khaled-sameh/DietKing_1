@@ -372,9 +372,9 @@ class InventoryApi {
     final clientId = generateUuidV4();
     final res = await _client.rpc('apply_stocktake', params: {
       'p_client_id': clientId,
-      if (!dryRun && token != null) 'p_token': token,
+      'p_token': token,          // null صريح في المعاينة — التوقيع يقبله
       'p_dry_run': dryRun,
-      'p_warehouse_id': ?warehouseId,
+      'p_warehouse_id': warehouseId, // null صريح بدون ? لضمان إرسال المفتاح
       'p_notes': notes,
       'p_lines': lines,
     });

@@ -42,7 +42,7 @@ class InventorySidebar extends StatelessWidget {
                     _SidebarItem(
                       section: InventorySection.rawMaterials,
                       isActive: state.section == InventorySection.rawMaterials,
-                      badgeText: '318',
+                      badgeText: state.rawMaterialsCount > 0 ? state.rawMaterialsCount.toString() : null,
                     ),
                     _SidebarItem(
                       section: InventorySection.supplyRequests,
@@ -66,13 +66,6 @@ class InventorySidebar extends StatelessWidget {
                       isActive: state.section == InventorySection.branchOrders,
                       badgeText: state.activeBranchOrdersCount > 0 ? state.activeBranchOrdersCount.toString() : null,
                       badgeColor: AppColors.secondaryContainer,
-                    ),
-                    const SizedBox(height: 8),
-                    const Divider(color: AppColors.surfaceContainerHigh),
-                    const SizedBox(height: 8),
-                    _SidebarItem(
-                      section: InventorySection.reports,
-                      isActive: state.section == InventorySection.reports,
                     ),
                   ],
                 );

@@ -103,18 +103,21 @@ class RawMaterialRow extends StatelessWidget {
               child: RawStatusBadge(isLow: item.isLow),
             ),
           ),
-          // زر تعديل
-          Tooltip(
-            message: 'تعديل الصنف',
-            child: IconButton(
-              icon: const Icon(
-                Icons.edit_outlined,
-                color: AppColors.onSurfaceVariant,
-                size: 18,
+          // زر تعديل (يختفي للمنتجات التامة أو النظامية)
+          if (item.category?.kind.name != 'finished' && item.category?.isSystem != true)
+            Tooltip(
+              message: 'تعديل الصنف',
+              child: IconButton(
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  color: AppColors.onSurfaceVariant,
+                  size: 18,
+                ),
+                onPressed: onEdit,
               ),
-              onPressed: onEdit,
-            ),
-          ),
+            )
+          else
+            const SizedBox(width: 34), // نفس حجم الزر للحفاظ على المحاذاة
           // زر حركات الصنف
           Tooltip(
             message: 'عرض حركات الصنف',

@@ -79,7 +79,21 @@ class KitchenIssuesTable extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              'خطة الإنتاج',
+              'خطة الطهي',
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              'الشيف',
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Text(
+              'الوردية',
               style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
             ),
           ),
@@ -93,11 +107,11 @@ class KitchenIssuesTable extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              'الشيف المستلم',
+              'التاريخ',
               style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
             ),
           ),
-          const Expanded(flex: 2, child: Text('')), // Actions column
+          const SizedBox(width: 40), // Actions or status column
         ],
       ),
     );

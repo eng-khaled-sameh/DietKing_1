@@ -5,12 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../cubit/inventory_cubit.dart';
 import '../cubit/inventory_state.dart';
-import '../utils/csv_exporter.dart';
 import '../widgets/dashboard/kpi_card.dart';
-import '../widgets/inventory_snack.dart';
-import '../../../../core/utils/file_saved_dialog.dart';
 
-/// لوحة المخزون الرئيسية — الأرقام من الكاش المحلي (صفر طلبات شبكة إضافية)
 class DashboardSection extends StatelessWidget {
   const DashboardSection({super.key});
 
@@ -25,7 +21,7 @@ class DashboardSection extends StatelessWidget {
             children: [
               _buildHeader(context, state),
               const SizedBox(height: 24),
-              _buildKpiGrid(state),
+              _buildKpiGrid(context, state),
               if (state.error != null) ...[
                 const SizedBox(height: 16),
                 _buildErrorBanner(state.error!),
@@ -51,7 +47,6 @@ class DashboardSection extends StatelessWidget {
         ),
         Row(
           children: [
-            // زر تحديث
             Tooltip(
               message: 'تحديث البيانات',
               child: IconButton(
@@ -73,58 +68,13 @@ class DashboardSection extends StatelessWidget {
                     : () => context.read<InventoryCubit>().refreshCatalogAndStock(),
               ),
             ),
-            const SizedBox(width: 8),
-            // تصدير نواقص المخزون
-            OutlinedButton.icon(
-              onPressed: () async {
-                try {
-                  final items = context.read<InventoryCubit>().state.visibleItems
-                      .where((m) => m.isLow)
-                      .toList();
-                  final rows = items
-                      .map((m) => [
-                            m.item.sku,
-                            m.item.name,
-                            m.stockQty,
-                            m.item.minLevel,
-                            m.item.unitCode,
-                          ])
-                      .toList();
-                  final path = await CsvExporter.save(
-                    baseName: 'LowStock',
-                    headers: ['رمز SKU', 'الاسم', 'الرصيد', 'الحد الأدنى', 'الوحدة'],
-                    rows: rows,
-                  );
-                  if (context.mounted) {
-                    showFileSavedDialog(context, path);
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    showInventorySnack(context, 'تعذر حفظ الملف', isError: true);
-                  }
-                }
-              },
-              icon: const Icon(
-                Icons.file_download_outlined,
-                color: AppColors.onSurface,
-              ),
-              label: Text(
-                'تصدير نواقص المخزون',
-                style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.surfaceContainerHigh),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-            ),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildKpiGrid(InventoryState state) {
+  Widget _buildKpiGrid(BuildContext context, InventoryState state) {
     final totalItems = state.catalog?.items.where((i) => i.isActive).length ?? 0;
     final rawItems = state.catalog?.items
             .where((i) {
@@ -134,77 +84,87 @@ class DashboardSection extends StatelessWidget {
                   .firstOrNull;
               return cat?.kind.name == 'raw';
             })
-            .length ??
-        0;
+            .length ?? 0;
     final finishedItems = state.finishedItems.length;
-    final stockValue = state.totalStockValue;
 
-    return GridView.count(
-      crossAxisCount: 4,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.7,
-      children: [
-        KPICard(
-          title: 'إجمالي الأصناف',
-          value: '$totalItems',
-          icon: Icons.inventory_2_outlined,
-          iconColor: AppColors.primary,
-        ),
-        KPICard(
-          title: 'الخامات',
-          value: '$rawItems',
-          icon: Icons.grain,
-          iconColor: AppColors.tertiary,
-        ),
-        KPICard(
-          title: 'منتجات تامة',
-          value: '$finishedItems',
-          icon: Icons.restaurant_menu,
-          iconColor: AppColors.secondary,
-        ),
-        KPICard(
-          title: 'قيمة المخزون',
-          value: stockValue > 0
-              ? '${stockValue.toStringAsFixed(0)} ج.م'
-              : '—',
-          icon: Icons.account_balance_wallet_outlined,
-          iconColor: AppColors.statusGreen,
-        ),
-        KPICard(
-          title: 'أصناف منخفضة',
-          value: '${state.lowStockCount}',
-          subtitle: 'تحت الحد الأدنى',
-          icon: Icons.warning_amber_rounded,
-          iconColor: AppColors.statusRed,
-          isAlert: state.lowStockCount > 0,
-        ),
-        KPICard(
-          title: 'طلبات توريد نشطة',
-          value: '${state.activeSupplyCount}',
-          icon: Icons.local_shipping_outlined,
-          iconColor: AppColors.secondary,
-        ),
-        KPICard(
-          title: 'طلبات فروع مقدّمة',
-          value: '${state.submittedBranchOrdersCount}',
-          icon: Icons.storefront_outlined,
-          iconColor: AppColors.secondaryContainer,
-          isAlert: state.submittedBranchOrdersCount > 0,
-        ),
-        KPICard(
-          title: 'حالة المزامنة',
-          value: state.isLoading ? 'جارٍ...' : 'محدّث',
-          icon: state.isLoading
-              ? Icons.sync
-              : Icons.cloud_done_outlined,
-          iconColor: state.isLoading
-              ? AppColors.onSurfaceVariant
-              : AppColors.statusGreen,
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final int crossAxisCount = screenWidth < 1100 ? 2 : 4;
+        const double spacing = 16.0;
+        
+        final double itemWidth = (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            SizedBox(
+              width: itemWidth,
+              height: 120, // fixed height for uniform look
+              child: KPICard(
+                title: 'إجمالي الأصناف',
+                value: '$totalItems',
+                icon: Icons.inventory_2_outlined,
+                iconColor: AppColors.primary,
+              ),
+            ),
+            SizedBox(
+              width: itemWidth,
+              height: 120,
+              child: KPICard(
+                title: 'الخامات',
+                value: '$rawItems',
+                icon: Icons.grain,
+                iconColor: AppColors.tertiary,
+              ),
+            ),
+            SizedBox(
+              width: itemWidth,
+              height: 120,
+              child: KPICard(
+                title: 'منتجات تامة',
+                value: '$finishedItems',
+                icon: Icons.restaurant_menu,
+                iconColor: AppColors.secondary,
+              ),
+            ),
+            SizedBox(
+              width: itemWidth,
+              height: 120,
+              child: KPICard(
+                title: 'أصناف منخفضة',
+                value: '${state.lowStockCount}',
+                subtitle: 'تحت الحد الأدنى',
+                icon: Icons.warning_amber_rounded,
+                iconColor: AppColors.statusRed,
+                isAlert: state.lowStockCount > 0,
+              ),
+            ),
+            SizedBox(
+              width: itemWidth,
+              height: 120,
+              child: KPICard(
+                title: 'طلبات توريد نشطة',
+                value: '${state.activeSupplyCount}',
+                icon: Icons.local_shipping_outlined,
+                iconColor: AppColors.secondary,
+              ),
+            ),
+            SizedBox(
+              width: itemWidth,
+              height: 120,
+              child: KPICard(
+                title: 'طلبات فروع مقدّمة',
+                value: '${state.submittedBranchOrdersCount}',
+                icon: Icons.storefront_outlined,
+                iconColor: AppColors.secondaryContainer,
+                isAlert: state.submittedBranchOrdersCount > 0,
+              ),
+            ),
+          ],
+        );
+      }
     );
   }
 
@@ -212,19 +172,19 @@ class DashboardSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.statusRed.withValues(alpha: 0.1),
+        color: AppColors.errorContainer,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.statusRed.withValues(alpha: 0.4)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: AppColors.statusRed, size: 18),
+          const Icon(Icons.error_outline, color: AppColors.onErrorContainer, size: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               error,
               style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.statusRed,
+                color: AppColors.onErrorContainer,
                 fontSize: 13,
               ),
             ),

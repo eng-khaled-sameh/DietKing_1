@@ -142,9 +142,9 @@ class BranchOrdersSection extends StatelessWidget {
         // ترتيب: المقدّمة أولاً ثم الأحدث
         final orders = [...state.branchOrders]..sort((a, b) {
             if (a.status == BranchOrderStatus.submitted &&
-                b.status != BranchOrderStatus.submitted) return -1;
+                b.status != BranchOrderStatus.submitted) { return -1; }
             if (b.status == BranchOrderStatus.submitted &&
-                a.status != BranchOrderStatus.submitted) return 1;
+                a.status != BranchOrderStatus.submitted) { return 1; }
             return b.createdAt.compareTo(a.createdAt);
           });
 

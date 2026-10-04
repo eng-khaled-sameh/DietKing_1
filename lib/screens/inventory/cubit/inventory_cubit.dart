@@ -28,7 +28,6 @@ class InventoryCubit extends Cubit<InventoryState> {
   bool _supplyLoaded = false;
   bool _branchOrdersLoaded = false;
   bool _kitchenLoaded = false;
-  bool _reportsLoaded = false;
 
   InventoryCubit(this._api, this._sync) : super(InventoryState.initial());
 
@@ -176,8 +175,6 @@ class InventoryCubit extends Cubit<InventoryState> {
         loadKitchenDocs();
       case InventorySection.stockAudit:
         loadStocktakeRecords();
-      case InventorySection.reports:
-        loadReports();
       default:
         break;
     }
@@ -613,25 +610,6 @@ class InventoryCubit extends Cubit<InventoryState> {
       if (match != null) return match.group(1)!.trim();
     }
     return msg;
-  }
-
-  // ── التقارير ──────────────────────────────────────────────────────────────
-
-  Future<void> loadReports({bool force = false}) async {
-    if (_reportsLoaded && !force) return;
-    emit(state.copyWith(isLoadingDocs: true, error: null));
-    try {
-      final stockValuation = await _api.fetchStockValuation();
-      final lowStock = await _api.fetchLowStock();
-      _reportsLoaded = true;
-      emit(state.copyWith(
-        isLoadingDocs: false,
-        stockValuation: stockValuation,
-        lowStockReport: lowStock,
-      ));
-    } catch (e) {
-      emit(state.copyWith(isLoadingDocs: false, error: _mapError(e)));
-    }
   }
 }
 

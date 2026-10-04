@@ -1,4 +1,4 @@
-/// تحويلات آمنة لاستجابات Supabase (uuid/numeric/jsonb قد تصل بأنواع مختلفة)
+// تحويلات آمنة لاستجابات Supabase (uuid/numeric/jsonb قد تصل بأنواع مختلفة)
 
 String asString(dynamic value, {String fallback = ''}) {
   if (value == null) return fallback;

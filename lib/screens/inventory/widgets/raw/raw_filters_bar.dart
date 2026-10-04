@@ -49,7 +49,7 @@ class _RawFiltersBarState extends State<RawFiltersBar> {
                     c.isActive &&
                     !c.isSystem &&
                     (state.rawKindFilter == null ||
-                        c.kind.value == state.rawKindFilter))
+                        c.kind.name == state.rawKindFilter))
                 .toList() ??
             <InventoryCategory>[];
 

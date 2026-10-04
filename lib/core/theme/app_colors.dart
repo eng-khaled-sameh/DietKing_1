@@ -37,6 +37,7 @@ abstract final class AppColors {
   static const Color error = Color(0xFFFFB4AB);
   static const Color onError = Color(0xFF690005);
   static const Color errorContainer = Color(0xFF93000A);
+  static const Color onErrorContainer = Color(0xFFFFDAD6);
   static const Color statusGreen = Color(0xFF34D399);
   static const Color statusRed = Color(0xFFF87171);
 

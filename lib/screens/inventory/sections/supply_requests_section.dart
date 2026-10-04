@@ -11,7 +11,10 @@ import '../dialogs/receive_supply_order_dialog.dart';
 import '../dialogs/review_supply_order_dialog.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/inventory_snack.dart';
+import '../dialogs/supply_order_items_dialog.dart';
 import '../widgets/read_error_state.dart';
+import '../widgets/status_badge.dart';
+import '../models/enums.dart';
 
 /// قسم طلبات التوريد
 class SupplyRequestsSection extends StatelessWidget {
@@ -314,6 +317,20 @@ class _SupplyOrderRow extends StatelessWidget {
     switch (order.status) {
       case SupplyOrderStatus.pendingReview:
         return [
+          // عرض الأصناف
+          Tooltip(
+            message: 'عرض الأصناف',
+            child: IconButton(
+              icon: const Icon(Icons.list_alt_outlined, color: AppColors.onSurfaceVariant, size: 20),
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => BlocProvider.value(
+                  value: cubit,
+                  child: SupplyOrderItemsDialog(order: order),
+                ),
+              ),
+            ),
+          ),
           // مراجعة (موافقة/رفض)
           Tooltip(
             message: 'مراجعة الطلب',
@@ -364,6 +381,20 @@ class _SupplyOrderRow extends StatelessWidget {
 
       case SupplyOrderStatus.approved:
         return [
+          // عرض الأصناف
+          Tooltip(
+            message: 'عرض الأصناف',
+            child: IconButton(
+              icon: const Icon(Icons.list_alt_outlined, color: AppColors.onSurfaceVariant, size: 20),
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => BlocProvider.value(
+                  value: cubit,
+                  child: SupplyOrderItemsDialog(order: order),
+                ),
+              ),
+            ),
+          ),
           Tooltip(
             message: 'تسجيل الاستلام',
             child: ElevatedButton.icon(
@@ -390,6 +421,20 @@ class _SupplyOrderRow extends StatelessWidget {
 
       case SupplyOrderStatus.received:
         return [
+          // عرض الأصناف
+          Tooltip(
+            message: 'عرض الأصناف',
+            child: IconButton(
+              icon: const Icon(Icons.list_alt_outlined, color: AppColors.onSurfaceVariant, size: 20),
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => BlocProvider.value(
+                  value: cubit,
+                  child: SupplyOrderItemsDialog(order: order),
+                ),
+              ),
+            ),
+          ),
           Text('مكتمل',
               style: GoogleFonts.ibmPlexSansArabic(
                   color: AppColors.statusGreen,
@@ -398,6 +443,20 @@ class _SupplyOrderRow extends StatelessWidget {
 
       default:
         return [
+          // عرض الأصناف
+          Tooltip(
+            message: 'عرض الأصناف',
+            child: IconButton(
+              icon: const Icon(Icons.list_alt_outlined, color: AppColors.onSurfaceVariant, size: 20),
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => BlocProvider.value(
+                  value: cubit,
+                  child: SupplyOrderItemsDialog(order: order),
+                ),
+              ),
+            ),
+          ),
           Text(
             order.status.arabicLabel,
             style: GoogleFonts.ibmPlexSansArabic(
@@ -418,22 +477,9 @@ class _PriorityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUrgent = priority == 'urgent';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: (isUrgent ? AppColors.statusRed : AppColors.statusGreen)
-            .withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        isUrgent ? 'عاجلة' : 'عادية',
-        style: GoogleFonts.ibmPlexSansArabic(
-          color: isUrgent
-              ? AppColors.statusRed
-              : AppColors.statusGreen,
-          fontSize: 12,
-        ),
-      ),
+    return StatusBadge(
+      text: isUrgent ? 'عاجلة' : 'عادية',
+      tone: isUrgent ? BadgeTone.danger : BadgeTone.neutral,
     );
   }
 }

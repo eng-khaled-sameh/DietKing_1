@@ -7,8 +7,7 @@ enum InventorySection {
   stockAudit('جرد ومطابقة المخزون', Icons.fact_check),
   kitchenIssue('صرف خامات للمطبخ', Icons.soup_kitchen),
   kitchenReceipts('استلام إنتاج المطبخ', Icons.inventory_2),
-  branchOrders('طلبات الفروع', Icons.storefront),
-  reports('التقارير والإحصائيات', Icons.analytics);
+  branchOrders('طلبات الفروع', Icons.storefront);
 
   final String label;
   final IconData icon;

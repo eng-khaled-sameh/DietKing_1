@@ -26,6 +26,7 @@ class KitchenIssueRow extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             flex: 2,
@@ -44,53 +45,76 @@ class KitchenIssueRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            flex: 3,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: issue.lines.map((line) {
-                final item = itemsById[line.itemId];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    children: [
-                      Expanded(child: CatalogItemDetails(item: item)),
-                      const SizedBox(width: 8),
-                      Text(
-                        formatCatalogQuantity(line.qty, item),
-                        style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          Expanded(
             flex: 2,
             child: Text(
-              '${issue.chefName} (${issue.shift.arabicLabel})',
+              issue.chefName,
               style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
             ),
           ),
           Expanded(
-            flex: 2,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  'تم الصرف',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.statusGreen,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+            flex: 1,
+            child: Text(
+              issue.shift.arabicLabel,
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
             ),
           ),
+          Expanded(
+            flex: 3,
+            child: _buildItemsList(),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              _formatDate(issue.createdAt),
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+            ),
+          ),
+          const SizedBox(width: 40),
         ],
       ),
     );
+  }
+
+  Widget _buildItemsList() {
+    final displayLines = issue.lines.take(3).toList();
+    final hiddenCount = issue.lines.length - 3;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...displayLines.map((line) {
+          final item = itemsById[line.itemId];
+          final itemName = item?.name ?? 'غير معروف';
+          final qty = formatCatalogQuantity(line.qty, item);
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Text(
+              '$itemName — $qty',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 13,
+              ),
+            ),
+          );
+        }),
+        if (hiddenCount > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              '+ $hiddenCount أخرى',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime d) {
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
   }
 }

@@ -9,6 +9,7 @@ import '../../../../data/inventory/models/inventory_category.dart';
 import '../../../../data/inventory/models/inventory_item.dart';
 import '../cubit/inventory_cubit.dart';
 import '../cubit/inventory_state.dart';
+import '../widgets/app_dialog.dart';
 import '../widgets/inventory_snack.dart';
 import 'save_category_dialog.dart';
 
@@ -191,7 +192,7 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
   List<InventoryCategory> _eligibleCategories(InventoryState state) {
     return state.catalog?.categories
         .where((c) =>
-            c.isActive && !c.isSystem && c.kind.value != 'finished')
+            c.isActive && !c.isSystem && c.kind.name != 'finished')
         .toList() ?? [];
   }
 
@@ -334,71 +335,56 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Dialog(
-        backgroundColor: AppColors.surfaceContainer,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: SizedBox(
-          width: 520,
-          child: BlocBuilder<InventoryCubit, InventoryState>(
-            buildWhen: (p, c) => p.catalog != c.catalog,
-            builder: (context, state) {
-              return Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildHeader(),
-                    const Divider(height: 1, color: AppColors.outlineVariant),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 520),
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(24),
-                        child: _buildFields(context, state),
-                      ),
-                    ),
-                    const Divider(height: 1, color: AppColors.outlineVariant),
-                    _buildActions(),
-                  ],
-                ),
-              );
-            },
+    return BlocBuilder<InventoryCubit, InventoryState>(
+      buildWhen: (p, c) => p.catalog != c.catalog,
+      builder: (context, state) {
+        return Form(
+          key: _formKey,
+          child: AppDialog(
+            title: _isEdit ? 'تعديل صنف' : 'إضافة صنف جديد',
+            icon: _isEdit ? Icons.edit_rounded : Icons.add_circle_outline_rounded,
+            maxWidth: 520,
+            content: _buildFields(context, state),
+            actions: _buildActionButtons(),
           ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildActionButtons() {
+    return [
+      TextButton(
+        onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+        child: Text(
+          'إلغاء',
+          style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Row(
-        children: [
-          Icon(
-            _isEdit ? Icons.edit_rounded : Icons.add_circle_outline_rounded,
-            color: AppColors.primary,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            _isEdit ? 'تعديل صنف' : 'إضافة صنف جديد',
-            style: GoogleFonts.ibmPlexSansArabic(
-              color: AppColors.onSurface,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.close, color: AppColors.onSurfaceVariant),
-            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-          ),
-        ],
+      const SizedBox(width: 12),
+      ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.onPrimary,
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        onPressed: _submitting ? null : _submit,
+        child: _submitting
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.onPrimary),
+              )
+            : Text(
+                'حفظ',
+                style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold),
+              ),
       ),
-    );
+    ];
   }
 
+  // Header and Actions were replaced by AppDialog parameters.
   Widget _buildFields(BuildContext context, InventoryState state) {
     final categories = _eligibleCategories(state);
     final units = state.catalog?.units ?? [];
@@ -662,49 +648,7 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
     );
   }
 
-  Widget _buildActions() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          TextButton(
-            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-            child: Text(
-              'إلغاء',
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.onSurfaceVariant),
-            ),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.onPrimary,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: _submitting ? null : _submit,
-            child: _submitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.onPrimary),
-                  )
-                : Text(
-                    'حفظ',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        fontWeight: FontWeight.bold),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
+  // Actions were moved to _buildActionButtons
   InputDecoration _inputDecoration(String label,
       {bool isRequired = false, String? hint}) {
     return InputDecoration(

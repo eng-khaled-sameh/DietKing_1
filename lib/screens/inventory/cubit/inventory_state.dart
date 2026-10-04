@@ -137,8 +137,8 @@ class InventoryState extends Equatable {
       isSubmitting:         isSubmitting      ?? this.isSubmitting,
       error:                error, // يُعاد ضبطه صراحةً: null = لا خطأ
       catalog:              nextCatalog,
-      catalogItemsById:     identical(nextCatalog, this.catalog)
-          ? this.catalogItemsById
+      catalogItemsById:     identical(nextCatalog, catalog)
+          ? catalogItemsById
           : null,
       stock:                stock             ?? this.stock,
       rawQuery:             rawQuery          ?? this.rawQuery,
@@ -205,7 +205,7 @@ class InventoryState extends Equatable {
         .where((iws) {
       // فلتر النوع (raw/supply/finished)
       if (rawKindFilter != null) {
-        final kind = iws.category?.kind.value;
+        final kind = iws.category?.kind.name;
         if (kind != rawKindFilter) return false;
       }
       // فلتر التصنيف
@@ -259,8 +259,18 @@ class InventoryState extends Equatable {
     final categoriesMap = _categoriesMap;
     return catalog!.items.where((i) {
       final cat = categoriesMap[i.categoryId];
-      return i.isActive && cat?.kind.value == 'finished';
+      return i.isActive && cat?.kind.name == 'finished';
     }).toList();
+  }
+
+  /// إجمالي عدد الخامات النشطة
+  int get rawMaterialsCount {
+    if (catalog == null) return 0;
+    final categoriesMap = _categoriesMap;
+    return catalog!.items.where((i) {
+      final cat = categoriesMap[i.categoryId];
+      return i.isActive && cat?.kind.name == 'raw';
+    }).length;
   }
 
   /// عدد الأصناف تحت الحد الأدنى

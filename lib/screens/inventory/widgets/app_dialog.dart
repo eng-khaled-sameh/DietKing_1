@@ -8,6 +8,7 @@ class AppDialog extends StatelessWidget {
   final Widget content;
   final List<Widget> actions;
   final double maxWidth;
+  final IconData? icon;
 
   const AppDialog({
     super.key,
@@ -15,31 +16,39 @@ class AppDialog extends StatelessWidget {
     required this.content,
     required this.actions,
     this.maxWidth = 560,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceXl,
-          vertical: AppDimens.spaceLg,
+        insetPadding: EdgeInsets.only(
+          left: AppDimens.spaceXl,
+          right: AppDimens.spaceXl,
+          top: AppDimens.spaceLg,
+          bottom: AppDimens.spaceLg + bottomInset,
         ),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
+          constraints: BoxConstraints(
+            maxWidth: maxWidth,
+            maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+          ),
           child: Container(
-            padding: const EdgeInsets.all(AppDimens.spaceXl),
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLow,
+              color: AppColors.surfaceContainer,
               borderRadius: BorderRadius.circular(AppDimens.radiusXl),
               border: Border.all(
-                color: AppColors.outlineVariant.withValues(alpha: 0.4),
+                color: AppColors.outlineVariant.withValues(alpha: 0.3),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.5),
+                  color: Colors.black.withValues(alpha: 0.6),
                   blurRadius: AppDimens.cardElevation,
                   offset: const Offset(0, 16),
                 ),
@@ -47,35 +56,64 @@ class AppDialog extends StatelessWidget {
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.tune, color: AppColors.primary),
-                    const SizedBox(width: AppDimens.spaceMd),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: AppDimens.fontXl,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.onSurface,
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceXl,
+                    AppDimens.spaceXl,
+                    AppDimens.spaceXl,
+                    AppDimens.spaceMd,
+                  ),
+                  child: Row(
+                    children: [
+                      if (icon != null) ...[
+                        Icon(icon, color: AppColors.primary),
+                        const SizedBox(width: AppDimens.spaceMd),
+                      ],
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            fontSize: AppDimens.fontXl,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.onSurface,
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      color: AppColors.onSurfaceVariant,
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        color: AppColors.onSurfaceVariant,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: AppDimens.spaceLg),
-                content,
-                const SizedBox(height: AppDimens.spaceXl),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: actions,
+                Divider(
+                  height: 1,
+                  color: AppColors.outlineVariant.withValues(alpha: 0.3),
+                ),
+                // Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(AppDimens.spaceXl),
+                    child: content,
+                  ),
+                ),
+                Divider(
+                  height: 1,
+                  color: AppColors.outlineVariant.withValues(alpha: 0.3),
+                ),
+                // Footer
+                Padding(
+                  padding: const EdgeInsets.all(AppDimens.spaceXl),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: actions,
+                  ),
                 ),
               ],
             ),

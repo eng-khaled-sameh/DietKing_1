@@ -42,7 +42,7 @@ class _SaveCategoryDialogState extends State<SaveCategoryDialog> {
       final cat = widget.existing!;
       _nameCtrl.text = cat.name;
       _codeCtrl.text = cat.code;
-      _kind = cat.kind.value == 'finished' ? 'raw' : cat.kind.value;
+      _kind = cat.kind.name == 'finished' ? 'raw' : cat.kind.name;
     }
   }
 
