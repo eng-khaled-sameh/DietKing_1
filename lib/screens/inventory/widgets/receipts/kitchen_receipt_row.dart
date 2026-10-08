@@ -24,13 +24,6 @@ class KitchenReceiptRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            flex: 2,
-            child: Text(
-              batch.number,
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
-            ),
-          ),
-          Expanded(
             flex: 3,
             child: CatalogItemDetails(item: item),
           ),

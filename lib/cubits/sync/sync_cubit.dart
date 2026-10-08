@@ -40,10 +40,15 @@ class SyncCubit extends Cubit<SyncState> {
   late final SyncService _service;
   Timer? _timer;
   String? _userId;
+  Future<void>? _activeSync;
+  bool _runAnotherCycle = false;
   final LocalRecordsRepository _repo = LocalRecordsRepository();
 
   /// جدول الـ backoff: بالثواني
-  static const List<int> _backoffSchedule = [30, 60, 120, 300];
+  // Keep the retry window short.  Once the device is online again, locally
+  // saved invoices should reach the server promptly instead of waiting up to
+  // five minutes after a previous network failure.
+  static const List<int> _backoffSchedule = [15, 30, 60, 60];
 
   /// الفهرس الحالي في جدول الـ backoff
   int _backoffIndex = 0;
@@ -73,10 +78,41 @@ class SyncCubit extends Cubit<SyncState> {
   }
 
   /// تشغيل مزامنة فورية (يُنادى من الواجهة أو بعد حفظ سجل جديد)
-  Future<void> triggerSync() async {
+  /// Starts a sync immediately.  [userId] is supplied by write flows as a
+  /// safeguard: a document must never remain pending merely because the
+  /// module launcher did not initialize this cubit first.
+  Future<void> triggerSync({String? userId}) async {
+    final requestedUserId = userId?.trim();
+    if (requestedUserId != null && requestedUserId.isNotEmpty &&
+        _userId != requestedUserId) {
+      _userId = requestedUserId;
+      _backoffIndex = 0;
+      await _refreshCounts();
+    }
     if (_userId == null || _userId!.isEmpty) return;
-    if (state.isSyncing) return;
+    if (_activeSync != null) {
+      // سجل وصل أثناء دورة قائمة؛ نفّذ دورة أخرى فور انتهائها.
+      _runAnotherCycle = true;
+      return _activeSync!;
+    }
 
+    final sync = _runRequestedCycles();
+    _activeSync = sync;
+    try {
+      await sync;
+    } finally {
+      _activeSync = null;
+    }
+  }
+
+  Future<void> _runRequestedCycles() async {
+    do {
+      _runAnotherCycle = false;
+      await _runSingleCycle();
+    } while (_runAnotherCycle && _userId != null && _userId!.isNotEmpty);
+  }
+
+  Future<void> _runSingleCycle() async {
     emit(state.copyWith(isSyncing: true));
     final hadNetworkError = await _service.runOnce(_userId!);
     await _refreshCounts();

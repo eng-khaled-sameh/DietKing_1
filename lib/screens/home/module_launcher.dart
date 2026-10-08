@@ -5,6 +5,7 @@ import '../../core/app_modules.dart';
 import '../../cubits/catalog/catalog_cubit.dart';
 import '../../cubits/pos_settings/pos_settings_cubit.dart';
 import '../../cubits/session/session_cubit.dart';
+import '../../cubits/sync/sync_cubit.dart';
 import '../../features/auth/presentation/widgets/start_shift_dialog.dart';
 import '../../features/meal_sales/presentation/screens/meal_sales_screen.dart';
 import '../../models/user_profile.dart';
@@ -18,7 +19,21 @@ Future<void> startAndOpenModule(
   UserProfile profile, {
   bool replace = false,
 }) async {
+  // فعّل المزامنة للمستخدم الحالي قبل فتح أي قسم. بذلك تُرسل كل المستندات
+  // المحلية فوراً عند وجود اتصال، بدلاً من بقائها pending حتى محاولة لاحقة.
+  await context.read<SyncCubit>().onLogin(profile.userId);
+  if (!context.mounted) return;
+
   final sessionCubit = context.read<SessionCubit>();
+  if (module == AppModule.cashier) {
+    await sessionCubit.restoreCashierSession(
+      userId: profile.userId,
+      email: profile.email,
+      fullName: profile.fullName,
+      role: profile.role,
+    );
+    if (!context.mounted) return;
+  }
   if (sessionCubit.hasModuleSession(module)) {
     sessionCubit.resume(
       userId: profile.userId,
@@ -37,16 +52,19 @@ Future<void> startAndOpenModule(
     }
     return;
   }
-  final start = await StartShiftDialog.show(context, module);
+  final start = await StartShiftDialog.show(context, module, profile);
   if (!context.mounted || start == null) return;
-  context.read<SessionCubit>().start(
+  await context.read<SessionCubit>().start(
         userId: profile.userId,
         email: profile.email,
         fullName: profile.fullName,
         role: profile.role,
         module: module,
         shift: start.shift,
-        branch: start.branch,
+        selectedBranch:
+            profile.role == AppRole.cashier ? null : start.branch,
+        cashierBranch:
+            profile.role == AppRole.cashier ? start.branch : null,
         openingCash: start.openingCash,
       );
   if (!context.mounted) return;

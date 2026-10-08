@@ -7,6 +7,9 @@ import '../inventory_constants.dart';
 import '../models/enums.dart';
 import '../cubit/inventory_cubit.dart';
 import '../cubit/inventory_state.dart';
+import 'package:my_desktop_app/cubits/auth/auth_cubit.dart';
+import 'package:my_desktop_app/cubits/session/session_cubit.dart';
+import 'package:my_desktop_app/features/auth/presentation/screens/login_screen.dart';
 
 class InventorySidebar extends StatelessWidget {
   const InventorySidebar({super.key});
@@ -81,8 +84,31 @@ class InventorySidebar extends StatelessWidget {
               },
             ),
           ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(AppDimens.spaceMd),
+            child: _SidebarItem.action(
+              label: 'تسجيل الخروج',
+              icon: Icons.logout_rounded,
+              onTap: () => _signOut(context),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _signOut(BuildContext context) async {
+    await context.read<InventoryCubit>().clearSession();
+    if (!context.mounted) return;
+
+    await context.read<AuthCubit>().signOut();
+    if (!context.mounted) return;
+
+    context.read<SessionCubit>().clearMemory();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
     );
   }
 
@@ -152,6 +178,15 @@ class _SidebarItem extends StatefulWidget {
   }) : onTap = null,
        icon = null,
        label = null;
+
+  const _SidebarItem.action({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  }) : section = null,
+       isActive = false,
+       badgeText = null,
+       badgeColor = null;
 
   @override
   State<_SidebarItem> createState() => _SidebarItemState();

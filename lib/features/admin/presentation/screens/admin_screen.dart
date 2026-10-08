@@ -21,6 +21,7 @@ import '../../../../screens/inventory/cubit/inventory_cubit.dart';
 import '../../../../screens/inventory/cubit/inventory_state.dart';
 import '../../../../screens/inventory/utils/formatters.dart';
 import '../../../../data/inventory/models/branch_order.dart';
+import '../../../../repositories/expenses_repository.dart';
 
 // ── الأقسام ───────────────────────────────────────────────────────────────────
 
@@ -540,7 +541,7 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
 
       // ب) محاولة مزامنة بحد أقصى 15 ثانية بدون حجب
       if (mounted) {
-        context.read<SyncCubit>().triggerSync();
+        context.read<SyncCubit>().triggerSync(userId: session.userId);
         await Future.delayed(const Duration(seconds: 15));
       }
 
@@ -597,7 +598,7 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
         if (mounted) {
           await context.read<AuthCubit>().signOut();
           if (!mounted) return;
-          context.read<SessionCubit>().end();
+          await context.read<SessionCubit>().end();
           context.read<CatalogCubit>().reset();
           context.read<AdminAccessCubit>().reset();
           context.read<PosSettingsCubit>().reset();
@@ -846,7 +847,7 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
   bool _isSaving = false;
   String? _errorMsg;
 
-  List<LocalRecord> _sessionExpenses = [];
+  List<ExpenseRecord> _branchExpenses = [];
 
   double get _vatAmount => double.tryParse(_vatController.text) ?? 0.0;
   double get _amount => double.tryParse(_amountController.text) ?? 0.0;
@@ -872,9 +873,32 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
 
   Future<void> _loadExpenses() async {
     final session = context.read<SessionCubit>().state;
-    final repo = LocalRecordsRepository();
-    final expenses = await repo.getBySession(session.sessionId, 'expense');
-    if (mounted) setState(() => _sessionExpenses = expenses);
+    final branchId = session.branchId;
+    if (branchId == null) return;
+
+    final localExpenses = await LocalRecordsRepository().getByBranch(
+      branchId,
+      'expense',
+    );
+    final expensesByClientId = <String, ExpenseRecord>{
+      for (final record in localExpenses)
+        record.clientId: ExpenseRecord.fromLocalRecord(record),
+    };
+
+    try {
+      final serverExpenses = await ExpensesRepository().getBranchExpenses(
+        branchId,
+      );
+      for (final record in serverExpenses) {
+        expensesByClientId[record.clientId] = record;
+      }
+    } catch (_) {
+      // يبقى السجل المحلي ظاهراً إذا تعذر الوصول إلى الخادم مؤقتاً.
+    }
+
+    final expenses = expensesByClientId.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (mounted) setState(() => _branchExpenses = expenses);
   }
 
   Future<void> _handleSave() async {
@@ -910,6 +934,7 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
         'client_id': clientId,
         'branch_id': branchId,
         'session_id': session.sessionId,
+        'local_number': localNumber,
         'category': _category,
         'payee': _payeeController.text.trim().isEmpty
             ? null
@@ -944,9 +969,10 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
       );
 
       if (mounted) {
-        context.read<SyncCubit>().triggerSync();
+        await context.read<SyncCubit>().triggerSync(userId: session.userId);
         await _loadExpenses();
         if (!mounted) return;
+        final savedRecord = await repo.getByClientId(clientId);
         // إعادة التعيين
         _amountController.clear();
         _vatController.text = '0';
@@ -960,9 +986,16 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
           _expenseDate = DateTime.now();
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم حفظ المصروف بنجاح', textAlign: TextAlign.right),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text(
+              savedRecord?.status == 'synced'
+                  ? 'تم إرسال المصروف وحفظه في سجل الفرع'
+                  : 'تم حفظ المصروف محلياً وسيُعاد إرساله تلقائياً عند توفر الاتصال',
+              textAlign: TextAlign.right,
+            ),
+            backgroundColor: savedRecord?.status == 'synced'
+                ? Colors.green
+                : AppColors.tertiary,
           ),
         );
       }
@@ -1241,14 +1274,14 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
 
           // ── جدول مصروفات الوردية ────────────────────────────────────────
           _AdminCard(
-            title: 'مصروفات الوردية الحالية',
+            title: 'سجل مصروفات الفرع',
             icon: Icons.list_alt_rounded,
-            child: _sessionExpenses.isEmpty
+            child: _branchExpenses.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(AppDimens.spaceLg),
                       child: Text(
-                        'لا توجد مصروفات مسجلة في هذه الوردية',
+                        'لا توجد مصروفات مسجلة لهذا الفرع',
                         style: GoogleFonts.ibmPlexSansArabic(
                           color: AppColors.onSurfaceVariant,
                         ),
@@ -1273,20 +1306,13 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                         _col('النوع'),
                         _col('المبلغ'),
                         _col('الإجمالي'),
-                        _col('الحالة'),
                       ],
-                      rows: _sessionExpenses.map((r) {
-                        final number = r.serverNumber ?? r.localNumber ?? '-';
-                        final category =
-                            (r.payload['category'] as String?) ?? '-';
-                        final amount =
-                            (r.payload['amount'] as num?)?.toDouble() ?? 0.0;
-                        final total = r.total ?? 0.0;
+                      rows: _branchExpenses.map((r) {
                         return DataRow(
                           cells: [
                             DataCell(
                               Text(
-                                number,
+                                r.number,
                                 style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: AppDimens.fontXs,
                                   color: AppColors.onSurface,
@@ -1295,7 +1321,7 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                             ),
                             DataCell(
                               Text(
-                                category,
+                                r.category,
                                 style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: AppDimens.fontXs,
                                   color: AppColors.onSurface,
@@ -1304,7 +1330,7 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                             ),
                             DataCell(
                               Text(
-                                '${amount.toStringAsFixed(2)} ر.س',
+                                '${r.amount.toStringAsFixed(2)} ر.س',
                                 style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: AppDimens.fontXs,
                                   color: AppColors.onSurface,
@@ -1313,7 +1339,7 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                             ),
                             DataCell(
                               Text(
-                                '${total.toStringAsFixed(2)} ر.س',
+                                '${r.total.toStringAsFixed(2)} ر.س',
                                 style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: AppDimens.fontXs,
                                   fontWeight: FontWeight.w700,
@@ -1321,7 +1347,6 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                                 ),
                               ),
                             ),
-                            DataCell(_StatusBadge(status: r.status)),
                           ],
                         );
                       }).toList(),
@@ -1347,6 +1372,7 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
 
 // ── Badge حالة السجل ──────────────────────────────────────────────────────────
 
+// ignore: unused_element
 class _StatusBadge extends StatelessWidget {
   final String status;
   const _StatusBadge({required this.status});
@@ -3012,10 +3038,7 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          content: Text(
-            'هل استلمت الطلب رقم ${_o.number}؟ لا يمكن التراجع.',
-            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
-          ),
+          content: _buildReceiptPreview(context),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -3061,6 +3084,140 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
       }
     }
   }
+
+  /// يعرض للكاشير ما طلبه وما جهّزه المخزن قبل تنفيذ الاستلام النهائي.
+  Widget _buildReceiptPreview(BuildContext context) {
+    final catalog = context.read<InventoryCubit>().state.catalogItemsById;
+
+    return SizedBox(
+      width: 520,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'راجع الكميات قبل التأكيد:',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                border: Border.all(color: AppColors.surfaceContainerHigh),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 12, 7),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            'الصنف',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              color: AppColors.onSurfaceVariant,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        _quantityHeader('المطلوبة'),
+                        _quantityHeader('المرسلة'),
+                      ],
+                    ),
+                  ),
+                  const Divider(
+                    height: 1,
+                    color: AppColors.surfaceContainerHigh,
+                  ),
+                  ..._o.lines.map((line) {
+                    final item = catalog[line.itemId];
+                    final unitCode = item?.unitCode ?? '';
+                    final double sentQty = line.qtyApproved ?? 0;
+                    return Padding(
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        12,
+                        9,
+                        12,
+                        9,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              item?.name ?? 'صنف غير متاح',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                color: AppColors.onSurface,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          _quantityValue(
+                            _fmtQty(line.qtyRequested, unitCode),
+                            AppColors.onSurface,
+                          ),
+                          _quantityValue(
+                            _fmtQty(sentQty, unitCode),
+                            sentQty < line.qtyRequested
+                                ? AppColors.secondary
+                                : AppColors.statusGreen,
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'لا يمكن التراجع بعد تأكيد الاستلام.',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _quantityHeader(String text) => Expanded(
+    flex: 2,
+    child: Text(
+      text,
+      textAlign: TextAlign.center,
+      style: GoogleFonts.ibmPlexSansArabic(
+        color: AppColors.onSurfaceVariant,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
+
+  Widget _quantityValue(String text, Color color) => Expanded(
+    flex: 2,
+    child: Text(
+      text,
+      textAlign: TextAlign.center,
+      style: GoogleFonts.ibmPlexSansArabic(
+        color: color,
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -3227,7 +3384,7 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
                           ),
                         ),
                         Text(
-                          'الكمية',
+                          'الكمية المطلوبة',
                           style: GoogleFonts.ibmPlexSansArabic(
                             color: AppColors.onSurfaceVariant,
                             fontSize: 11,
@@ -3240,7 +3397,7 @@ class _BranchOrderCardState extends State<_BranchOrderCard> {
                               start: 20,
                             ),
                             child: Text(
-                              'المعتمد',
+                              'الكمية المرسلة',
                               style: GoogleFonts.ibmPlexSansArabic(
                                 color: AppColors.onSurfaceVariant,
                                 fontSize: 11,

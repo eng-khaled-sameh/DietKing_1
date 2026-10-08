@@ -58,7 +58,8 @@ class SyncService {
           // نجاح
           String? serverNumber;
           if (response is Map<String, dynamic>) {
-            serverNumber = response['invoice_number'] as String?;
+            serverNumber = (response['invoice_number'] ?? response['number'])
+                as String?;
             // already_exists = true يُعتبر نجاح
           }
 

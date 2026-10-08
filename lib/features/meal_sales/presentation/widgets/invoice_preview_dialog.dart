@@ -150,28 +150,20 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
 
       _localInvoiceNumber = localNumber;
 
-      // انتظر المزامنة مع السيرفر لجلب رقم الفاتورة الرسمي
-      String printNumber = localNumber;
+      // نزامن الفاتورة في الخلفية، لكن الإيصال يطبع دائماً بالرقم المحلي
+      // المختصر ذي الأربع خانات.
       if (mounted) {
         try {
-          await context.read<SyncCubit>().triggerSync();
-          if (mounted) {
-            // اقرأ السجل من قاعدة البيانات المحلية لجلب serverNumber
-            final records = await repo.getBySession(session.sessionId, 'sale');
-            final saved = records.where((r) => r.clientId == clientId).firstOrNull;
-            if (saved?.serverNumber != null && saved!.serverNumber!.isNotEmpty) {
-              printNumber = saved.serverNumber!;
-            }
-          }
+          await context.read<SyncCubit>().triggerSync(userId: session.userId);
         } catch (_) {
-          // لو المزامنة فشلت (لا يوجد إنترنت) نطبع بالرقم المحلي
+          // لو المزامنة فشلت، الإيصال المحلي ما زال جاهزاً للطباعة.
         }
       }
 
       // اطبع الفاتورة
       if (mounted) {
         setState(() => _isSaving = false);
-        await _printPdfAndClose(printNumber, paymentMethod);
+        await _printPdfAndClose(localNumber, paymentMethod);
       }
     } catch (e) {
       if (mounted) {

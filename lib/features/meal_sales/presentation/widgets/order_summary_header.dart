@@ -12,7 +12,7 @@ class OrderSummaryHeader extends StatelessWidget {
 
   const OrderSummaryHeader({
     super.key,
-    this.orderNumber = '#1042',
+    required this.orderNumber,
     this.onClearAll,
   });
 

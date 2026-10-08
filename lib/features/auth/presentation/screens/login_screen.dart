@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../cubits/auth/auth_cubit.dart';
 import '../../../../cubits/auth/auth_state.dart';
+import '../../../../cubits/branches/branches_cubit.dart';
 import '../../../../cubits/session/session_cubit.dart';
 import '../../../../screens/home/module_launcher.dart';
 import '../../../../screens/home/modules_screen.dart';
@@ -49,7 +50,34 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _continueAfterLogin() async {
-    final profile = context.read<AuthCubit>().state.profile;
+    var profile = context.read<AuthCubit>().state.profile;
+    if (profile == null) return;
+    if (profile.role == AppRole.cashier) {
+      final branchesCubit = context.read<BranchesCubit>();
+      await branchesCubit.load();
+      if (!mounted) return;
+      final branchesState = branchesCubit.state;
+      if (branchesState.status == BranchesStatus.loaded) {
+        final matches = branchesState.branches
+            .where((item) => item.id == profile!.branchId)
+            .toList();
+        if (matches.isEmpty) {
+          await context.read<AuthCubit>().block(
+                'الفرع المرتبط بحسابك غير نشط، تواصل مع الإدارة',
+              );
+          return;
+        }
+        profile = await context.read<AuthCubit>().cacheCashierBranch(
+              matches.single,
+            );
+        if (!mounted) return;
+      } else if (profile.branchName == null || profile.branchCode == null) {
+        await context.read<AuthCubit>().block(
+              'تعذر تحميل بيانات الفرع، تواصل مع الإدارة',
+            );
+        return;
+      }
+    }
     if (profile == null) return;
     final modules = allowedModules(profile.role);
     if (modules.length == 1) {

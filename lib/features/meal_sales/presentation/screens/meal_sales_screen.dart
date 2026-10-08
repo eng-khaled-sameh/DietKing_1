@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:my_desktop_app/cubits/sales/sales_cubit.dart';
-
 import '../../../../core/cubits/held_orders_cubit.dart';
 import '../../../../core/models/held_order.dart';
 import '../../../../core/models/invoice_data.dart';
@@ -37,8 +36,11 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
   late CartCubit _cartCubit;
   final FocusNode _focusNode = FocusNode();
 
-  /// عدّاد تسلسلي بسيط لرقم الطلب (في الذاكرة فقط)
-  static int _orderCounter = 0;
+  /// رقم الفاتورة الظاهر للكاشير؛ يبدأ من 001 ويزيد بعد إتمام الدفع.
+  int _nextInvoiceNumber = 1;
+
+  String get _displayInvoiceNumber =>
+      _nextInvoiceNumber.toString().padLeft(3, '0');
 
   @override
   void initState() {
@@ -120,7 +122,9 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
                 child: Text(
                   'تعذر تحميل نسبة الضريبة. يُرجى إعادة المحاولة قبل إتمام الفاتورة.',
                   textAlign: TextAlign.right,
-                  style: GoogleFonts.ibmPlexSansArabic(fontSize: AppDimens.fontSm),
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    fontSize: AppDimens.fontSm,
+                  ),
                 ),
               ),
             ],
@@ -148,9 +152,7 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
       return;
     }
 
-    // بناء رقم الطلب التسلسلي
-    _orderCounter++;
-    final orderNumber = '#${_orderCounter.toString().padLeft(4, '0')}';
+    final orderNumber = _displayInvoiceNumber;
 
     // تحويل CartLine → InvoiceLineItem
     final invoiceItems = cartState.lines
@@ -190,9 +192,13 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
         sessionState: sessionState,
         onPaymentComplete: () {
           // إعادة ضبط السلة — الخصم يرجع 0، الضريبة ترجع للقيمة الحالية من PosSettingsCubit
-          final currentVat = context.read<PosSettingsCubit>().state.currentVatRate;
+          final currentVat = context
+              .read<PosSettingsCubit>()
+              .state
+              .currentVatRate;
           _cartCubit.clearAll(keepVatRate: currentVat);
           context.read<SalesCubit>().reset();
+          setState(() => _nextInvoiceNumber++);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('تم الدفع بنجاح', textAlign: TextAlign.right),
@@ -208,8 +214,13 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _cartCubit,
-      child: KeyboardListener(
-        focusNode: _focusNode,
+      child: BlocListener<PosSettingsCubit, PosSettingsState>(
+        listenWhen: (previous, current) =>
+            previous.status != PosSettingsStatus.loaded &&
+            current.status == PosSettingsStatus.loaded,
+        listener: (_, state) => _cartCubit.syncVatRate(state.currentVatRate),
+        child: KeyboardListener(
+          focusNode: _focusNode,
         autofocus: true,
         onKeyEvent: (event) {
           if (event is KeyDownEvent) {
@@ -232,7 +243,11 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
         },
         child: Directionality(
           textDirection: TextDirection.rtl,
-          child: _MealSalesBody(onCheckout: _handleCheckout),
+          child: _MealSalesBody(
+            orderNumber: _displayInvoiceNumber,
+            onCheckout: _handleCheckout,
+          ),
+        ),
         ),
       ),
     );
@@ -242,9 +257,10 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
 // ── Body مع BlocBuilder للكاتالوج ─────────────────────────────────────────────
 
 class _MealSalesBody extends StatelessWidget {
+  final String orderNumber;
   final VoidCallback onCheckout;
 
-  const _MealSalesBody({required this.onCheckout});
+  const _MealSalesBody({required this.orderNumber, required this.onCheckout});
 
   @override
   Widget build(BuildContext context) {
@@ -280,7 +296,10 @@ class _MealSalesBody extends StatelessWidget {
                   // ── عمود ملخص الطلب الجانبي الثابت (4/12) ──────────────
                   Expanded(
                     flex: 4,
-                    child: OrderSummaryPanel(onCheckout: onCheckout),
+                    child: OrderSummaryPanel(
+                      orderNumber: orderNumber,
+                      onCheckout: onCheckout,
+                    ),
                   ),
                 ],
               ),

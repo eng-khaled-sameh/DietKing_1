@@ -252,7 +252,7 @@ String generateUuidV4() {
 // ── LocalRecordsRepository ────────────────────────────────────────────────────
 
 class LocalRecordsRepository {
-  /// توليد رقم الفاتورة المحلي: branchCode + "-L" + yyMMdd + "-" + 4-digit seq
+  /// توليد رقم إيصال محلي مختصر من 4 خانات (0-9 و A-Z).
   Future<String> nextLocalNumber(String branchCode) async {
     final database = await LocalDb.db;
     return database.transaction<String>((txn) async {
@@ -271,11 +271,11 @@ class LocalRecordsRepository {
           whereArgs: [metaKey],
         );
       }
-      final now = DateTime.now();
-      final yyMMdd =
-          '${(now.year % 100).toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-      final seqStr = seq.toString().padLeft(4, '0');
-      return '$branchCode-L$yyMMdd-$seqStr';
+      const maxFourCharacterCodes = 36 * 36 * 36 * 36;
+      if (seq >= maxFourCharacterCodes) {
+        throw StateError('تم الوصول إلى الحد اليومي لأرقام الإيصالات');
+      }
+      return seq.toRadixString(36).toUpperCase().padLeft(4, '0');
     });
   }
 
@@ -327,8 +327,10 @@ class LocalRecordsRepository {
     final database = await LocalDb.db;
     final rows = await database.query(
       'local_records',
-      where: 'status = ? AND user_id = ?',
-      whereArgs: ['pending', userId],
+      // A record marked failed must still be retried.  `failed` is a
+      // user-visible warning after several attempts, not a terminal state.
+      where: 'status IN (?, ?) AND user_id = ?',
+      whereArgs: ['pending', 'failed', userId],
       orderBy: 'created_at ASC',
     );
     return rows.map(LocalRecord.fromMap).toList();
@@ -347,12 +349,36 @@ class LocalRecordsRepository {
     return rows.map(LocalRecord.fromMap).toList();
   }
 
+  /// سجلات الفرع من النوع المطلوب، لاستخدامها كنسخة محلية احتياطية للسجل.
+  Future<List<LocalRecord>> getByBranch(String branchId, String kind) async {
+    final database = await LocalDb.db;
+    final rows = await database.query(
+      'local_records',
+      where: 'branch_id = ? AND kind = ?',
+      whereArgs: [branchId, kind],
+      orderBy: 'created_at DESC',
+    );
+    return rows.map(LocalRecord.fromMap).toList();
+  }
+
+  Future<LocalRecord?> getByClientId(String clientId) async {
+    final database = await LocalDb.db;
+    final rows = await database.query(
+      'local_records',
+      where: 'client_id = ?',
+      whereArgs: [clientId],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : LocalRecord.fromMap(rows.first);
+  }
+
   /// عدد السجلات pending لمستخدم معين
   Future<int> countPending(String userId) async {
     final database = await LocalDb.db;
     final result = await database.rawQuery(
-      'SELECT COUNT(*) as cnt FROM local_records WHERE status = ? AND user_id = ?',
-      ['pending', userId],
+      'SELECT COUNT(*) as cnt FROM local_records '
+      'WHERE status IN (?, ?) AND user_id = ?',
+      ['pending', 'failed', userId],
     );
     return (result.first['cnt'] as int?) ?? 0;
   }

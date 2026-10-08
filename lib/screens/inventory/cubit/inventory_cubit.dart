@@ -412,13 +412,17 @@ class InventoryCubit extends Cubit<InventoryState> {
         lines: lines,
       );
       if (!dryRun) {
-        // تحديث الأرصدة من نتيجة الجرد
+        // الجرد قد يغيّر الأرصدة وبيانات الأصناف، لذلك نعيد تحميلهما
+        // من النظام قبل إظهار النتيجة في شاشة الخامات.
+        final freshCatalog = await _sync.syncCatalog();
         final freshStock = await _sync.syncStock();
+        _catalogLoaded = true;
         _stockLoaded = true;
         // تحديث سجل الجرديات
         final records = await _api.getStocktakeRecords();
         emit(state.copyWith(
           isSubmitting: false,
+          catalog: freshCatalog,
           stock: freshStock.entries,
           stocktakeRecords: records,
         ));

@@ -70,13 +70,6 @@ class KitchenReceiptsTable extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            flex: 2,
-            child: Text(
-              'رقم التشغيلة (Batch)',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
             flex: 3,
             child: Text(
               'المنتج / الوجبة',

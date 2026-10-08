@@ -13,12 +13,14 @@ import 'order_totals_breakdown.dart';
 /// اللوحة الجانبية الثابتة لملخص الطلب (Sticky Column)
 /// تقرأ قائمة الأسطر من [CartCubit] عبر [BlocBuilder].
 class OrderSummaryPanel extends StatelessWidget {
+  final String orderNumber;
   final VoidCallback? onCheckout;
   final VoidCallback? onHold;
   final VoidCallback? onCancel;
 
   const OrderSummaryPanel({
     super.key,
+    required this.orderNumber,
     this.onCheckout,
     this.onHold,
     this.onCancel,
@@ -48,6 +50,7 @@ class OrderSummaryPanel extends StatelessWidget {
         children: [
           // ── 1. هيدر ملخص الطلب ──────────────────────────────────────────
           OrderSummaryHeader(
+            orderNumber: orderNumber,
             onClearAll: () => context.read<CartCubit>().clearAll(),
           ),
 

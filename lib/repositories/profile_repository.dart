@@ -6,6 +6,7 @@ import '../core/app_exception.dart';
 import '../core/app_modules.dart';
 import '../core/local_db.dart';
 import '../core/supabase_client.dart';
+import '../models/login_branch.dart';
 import '../models/user_profile.dart';
 
 class ProfileRepository {
@@ -41,12 +42,27 @@ class ProfileRepository {
     );
   }
 
+  Future<UserProfile> cacheBranch(
+    UserProfile profile,
+    LoginBranch branch,
+  ) async {
+    final resolved = profile.copyWith(
+      branchName: branch.name,
+      branchCode: branch.code,
+    );
+    await _writeCache(resolved);
+    return resolved;
+  }
+
   Future<void> _writeCache(UserProfile profile) async {
     final db = await LocalDb.db;
     final value = jsonEncode({
       'user_id': profile.userId,
       'role': roleToText(profile.role),
       'is_active': profile.isActive,
+      'branch_id': profile.branchId,
+      'branch_name': profile.branchName,
+      'branch_code': profile.branchCode,
     });
     await db.insert('app_meta', {'key': _cacheKey(profile.userId), 'value': value},
         conflictAlgorithm: ConflictAlgorithm.replace);
@@ -64,6 +80,9 @@ class ProfileRepository {
       role: roleFromText(data['role'] as String?),
       isActive: data['is_active'] as bool? ?? false,
       fullName: email.split('@').first,
+      branchId: data['branch_id']?.toString(),
+      branchName: data['branch_name'] as String?,
+      branchCode: data['branch_code'] as String?,
     );
   }
 

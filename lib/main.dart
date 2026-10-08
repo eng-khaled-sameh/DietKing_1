@@ -22,7 +22,6 @@ import 'data/inventory/inventory_api.dart';
 import 'data/inventory/inventory_cache.dart';
 import 'data/inventory/inventory_sync.dart';
 import 'screens/inventory/cubit/inventory_cubit.dart';
-
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<void> main() async {
@@ -54,9 +53,9 @@ Future<void> main() async {
         BlocProvider(create: (_) => SessionCubit()),
         // PosSettingsCubit — إعدادات نقطة البيع (نسبة الضريبة)
         // تُحمَّل مرة واحدة بعد تسجيل الدخول وتظل طوال الجلسة
-        BlocProvider(create: (_) => PosSettingsCubit(
-          repository: PosSettingsRepository(),
-        )),
+        BlocProvider(
+          create: (_) => PosSettingsCubit(repository: PosSettingsRepository()),
+        ),
         // SalesCubit — لإتمام المبيعات وحفظها
         BlocProvider(create: (_) => SalesCubit(SalesRepository())),
         // SyncCubit — مزامنة الخلفية
