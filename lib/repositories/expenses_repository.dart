@@ -64,10 +64,12 @@ class ExpenseRecord {
       category: payload['category']?.toString() ?? '-',
       amount: numberValue(payload['amount']),
       vatAmount: numberValue(payload['vat_amount']),
-      total: record.total ??
+      total:
+          record.total ??
           numberValue(payload['amount']) + numberValue(payload['vat_amount']),
       paymentMethod: payload['payment_method']?.toString() ?? 'other',
-      expenseDate: DateTime.tryParse(payload['expense_date']?.toString() ?? '') ??
+      expenseDate:
+          DateTime.tryParse(payload['expense_date']?.toString() ?? '') ??
           record.createdAt,
       createdAt: record.createdAt,
       payee: payload['payee']?.toString(),

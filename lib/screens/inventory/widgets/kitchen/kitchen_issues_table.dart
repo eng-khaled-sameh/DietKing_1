@@ -28,15 +28,16 @@ class KitchenIssuesTable extends StatelessWidget {
                   if (state.error != null) {
                     return ReadErrorState(
                       message: state.error!,
-                      onRetry: () => context
-                          .read<InventoryCubit>()
-                          .loadKitchenIssues(),
+                      onRetry: () =>
+                          context.read<InventoryCubit>().loadKitchenIssues(),
                     );
                   }
                   return Center(
                     child: Text(
                       'لا توجد صرفيات مطبخ حالياً',
-                      style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   );
                 }
@@ -73,42 +74,60 @@ class KitchenIssuesTable extends StatelessWidget {
             flex: 2,
             child: Text(
               'رقم الإذن',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
               'خطة الطهي',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
               'الشيف',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
             flex: 1,
             child: Text(
               'الوردية',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
             flex: 3,
             child: Text(
               'الخامات والكميات',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
               'التاريخ',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const SizedBox(width: 40), // Actions or status column

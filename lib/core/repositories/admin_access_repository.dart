@@ -75,7 +75,10 @@ class AdminAccessRepository {
   Future<AdminAccessResult> _verifyRemote(String password) async {
     try {
       final response = await supabase
-          .rpc('verify_cashier_admin_password', params: {'p_password': password})
+          .rpc(
+            'verify_cashier_admin_password',
+            params: {'p_password': password},
+          )
           .timeout(const Duration(seconds: 10));
 
       final isValid = (response as bool?) ?? false;
@@ -94,7 +97,8 @@ class AdminAccessRepository {
       return _verifyLocal(password);
     } catch (e) {
       final msg = e.toString();
-      if (msg.contains('ClientException') || msg.contains('Connection refused')) {
+      if (msg.contains('ClientException') ||
+          msg.contains('Connection refused')) {
         return _verifyLocal(password);
       }
       if (e is PostgrestException) {
@@ -108,11 +112,10 @@ class AdminAccessRepository {
   Future<void> _storeVerifiedAt() async {
     final database = await LocalDb.db;
     final now = DateTime.now().toUtc().toIso8601String();
-    await database.insert(
-      'app_meta',
-      {'key': _verifiedAtKey, 'value': now},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await database.insert('app_meta', {
+      'key': _verifiedAtKey,
+      'value': now,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> _storeLocalFingerprint(String password) async {
@@ -122,21 +125,35 @@ class AdminAccessRepository {
 
     final pwBytes = utf8.encode(password);
     final hashBytes = sha256.convert([...saltBytes, ...pwBytes]).bytes;
-    final hashHex = hashBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    final hashHex = hashBytes
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
 
     final database = await LocalDb.db;
     await database.transaction((txn) async {
-      await txn.insert('app_meta', {'key': _saltKey, 'value': saltBase64},
-          conflictAlgorithm: ConflictAlgorithm.replace);
-      await txn.insert('app_meta', {'key': _hashKey, 'value': hashHex},
-          conflictAlgorithm: ConflictAlgorithm.replace);
+      await txn.insert('app_meta', {
+        'key': _saltKey,
+        'value': saltBase64,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await txn.insert('app_meta', {
+        'key': _hashKey,
+        'value': hashHex,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     });
   }
 
   Future<AdminAccessResult> _verifyLocal(String password) async {
     final database = await LocalDb.db;
-    final saltRows = await database.query('app_meta', where: 'key = ?', whereArgs: [_saltKey]);
-    final hashRows = await database.query('app_meta', where: 'key = ?', whereArgs: [_hashKey]);
+    final saltRows = await database.query(
+      'app_meta',
+      where: 'key = ?',
+      whereArgs: [_saltKey],
+    );
+    final hashRows = await database.query(
+      'app_meta',
+      where: 'key = ?',
+      whereArgs: [_hashKey],
+    );
 
     if (saltRows.isEmpty || hashRows.isEmpty) {
       return AdminAccessResult.offlineUnavailable;
@@ -148,7 +165,9 @@ class AdminAccessRepository {
     final saltBytes = base64Decode(saltBase64);
     final pwBytes = utf8.encode(password);
     final hashBytes = sha256.convert([...saltBytes, ...pwBytes]).bytes;
-    final hashHex = hashBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    final hashHex = hashBytes
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
 
     if (hashHex == storedHash) {
       return AdminAccessResult.offlineGranted;

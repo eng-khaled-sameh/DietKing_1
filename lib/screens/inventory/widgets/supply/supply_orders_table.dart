@@ -28,7 +28,9 @@ class SupplyOrdersTable extends StatelessWidget {
                   return Center(
                     child: Text(
                       'لا توجد طلبات في هذه القائمة',
-                      style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   );
                 }
@@ -59,28 +61,40 @@ class SupplyOrdersTable extends StatelessWidget {
             flex: 2,
             child: Text(
               'رقم الطلب',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
               'المورّد',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
             flex: 4,
             child: Text(
               'الخامات المطلوبة',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
               'تاريخ التوريد',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const Expanded(flex: 3, child: Text('')), // Actions column

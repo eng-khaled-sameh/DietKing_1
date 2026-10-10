@@ -44,12 +44,15 @@ class _RawFiltersBarState extends State<RawFiltersBar> {
         final cubit = context.read<InventoryCubit>();
 
         // التصنيفات المتاحة للنوع المحدد (أو كلها)
-        final categories = state.catalog?.categories
-                .where((c) =>
-                    c.isActive &&
-                    !c.isSystem &&
-                    (state.rawKindFilter == null ||
-                        c.kind.name == state.rawKindFilter))
+        final categories =
+            state.catalog?.categories
+                .where(
+                  (c) =>
+                      c.isActive &&
+                      !c.isSystem &&
+                      (state.rawKindFilter == null ||
+                          c.kind.name == state.rawKindFilter),
+                )
                 .toList() ??
             <InventoryCategory>[];
 
@@ -64,12 +67,14 @@ class _RawFiltersBarState extends State<RawFiltersBar> {
               child: TextField(
                 controller: _searchController,
                 onChanged: cubit.setRawQuery,
-                style:
-                    GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onSurface,
+                ),
                 decoration: InputDecoration(
                   hintText: 'بحث بالاسم أو SKU...',
                   hintStyle: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurfaceVariant),
+                    color: AppColors.onSurfaceVariant,
+                  ),
                   prefixIcon: const Icon(
                     Icons.search,
                     color: AppColors.onSurfaceVariant,
@@ -80,8 +85,10 @@ class _RawFiltersBarState extends State<RawFiltersBar> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                 ),
               ),
             ),
@@ -110,12 +117,12 @@ class _RawFiltersBarState extends State<RawFiltersBar> {
                 hint: 'كل التصنيفات',
                 items: [
                   const DropdownMenuItem(
-                      value: null, child: Text('كل التصنيفات')),
+                    value: null,
+                    child: Text('كل التصنيفات'),
+                  ),
                   ...categories.map(
-                    (cat) => DropdownMenuItem(
-                      value: cat.id,
-                      child: Text(cat.name),
-                    ),
+                    (cat) =>
+                        DropdownMenuItem(value: cat.id, child: Text(cat.name)),
                   ),
                 ],
                 onChanged: cubit.setRawCategoryFilter,
@@ -189,14 +196,14 @@ class _DropdownFilter<T> extends StatelessWidget {
           value: value,
           hint: Text(
             hint,
-            style:
-                GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
           ),
           dropdownColor: AppColors.surfaceContainerHigh,
-          icon: const Icon(Icons.arrow_drop_down,
-              color: AppColors.onSurfaceVariant),
-          style:
-              GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+          icon: const Icon(
+            Icons.arrow_drop_down,
+            color: AppColors.onSurfaceVariant,
+          ),
+          style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
           items: items,
           onChanged: onChanged,
         ),

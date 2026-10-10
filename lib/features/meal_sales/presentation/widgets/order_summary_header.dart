@@ -92,9 +92,7 @@ class OrderSummaryHeader extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                border: Border.all(
-                  color: Colors.red.withValues(alpha: 0.3),
-                ),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,

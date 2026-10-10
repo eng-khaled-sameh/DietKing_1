@@ -23,12 +23,11 @@ class PosStatusFooter extends StatelessWidget {
             color: AppColors.tertiary,
           ),
 
-
           const Spacer(),
 
           // ── يسار: حقوق النشر ────────────────────────────────────────────
           Text(
-            'دايت كنج POS © 2026 | Developed by codva',
+            'Diet King © 2027 | Developed by Khaled Sameh | Codva',
             style: GoogleFonts.ibmPlexSansArabic(
               fontSize: 10,
               color: AppColors.onSurfaceVariant.withValues(alpha: 0.45),
@@ -38,7 +37,6 @@ class PosStatusFooter extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _DeviceStatus extends StatelessWidget {
@@ -60,13 +58,14 @@ class _DeviceStatus extends StatelessWidget {
         Container(
           width: 6,
           height: 6,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: AppDimens.spaceXs),
-        Icon(icon, size: 13, color: AppColors.onSurfaceVariant.withValues(alpha: 0.6)),
+        Icon(
+          icon,
+          size: 13,
+          color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
+        ),
         const SizedBox(width: 3),
         Text(
           label,

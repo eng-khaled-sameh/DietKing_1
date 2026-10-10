@@ -21,7 +21,7 @@ class LoginFooter extends StatelessWidget {
         children: [
           // ── يمين: حقوق وتفريغ معلومات الإصدار ─────────────────────────────
           Text(
-            'دايت كنج POS v4.2.0 • نظام تشغيل محطة المبيعات',
+            'دايت كنج POS v1.2.0 • نظام تشغيل محطة المبيعات',
             style: GoogleFonts.ibmPlexSansArabic(
               fontSize: AppDimens.fontXs,
               color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),

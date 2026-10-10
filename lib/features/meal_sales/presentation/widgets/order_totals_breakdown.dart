@@ -120,7 +120,9 @@ class _OrderTotalsBreakdownState extends State<OrderTotalsBreakdown> {
                       ),
                       borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                       border: Border.all(
-                        color: AppColors.primaryContainer.withValues(alpha: 0.4),
+                        color: AppColors.primaryContainer.withValues(
+                          alpha: 0.4,
+                        ),
                       ),
                     ),
                     child: Row(
@@ -263,7 +265,9 @@ class _OrderTotalsBreakdownState extends State<OrderTotalsBreakdown> {
                         color: AppColors.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                         border: Border.all(
-                          color: AppColors.outlineVariant.withValues(alpha: 0.3),
+                          color: AppColors.outlineVariant.withValues(
+                            alpha: 0.3,
+                          ),
                         ),
                       )
                     : null,
@@ -335,11 +339,14 @@ class _OrderTotalsBreakdownState extends State<OrderTotalsBreakdown> {
                       // شارة "معدّلة" بلون tertiary
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 5, vertical: 1),
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.tertiary.withValues(alpha: 0.12),
-                          borderRadius:
-                              BorderRadius.circular(AppDimens.radiusFull),
+                          borderRadius: BorderRadius.circular(
+                            AppDimens.radiusFull,
+                          ),
                           border: Border.all(
                             color: AppColors.tertiary.withValues(alpha: 0.35),
                             width: 0.8,
@@ -359,16 +366,12 @@ class _OrderTotalsBreakdownState extends State<OrderTotalsBreakdown> {
                       GestureDetector(
                         onTap: () {
                           // أوقف تمرير الحدث للـ InkWell الأب
-                          context
-                              .read<PosSettingsCubit>()
-                              .resetToDefault();
+                          context.read<PosSettingsCubit>().resetToDefault();
                           final defaultRate = context
                               .read<PosSettingsCubit>()
                               .state
                               .defaultVatRate;
-                          context
-                              .read<CartCubit>()
-                              .syncVatRate(defaultRate);
+                          context.read<CartCubit>().syncVatRate(defaultRate);
                         },
                         child: Icon(
                           Icons.restart_alt_rounded,
@@ -606,9 +609,9 @@ class _ValueDialogState extends State<_ValueDialog> {
                     onChanged: widget.isVatDialog
                         ? null // الضريبة: نسبة فقط (لا يمكن تغييرها لمبلغ ثابت في هذا الحوار)
                         : (val) => setState(() {
-                              _isPercentage = val!;
-                              _validationError = null;
-                            }),
+                            _isPercentage = val!;
+                            _validationError = null;
+                          }),
                   ),
                 ),
               ],
@@ -616,8 +619,9 @@ class _ValueDialogState extends State<_ValueDialog> {
             const SizedBox(height: AppDimens.spaceMd),
             TextField(
               controller: _controller,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
               onChanged: (_) {
                 if (_validationError != null) {
@@ -643,13 +647,17 @@ class _ValueDialogState extends State<_ValueDialog> {
                   borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                 ),
                 errorBorder: OutlineInputBorder(
-                  borderSide:
-                      const BorderSide(color: Colors.redAccent, width: 1.5),
+                  borderSide: const BorderSide(
+                    color: Colors.redAccent,
+                    width: 1.5,
+                  ),
                   borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      const BorderSide(color: Colors.redAccent, width: 2),
+                  borderSide: const BorderSide(
+                    color: Colors.redAccent,
+                    width: 2,
+                  ),
                   borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                 ),
                 filled: true,

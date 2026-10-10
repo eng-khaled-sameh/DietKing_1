@@ -28,7 +28,9 @@ class SupplyOrderItemsDialog extends StatelessWidget {
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'إغلاق',
-                style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onSurfaceVariant,
+                ),
               ),
             ),
           ],
@@ -75,7 +77,13 @@ class SupplyOrderItemsDialog extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('الأولوية: ', style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant, fontSize: 13)),
+            Text(
+              'الأولوية: ',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 13,
+              ),
+            ),
             StatusBadge(
               text: isUrgent ? 'عاجلة' : 'عادية',
               tone: isUrgent ? BadgeTone.danger : BadgeTone.neutral,
@@ -90,7 +98,13 @@ class SupplyOrderItemsDialog extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant, fontSize: 13)),
+        Text(
+          label,
+          style: GoogleFonts.ibmPlexSansArabic(
+            color: AppColors.onSurfaceVariant,
+            fontSize: 13,
+          ),
+        ),
         const SizedBox(width: 4),
         Text(
           value,
@@ -138,10 +152,14 @@ class SupplyOrderItemsDialog extends StatelessWidget {
     final itemName = item?.name ?? 'صنف غير معروف';
     final sku = item?.sku ?? 'N/A';
     final unit = item?.unitCode ?? 'وحدة';
-    
+
     final requested = _formatQty(line.qtyRequested);
-    final approved = line.qtyApproved != null ? _formatQty(line.qtyApproved!) : '—';
-    final received = line.qtyReceived != null ? _formatQty(line.qtyReceived!) : '—';
+    final approved = line.qtyApproved != null
+        ? _formatQty(line.qtyApproved!)
+        : '—';
+    final received = line.qtyReceived != null
+        ? _formatQty(line.qtyReceived!)
+        : '—';
     final total = line.qtyRequested * line.unitCost;
 
     return Container(
@@ -159,18 +177,27 @@ class SupplyOrderItemsDialog extends StatelessWidget {
               children: [
                 Text(
                   itemName,
-                  style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurface,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   '$sku • $unit',
-                  style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant, fontSize: 11),
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
                 ),
                 if (line.lineNote != null && line.lineNote!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       'ملاحظة: ${line.lineNote}',
-                      style: GoogleFonts.ibmPlexSansArabic(color: AppColors.tertiary, fontSize: 11),
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: AppColors.tertiary,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
               ],
@@ -195,11 +222,17 @@ class SupplyOrderItemsDialog extends StatelessWidget {
               children: [
                 Text(
                   'الوحدة: ${line.unitCost.toStringAsFixed(2)} ج.م',
-                  style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant, fontSize: 12),
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
                 Text(
                   'الإجمالي: ${total.toStringAsFixed(2)} ج.م',
-                  style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurface,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -213,8 +246,21 @@ class SupplyOrderItemsDialog extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('$label ', style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant, fontSize: 12)),
-        Text(val, style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontSize: 12, fontWeight: FontWeight.bold)),
+        Text(
+          '$label ',
+          style: GoogleFonts.ibmPlexSansArabic(
+            color: AppColors.onSurfaceVariant,
+            fontSize: 12,
+          ),
+        ),
+        Text(
+          val,
+          style: GoogleFonts.ibmPlexSansArabic(
+            color: AppColors.onSurface,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }
@@ -228,11 +274,19 @@ class SupplyOrderItemsDialog extends StatelessWidget {
           children: [
             Text(
               'الإجمالي الكلي:',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               '${_calculateTotal(order).toStringAsFixed(2)} ج.م',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.primary, fontSize: 16, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.primary,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -240,16 +294,23 @@ class SupplyOrderItemsDialog extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'ملاحظات الطلب: ${order.notes}',
-            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant, fontSize: 13),
+            style: GoogleFonts.ibmPlexSansArabic(
+              color: AppColors.onSurfaceVariant,
+              fontSize: 13,
+            ),
           ),
         ],
-        if (order.status == SupplyOrderStatus.rejected && order.rejectionReason != null) ...[
+        if (order.status == SupplyOrderStatus.rejected &&
+            order.rejectionReason != null) ...[
           const SizedBox(height: 8),
           Text(
             'سبب الرفض: ${order.rejectionReason}',
-            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.error, fontSize: 13),
+            style: GoogleFonts.ibmPlexSansArabic(
+              color: AppColors.error,
+              fontSize: 13,
+            ),
           ),
-        ]
+        ],
       ],
     );
   }
@@ -263,8 +324,12 @@ class SupplyOrderItemsDialog extends StatelessWidget {
 
   String _formatQty(double qty) {
     if (qty == qty.roundToDouble()) return qty.toInt().toString();
-    return qty.toStringAsFixed(3).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+    return qty
+        .toStringAsFixed(3)
+        .replaceAll(RegExp(r'0+$'), '')
+        .replaceAll(RegExp(r'\.$'), '');
   }
 
-  String _fmtDate(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  String _fmtDate(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }

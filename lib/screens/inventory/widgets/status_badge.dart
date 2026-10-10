@@ -76,7 +76,10 @@ class StatusBadge extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             text,
-            style: GoogleFonts.ibmPlexSansArabic(fontSize: AppDimens.fontXs, color: color),
+            style: GoogleFonts.ibmPlexSansArabic(
+              fontSize: AppDimens.fontXs,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -92,7 +95,8 @@ class _PulsingDot extends StatefulWidget {
   State<_PulsingDot> createState() => _PulsingDotState();
 }
 
-class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 

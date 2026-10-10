@@ -221,33 +221,33 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
         listener: (_, state) => _cartCubit.syncVatRate(state.currentVatRate),
         child: KeyboardListener(
           focusNode: _focusNode,
-        autofocus: true,
-        onKeyEvent: (event) {
-          if (event is KeyDownEvent) {
-            // تجنب تعارض الاختصارات مع أي TextField مفتوح
-            final primaryFocus = FocusManager.instance.primaryFocus;
-            final isTextFieldFocused =
-                primaryFocus?.context?.widget is EditableText;
+          autofocus: true,
+          onKeyEvent: (event) {
+            if (event is KeyDownEvent) {
+              // تجنب تعارض الاختصارات مع أي TextField مفتوح
+              final primaryFocus = FocusManager.instance.primaryFocus;
+              final isTextFieldFocused =
+                  primaryFocus?.context?.widget is EditableText;
 
-            if (event.logicalKey == LogicalKeyboardKey.f4) {
-              _handleHoldOrder();
-            } else if (event.logicalKey == LogicalKeyboardKey.escape &&
-                !isTextFieldFocused) {
-              _cartCubit.clearAll(keepVatRate: _cartCubit.state.vatValue);
-            } else if ((event.logicalKey == LogicalKeyboardKey.enter ||
-                    event.logicalKey == LogicalKeyboardKey.numpadEnter) &&
-                !isTextFieldFocused) {
-              _handleCheckout();
+              if (event.logicalKey == LogicalKeyboardKey.f4) {
+                _handleHoldOrder();
+              } else if (event.logicalKey == LogicalKeyboardKey.escape &&
+                  !isTextFieldFocused) {
+                _cartCubit.clearAll(keepVatRate: _cartCubit.state.vatValue);
+              } else if ((event.logicalKey == LogicalKeyboardKey.enter ||
+                      event.logicalKey == LogicalKeyboardKey.numpadEnter) &&
+                  !isTextFieldFocused) {
+                _handleCheckout();
+              }
             }
-          }
-        },
-        child: Directionality(
-          textDirection: TextDirection.rtl,
-          child: _MealSalesBody(
-            orderNumber: _displayInvoiceNumber,
-            onCheckout: _handleCheckout,
+          },
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: _MealSalesBody(
+              orderNumber: _displayInvoiceNumber,
+              onCheckout: _handleCheckout,
+            ),
           ),
-        ),
         ),
       ),
     );

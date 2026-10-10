@@ -189,10 +189,28 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
 
       final pdfBytes = await buildInvoicePdf(invoiceToPrint);
 
-      await Printing.layoutPdf(
-        onLayout: (format) async => pdfBytes,
-        name: 'DietKing_Invoice_$invoiceNumber',
-      );
+      final printers = await Printing.listPrinters();
+      Printer? targetPrinter;
+      try {
+        targetPrinter = printers.firstWhere((p) => p.isDefault);
+      } catch (e) {
+        if (printers.isNotEmpty) {
+          targetPrinter = printers.first;
+        }
+      }
+
+      if (targetPrinter != null) {
+        await Printing.directPrintPdf(
+          printer: targetPrinter,
+          onLayout: (format) async => pdfBytes,
+          name: 'DietKing_Invoice_$invoiceNumber',
+        );
+      } else {
+        await Printing.layoutPdf(
+          onLayout: (format) async => pdfBytes,
+          name: 'DietKing_Invoice_$invoiceNumber',
+        );
+      }
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -311,7 +329,17 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // ── اسم الشركة + الفرع ────────────────────────────────
+                        // ── اللوجو + اسم الشركة + الفرع ────────────────────────────────
+                        Center(
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            width: 60,
+                            height: 60,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const SizedBox(width: 60, height: 60),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         Center(
                           child: Text(
                             data.companyName,
@@ -453,21 +481,15 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                         _buildDivider(),
                         const SizedBox(height: AppDimens.spaceSm),
 
-                        // ── المجموع الفرعي ────────────────────────────────────
-                        _buildTotalRow('المجموع الفرعي', data.subtotal),
-                        const SizedBox(height: 4),
-
-                        // ── الخصم ─────────────────────────────────────────────
-                        _buildTotalRow(
-                          'الخصم',
-                          data.discountAmount,
-                          isNegative: true,
-                        ),
-                        const SizedBox(height: 4),
-
-                        // ── ضريبة القيمة المضافة ──────────────────────────────
-                        _buildTotalRow('ضريبة القيمة المضافة:', data.vatAmount),
-                        const SizedBox(height: AppDimens.spaceSm),
+                        // ── الخصم (إن وجد) ─────────────────────────────────────────────
+                        if (data.discountAmount > 0) ...[
+                          _buildTotalRow(
+                            'الخصم',
+                            data.discountAmount,
+                            isNegative: true,
+                          ),
+                          const SizedBox(height: AppDimens.spaceSm),
+                        ],
 
                         // ── الإجمالي النهائي ───────────────────────────────────
                         Divider(
@@ -525,13 +547,44 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                         const SizedBox(height: AppDimens.spaceMd),
                         _buildDivider(),
                         const SizedBox(height: AppDimens.spaceSm),
+
+                        // ── QR Code ──────────────────────────────────────────
+                        Center(
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(
+                              Icons.qr_code_2_rounded,
+                              size: 50,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Center(
+                          child: Text(
+                            'للاشتراك في الباقات زوروا موقعنا',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: AppDimens.fontSm,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.onSurface,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
                         Center(
                           child: Text(
                             'شكرًا لزيارتكم - دايت كنج',
                             style: GoogleFonts.ibmPlexSansArabic(
                               fontSize: AppDimens.fontXs,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.onSurfaceVariant.withValues(
-                                alpha: 0.7,
+                                alpha: 0.8,
                               ),
                             ),
                           ),

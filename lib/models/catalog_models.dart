@@ -5,10 +5,7 @@ class ProductCategory extends Equatable {
   final String id;
   final String name;
 
-  const ProductCategory({
-    required this.id,
-    required this.name,
-  });
+  const ProductCategory({required this.id, required this.name});
 
   factory ProductCategory.fromJson(Map<String, dynamic> json) {
     return ProductCategory(
@@ -117,6 +114,16 @@ class Product extends Equatable {
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
   @override
-  List<Object?> get props =>
-      [id, categoryId, name, sku, description, tag, isActive, hasVariants, price, variants];
+  List<Object?> get props => [
+    id,
+    categoryId,
+    name,
+    sku,
+    description,
+    tag,
+    isActive,
+    hasVariants,
+    price,
+    variants,
+  ];
 }

@@ -75,17 +75,13 @@ class InventoryCache {
     String? syncedUpTo,
   }) async {
     final db = await LocalDb.db;
-    await db.insert(
-      'inventory_cache',
-      {
-        'key': key,
-        'data': jsonEncode(data),
-        'stamp': stamp,
-        'synced_up_to': syncedUpTo,
-        'updated_at': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('inventory_cache', {
+      'key': key,
+      'data': jsonEncode(data),
+      'stamp': stamp,
+      'synced_up_to': syncedUpTo,
+      'updated_at': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   /// دمج قوائم delta بالكاش الموجود بحسب معرّف الصف

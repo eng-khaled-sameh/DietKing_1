@@ -5,11 +5,7 @@ import '../../../../core/theme/app_dimens.dart';
 
 /// زر تقديم نموذج تسجيل الدخول المخصص بتدرج لوني مميز
 class LoginSubmitButton extends StatelessWidget {
-  const LoginSubmitButton({
-    super.key,
-    this.onPressed,
-    this.isLoading = false,
-  });
+  const LoginSubmitButton({super.key, this.onPressed, this.isLoading = false});
 
   final VoidCallback? onPressed;
   final bool isLoading;
@@ -22,7 +18,11 @@ class LoginSubmitButton extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: isLoading
             ? const LinearGradient(
-                colors: [Color(0xFF7A5B2A), Color(0xFF9A7235), Color(0xFFB8893F)],
+                colors: [
+                  Color(0xFF7A5B2A),
+                  Color(0xFF9A7235),
+                  Color(0xFFB8893F),
+                ],
                 begin: Alignment.centerRight,
                 end: Alignment.centerLeft,
               )
@@ -30,7 +30,9 @@ class LoginSubmitButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppDimens.radiusMd),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryContainer.withValues(alpha: isLoading ? 0.15 : 0.35),
+            color: AppColors.primaryContainer.withValues(
+              alpha: isLoading ? 0.15 : 0.35,
+            ),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),

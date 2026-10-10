@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:window_manager/window_manager.dart';
 import 'core/supabase_config.dart';
 import 'core/supabase_client.dart';
 import 'core/theme/app_colors.dart';
@@ -26,6 +28,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('ar', null);
 
   // Initialize FFI for Windows desktop
   sqfliteFfiInit();
@@ -39,6 +42,20 @@ Future<void> main() async {
   // عند كل تشغيل: أزل أي جلسة Supabase قديمة محفوظة محلياً
   // حتى يختار الكاشير الفرع والوردية في كل مرة
   await supabase.auth.signOut(scope: SignOutScope.local);
+
+  await windowManager.ensureInitialized();
+  WindowOptions windowOptions = const WindowOptions(
+    size: Size(1024, 768),
+    minimumSize: Size(800, 600),
+    center: true,
+    backgroundColor: Colors.transparent,
+    skipTaskbar: false,
+    titleBarStyle: TitleBarStyle.hidden,
+  );
+  windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await windowManager.show();
+    await windowManager.focus();
+  });
 
   runApp(
     MultiBlocProvider(
@@ -86,7 +103,7 @@ class DietKingApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'دايت كنج POS — تسجيل دخول الكاشير',
+      title: 'دايت كنج POS — تسجيل دخول',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

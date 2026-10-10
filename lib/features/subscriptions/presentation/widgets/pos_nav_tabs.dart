@@ -7,11 +7,7 @@ class PosNavTabs extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int>? onTabChanged;
 
-  const PosNavTabs({
-    super.key,
-    this.selectedIndex = 0,
-    this.onTabChanged,
-  });
+  const PosNavTabs({super.key, this.selectedIndex = 0, this.onTabChanged});
 
   @override
   Widget build(BuildContext context) {

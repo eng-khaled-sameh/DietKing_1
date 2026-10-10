@@ -21,8 +21,7 @@ class ReceiveSupplyOrderDialog extends StatefulWidget {
       _ReceiveSupplyOrderDialogState();
 }
 
-class _ReceiveSupplyOrderDialogState
-    extends State<ReceiveSupplyOrderDialog> {
+class _ReceiveSupplyOrderDialogState extends State<ReceiveSupplyOrderDialog> {
   final _notesCtrl = TextEditingController();
   late final List<_ReceiveLine> _lines;
   bool _submitting = false;
@@ -37,11 +36,7 @@ class _ReceiveSupplyOrderDialogState
       final costCtrl = TextEditingController(
         text: l.unitCost > 0 ? l.unitCost.toStringAsFixed(2) : '',
       );
-      return _ReceiveLine(
-        line: l,
-        receivedCtrl: ctrl,
-        unitCostCtrl: costCtrl,
-      );
+      return _ReceiveLine(line: l, receivedCtrl: ctrl, unitCostCtrl: costCtrl);
     }).toList();
   }
 
@@ -59,7 +54,11 @@ class _ReceiveSupplyOrderDialogState
     for (final l in _lines) {
       final qty = double.tryParse(l.receivedCtrl.text.trim()) ?? 0;
       if (qty < 0) {
-        showInventorySnack(context, 'الكمية لا يمكن أن تكون سالبة', isError: true);
+        showInventorySnack(
+          context,
+          'الكمية لا يمكن أن تكون سالبة',
+          isError: true,
+        );
         return;
       }
     }
@@ -67,8 +66,7 @@ class _ReceiveSupplyOrderDialogState
     setState(() => _submitting = true);
     try {
       final lines = _lines.map((l) {
-        final qty =
-            double.tryParse(l.receivedCtrl.text.trim()) ?? 0;
+        final qty = double.tryParse(l.receivedCtrl.text.trim()) ?? 0;
         final cost =
             double.tryParse(l.unitCostCtrl.text.trim()) ?? l.line.unitCost;
         return <String, dynamic>{
@@ -79,20 +77,15 @@ class _ReceiveSupplyOrderDialogState
       }).toList();
 
       await context.read<InventoryCubit>().receiveSupplyOrder(
-            orderId: widget.order.id,
-            notes: _notesCtrl.text.trim().isEmpty
-                ? null
-                : _notesCtrl.text.trim(),
-            lines: lines,
-            expectedVersion: widget.order.version,
-          );
+        orderId: widget.order.id,
+        notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        lines: lines,
+        expectedVersion: widget.order.version,
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
-        showInventorySnack(
-          context,
-          'تم تسجيل الاستلام وتحديث الأرصدة ✓',
-        );
+        showInventorySnack(context, 'تم تسجيل الاستلام وتحديث الأرصدة ✓');
       }
     } catch (e) {
       if (mounted) {
@@ -111,8 +104,9 @@ class _ReceiveSupplyOrderDialogState
         textDirection: TextDirection.rtl,
         child: Dialog(
           backgroundColor: AppColors.surfaceContainer,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: SizedBox(
             width: 720,
             child: Column(
@@ -135,17 +129,21 @@ class _ReceiveSupplyOrderDialogState
                           controller: _notesCtrl,
                           maxLines: 2,
                           style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurface),
+                            color: AppColors.onSurface,
+                          ),
                           decoration: InputDecoration(
                             labelText: 'ملاحظات الاستلام (اختياري)',
                             labelStyle: GoogleFonts.ibmPlexSansArabic(
-                                color: AppColors.onSurfaceVariant),
+                              color: AppColors.onSurfaceVariant,
+                            ),
                             enabledBorder: const UnderlineInputBorder(
-                                borderSide: BorderSide(
-                                    color: AppColors.outlineVariant)),
+                              borderSide: BorderSide(
+                                color: AppColors.outlineVariant,
+                              ),
+                            ),
                             focusedBorder: const UnderlineInputBorder(
-                                borderSide:
-                                    BorderSide(color: AppColors.primary)),
+                              borderSide: BorderSide(color: AppColors.primary),
+                            ),
                           ),
                         ),
                       ],
@@ -172,22 +170,27 @@ class _ReceiveSupplyOrderDialogState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('استلام التوريد',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurface,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18)),
-                Text('رقم: ${widget.order.number} — ${widget.order.supplierName}',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurfaceVariant,
-                        fontSize: 12)),
+                Text(
+                  'استلام التوريد',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                Text(
+                  'رقم: ${widget.order.number} — ${widget.order.supplierName}',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),
           IconButton(
             icon: const Icon(Icons.close, color: AppColors.onSurfaceVariant),
-            onPressed:
-                _submitting ? null : () => Navigator.of(context).pop(),
+            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
           ),
         ],
       ),
@@ -200,13 +203,15 @@ class _ReceiveSupplyOrderDialogState
       decoration: BoxDecoration(
         color: AppColors.statusGreen.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-            color: AppColors.statusGreen.withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.statusGreen.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline,
-              color: AppColors.statusGreen, size: 16),
+          const Icon(
+            Icons.info_outline,
+            color: AppColors.statusGreen,
+            size: 16,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -251,25 +256,22 @@ class _ReceiveSupplyOrderDialogState
             final approved = l.line.qtyApproved ?? l.line.qtyRequested;
             final item = itemsById[l.line.itemId];
             return Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: const BoxDecoration(
                 border: Border(
-                    bottom: BorderSide(
-                        color: AppColors.surfaceContainerHigh)),
+                  bottom: BorderSide(color: AppColors.surfaceContainerHigh),
+                ),
               ),
               child: Row(
                 children: [
-                  Expanded(
-                    flex: 3,
-                    child: CatalogItemDetails(item: item),
-                  ),
+                  Expanded(flex: 3, child: CatalogItemDetails(item: item)),
                   Expanded(
                     flex: 2,
                     child: Text(
                       formatCatalogQuantity(approved, item),
                       style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurfaceVariant),
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   ),
                   Expanded(
@@ -277,21 +279,26 @@ class _ReceiveSupplyOrderDialogState
                     child: TextField(
                       controller: l.receivedCtrl,
                       keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
+                        decimal: true,
+                      ),
                       style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurface),
+                        color: AppColors.onSurface,
+                      ),
                       decoration: InputDecoration(
                         isDense: true,
                         hintText: '0',
                         suffixText: item?.unitCode ?? 'وحدة غير معروفة',
                         hintStyle: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.onSurfaceVariant),
+                          color: AppColors.onSurfaceVariant,
+                        ),
                         enabledBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(
-                                color: AppColors.outlineVariant)),
+                          borderSide: BorderSide(
+                            color: AppColors.outlineVariant,
+                          ),
+                        ),
                         focusedBorder: const UnderlineInputBorder(
-                            borderSide:
-                                BorderSide(color: AppColors.primary)),
+                          borderSide: BorderSide(color: AppColors.primary),
+                        ),
                       ),
                     ),
                   ),
@@ -300,20 +307,25 @@ class _ReceiveSupplyOrderDialogState
                     child: TextField(
                       controller: l.unitCostCtrl,
                       keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
+                        decimal: true,
+                      ),
                       style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurface),
+                        color: AppColors.onSurface,
+                      ),
                       decoration: InputDecoration(
                         isDense: true,
                         hintText: 'ج.م',
                         hintStyle: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.onSurfaceVariant),
+                          color: AppColors.onSurfaceVariant,
+                        ),
                         enabledBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(
-                                color: AppColors.outlineVariant)),
+                          borderSide: BorderSide(
+                            color: AppColors.outlineVariant,
+                          ),
+                        ),
                         focusedBorder: const UnderlineInputBorder(
-                            borderSide:
-                                BorderSide(color: AppColors.primary)),
+                          borderSide: BorderSide(color: AppColors.primary),
+                        ),
                       ),
                     ),
                   ),
@@ -333,18 +345,19 @@ class _ReceiveSupplyOrderDialogState
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           TextButton(
-            onPressed:
-                _submitting ? null : () => Navigator.of(context).pop(),
-            child: Text('إلغاء',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant)),
+            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+            child: Text(
+              'إلغاء',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
             onPressed: _submitting ? null : _save,
             icon: _submitting
@@ -352,15 +365,18 @@ class _ReceiveSupplyOrderDialogState
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.onPrimary),
+                      strokeWidth: 2,
+                      color: AppColors.onPrimary,
+                    ),
                   )
-                : const Icon(Icons.save_rounded,
-                    color: AppColors.onPrimary),
-            label: Text('تأكيد الاستلام وتحديث الرصيد',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onPrimary,
-                    fontWeight: FontWeight.bold)),
+                : const Icon(Icons.save_rounded, color: AppColors.onPrimary),
+            label: Text(
+              'تأكيد الاستلام وتحديث الرصيد',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -368,13 +384,16 @@ class _ReceiveSupplyOrderDialogState
   }
 
   Widget _th(String label, {int flex = 1}) => Expanded(
-        flex: flex,
-        child: Text(label,
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurface,
-                fontWeight: FontWeight.bold,
-                fontSize: 13)),
-      );
+    flex: flex,
+    child: Text(
+      label,
+      style: GoogleFonts.ibmPlexSansArabic(
+        color: AppColors.onSurface,
+        fontWeight: FontWeight.bold,
+        fontSize: 13,
+      ),
+    ),
+  );
 }
 
 class _ReceiveLine {

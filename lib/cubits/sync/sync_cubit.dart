@@ -83,7 +83,8 @@ class SyncCubit extends Cubit<SyncState> {
   /// module launcher did not initialize this cubit first.
   Future<void> triggerSync({String? userId}) async {
     final requestedUserId = userId?.trim();
-    if (requestedUserId != null && requestedUserId.isNotEmpty &&
+    if (requestedUserId != null &&
+        requestedUserId.isNotEmpty &&
         _userId != requestedUserId) {
       _userId = requestedUserId;
       _backoffIndex = 0;

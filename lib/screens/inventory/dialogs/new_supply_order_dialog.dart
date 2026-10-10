@@ -51,12 +51,16 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
 
   void _addLine(InventoryItem item) {
     if (_lines.any((l) => l.itemId == item.id)) return;
-    setState(() => _lines.add(_LineRow(
+    setState(
+      () => _lines.add(
+        _LineRow(
           itemId: item.id,
           itemName: item.name,
           itemSku: item.sku,
           unitCode: item.unitCode,
-        )));
+        ),
+      ),
+    );
   }
 
   void _removeLine(int index) {
@@ -77,8 +81,11 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
     for (final l in _lines) {
       final qty = double.tryParse(l.qtyCtrl.text.trim()) ?? 0;
       if (qty <= 0) {
-        showInventorySnack(context, 'الكمية يجب أن تكون أكبر من الصفر لكل سطر',
-            isError: true);
+        showInventorySnack(
+          context,
+          'الكمية يجب أن تكون أكبر من الصفر لكل سطر',
+          isError: true,
+        );
         return;
       }
     }
@@ -90,22 +97,24 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
         return <String, dynamic>{
           'item_id': l.itemId,
           'qty_requested': qty,
-          'line_note': l.noteCtrl.text.trim().isEmpty ? null : l.noteCtrl.text.trim(),
+          'line_note': l.noteCtrl.text.trim().isEmpty
+              ? null
+              : l.noteCtrl.text.trim(),
         };
       }).toList();
 
       await context.read<InventoryCubit>().createSupplyOrder(
-            supplierName: _supplierController.text.trim(),
-            supplierPhone: _supplierPhoneController.text.trim().isEmpty
-                ? null
-                : _supplierPhoneController.text.trim(),
-            expectedDate: _expectedDate,
-            priority: _priority == 'عاجلة' ? 'urgent' : 'normal',
-            notes: _notesController.text.trim().isEmpty
-                ? null
-                : _notesController.text.trim(),
-            lines: lines,
-          );
+        supplierName: _supplierController.text.trim(),
+        supplierPhone: _supplierPhoneController.text.trim().isEmpty
+            ? null
+            : _supplierPhoneController.text.trim(),
+        expectedDate: _expectedDate,
+        priority: _priority == 'عاجلة' ? 'urgent' : 'normal',
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+        lines: lines,
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -127,7 +136,9 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
         textDirection: TextDirection.rtl,
         child: Dialog(
           backgroundColor: AppColors.surfaceContainer,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: SizedBox(
             width: 720,
             child: Column(
@@ -219,14 +230,17 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
               decoration: InputDecoration(
                 labelText: 'التاريخ المتوقع للتسليم',
                 labelStyle: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant),
+                  color: AppColors.onSurfaceVariant,
+                ),
                 enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.outlineVariant)),
+                  borderSide: BorderSide(color: AppColors.outlineVariant),
+                ),
               ),
               child: Text(
                 _formatDate(_expectedDate),
                 style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurface),
+                  color: AppColors.onSurface,
+                ),
               ),
             ),
           ),
@@ -237,16 +251,19 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
             value: _priority,
             dropdownColor: AppColors.surfaceContainerHigh,
             style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
-            items: ['عادية', 'عاجلة']
-                .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                .toList(),
+            items: [
+              'عادية',
+              'عاجلة',
+            ].map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
             onChanged: (v) => setState(() => _priority = v ?? 'عادية'),
             decoration: InputDecoration(
               labelText: 'الأولوية',
               labelStyle: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.onSurfaceVariant),
+                color: AppColors.onSurfaceVariant,
+              ),
               enabledBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.outlineVariant)),
+                borderSide: BorderSide(color: AppColors.outlineVariant),
+              ),
             ),
           ),
         ),
@@ -291,8 +308,9 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
               color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                  color: AppColors.outlineVariant.withValues(alpha: 0.5),
-                  style: BorderStyle.solid),
+                color: AppColors.outlineVariant.withValues(alpha: 0.5),
+                style: BorderStyle.solid,
+              ),
             ),
             child: Text(
               'اضغط "+ إضافة صنف" لاختيار الخامات المطلوبة',
@@ -313,24 +331,33 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
                   children: [
                     Expanded(
                       flex: 3,
-                      child: Text('الصنف',
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurfaceVariant,
-                              fontSize: 12)),
+                      child: Text(
+                        'الصنف',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                     Expanded(
                       flex: 2,
-                      child: Text('الكمية المطلوبة',
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurfaceVariant,
-                              fontSize: 12)),
+                      child: Text(
+                        'الكمية المطلوبة',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                     Expanded(
                       flex: 3,
-                      child: Text('ملاحظة السطر',
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurfaceVariant,
-                              fontSize: 12)),
+                      child: Text(
+                        'ملاحظة السطر',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 36),
                   ],
@@ -354,12 +381,20 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(line.itemName,
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurface, fontSize: 13)),
-                Text('${line.itemSku} — ${line.unitCode}',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurfaceVariant, fontSize: 11)),
+                Text(
+                  line.itemName,
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurface,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  '${line.itemSku} — ${line.unitCode}',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
+                ),
               ],
             ),
           ),
@@ -367,20 +402,22 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
             flex: 2,
             child: TextField(
               controller: line.qtyCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              style:
-                  GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
               decoration: InputDecoration(
                 hintText: '0',
                 hintStyle: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant),
+                  color: AppColors.onSurfaceVariant,
+                ),
                 isDense: true,
                 enabledBorder: const UnderlineInputBorder(
-                    borderSide:
-                        BorderSide(color: AppColors.outlineVariant)),
+                  borderSide: BorderSide(color: AppColors.outlineVariant),
+                ),
                 focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primary)),
+                  borderSide: BorderSide(color: AppColors.primary),
+                ),
               ),
             ),
           ),
@@ -389,24 +426,28 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
             flex: 3,
             child: TextField(
               controller: line.noteCtrl,
-              style:
-                  GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
               decoration: InputDecoration(
                 hintText: 'اختياري',
                 hintStyle: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant),
+                  color: AppColors.onSurfaceVariant,
+                ),
                 isDense: true,
                 enabledBorder: const UnderlineInputBorder(
-                    borderSide:
-                        BorderSide(color: AppColors.outlineVariant)),
+                  borderSide: BorderSide(color: AppColors.outlineVariant),
+                ),
                 focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primary)),
+                  borderSide: BorderSide(color: AppColors.primary),
+                ),
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.remove_circle_outline,
-                color: AppColors.statusRed, size: 20),
+            icon: const Icon(
+              Icons.remove_circle_outline,
+              color: AppColors.statusRed,
+              size: 20,
+            ),
             onPressed: () => _removeLine(index),
           ),
         ],
@@ -422,9 +463,12 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
         children: [
           TextButton(
             onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-            child: Text('إلغاء',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant)),
+            child: Text(
+              'إلغاء',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           ElevatedButton.icon(
@@ -438,13 +482,18 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.onPrimary),
+                      strokeWidth: 2,
+                      color: AppColors.onPrimary,
+                    ),
                   )
                 : const Icon(Icons.send_rounded, color: AppColors.onPrimary),
-            label: Text('إنشاء الطلب',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onPrimary,
-                    fontWeight: FontWeight.bold)),
+            label: Text(
+              'إنشاء الطلب',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -463,11 +512,14 @@ class _NewSupplyOrderDialogState extends State<NewSupplyOrderDialog> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.ibmPlexSansArabic(
-            color: AppColors.onSurfaceVariant),
+          color: AppColors.onSurfaceVariant,
+        ),
         enabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.outlineVariant)),
+          borderSide: BorderSide(color: AppColors.outlineVariant),
+        ),
         focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.primary)),
+          borderSide: BorderSide(color: AppColors.primary),
+        ),
       ),
     );
   }
@@ -510,17 +562,18 @@ class _ItemSearchButton extends StatelessWidget {
     return BlocBuilder<InventoryCubit, InventoryState>(
       buildWhen: (p, c) => p.catalog != c.catalog,
       builder: (context, state) {
-        final items = state.catalog?.items
-                .where((i) =>
-                    i.isActive && !alreadySelected.contains(i.id))
+        final items =
+            state.catalog?.items
+                .where((i) => i.isActive && !alreadySelected.contains(i.id))
                 .toList() ??
             [];
         return OutlinedButton.icon(
           onPressed: () => _showSearch(context, items),
           icon: const Icon(Icons.add, size: 18, color: AppColors.primary),
-          label: Text('إضافة صنف',
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.primary)),
+          label: Text(
+            'إضافة صنف',
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.primary),
+          ),
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: AppColors.primary),
           ),
@@ -530,7 +583,9 @@ class _ItemSearchButton extends StatelessWidget {
   }
 
   Future<void> _showSearch(
-      BuildContext context, List<InventoryItem> items) async {
+    BuildContext context,
+    List<InventoryItem> items,
+  ) async {
     final selected = await showDialog<InventoryItem>(
       context: context,
       builder: (_) => _ItemSearchDialog(items: items),
@@ -564,9 +619,10 @@ class _ItemSearchDialogState extends State<_ItemSearchDialog> {
       child: AlertDialog(
         backgroundColor: AppColors.surfaceContainer,
         contentPadding: EdgeInsets.zero,
-        title: Text('اختيار صنف',
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurface)),
+        title: Text(
+          'اختيار صنف',
+          style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+        ),
         content: SizedBox(
           width: 400,
           height: 400,
@@ -578,13 +634,17 @@ class _ItemSearchDialogState extends State<_ItemSearchDialog> {
                   autofocus: true,
                   onChanged: (v) => setState(() => _query = v),
                   style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurface),
+                    color: AppColors.onSurface,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'بحث بالاسم أو SKU...',
                     hintStyle: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurfaceVariant),
-                    prefixIcon: const Icon(Icons.search,
-                        color: AppColors.onSurfaceVariant),
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppColors.onSurfaceVariant,
+                    ),
                     filled: true,
                     fillColor: AppColors.surfaceContainerHigh,
                     border: OutlineInputBorder(
@@ -602,17 +662,26 @@ class _ItemSearchDialogState extends State<_ItemSearchDialog> {
                     final item = filtered[i];
                     return ListTile(
                       dense: true,
-                      title: Text(item.name,
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurface)),
-                      subtitle: Text(item.sku,
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurfaceVariant,
-                              fontSize: 11)),
-                      trailing: Text(item.unitCode,
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurfaceVariant,
-                              fontSize: 12)),
+                      title: Text(
+                        item.name,
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                      subtitle: Text(
+                        item.sku,
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 11,
+                        ),
+                      ),
+                      trailing: Text(
+                        item.unitCode,
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
                       onTap: () => Navigator.of(ctx).pop(item),
                     );
                   },
@@ -624,9 +693,12 @@ class _ItemSearchDialogState extends State<_ItemSearchDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('إلغاء',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant)),
+            child: Text(
+              'إلغاء',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ),
         ],
       ),

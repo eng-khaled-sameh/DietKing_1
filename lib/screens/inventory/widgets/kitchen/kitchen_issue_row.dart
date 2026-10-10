@@ -55,18 +55,19 @@ class KitchenIssueRow extends StatelessWidget {
             flex: 1,
             child: Text(
               issue.shift.arabicLabel,
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
           ),
-          Expanded(
-            flex: 3,
-            child: _buildItemsList(),
-          ),
+          Expanded(flex: 3, child: _buildItemsList()),
           Expanded(
             flex: 2,
             child: Text(
               _formatDate(issue.createdAt),
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
           ),
           const SizedBox(width: 40),

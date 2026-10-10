@@ -23,7 +23,9 @@ class PanelCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppColors.outlineVariant.withValues(alpha: 0.3),
+        ),
       ),
       child: child,
     );
@@ -54,7 +56,9 @@ class _HoverablePanelCardState extends State<_HoverablePanelCard> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      cursor: widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : MouseCursor.defer,
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(

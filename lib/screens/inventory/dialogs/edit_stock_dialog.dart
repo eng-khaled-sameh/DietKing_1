@@ -7,11 +7,7 @@ class EditStockDialog extends StatefulWidget {
   final RawMaterial item;
   final ValueChanged<double> onSave;
 
-  const EditStockDialog({
-    super.key,
-    required this.item,
-    required this.onSave,
-  });
+  const EditStockDialog({super.key, required this.item, required this.onSave});
 
   @override
   State<EditStockDialog> createState() => _EditStockDialogState();
@@ -54,9 +50,15 @@ class _EditStockDialogState extends State<EditStockDialog> {
           style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
           decoration: InputDecoration(
             labelText: 'الرصيد الجديد (${widget.item.unit})',
-            labelStyle: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
-            enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.outlineVariant)),
-            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+            labelStyle: GoogleFonts.ibmPlexSansArabic(
+              color: AppColors.onSurfaceVariant,
+            ),
+            enabledBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.outlineVariant),
+            ),
+            focusedBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.primary),
+            ),
           ),
           autofocus: true,
           onSubmitted: (_) => _save(),
@@ -66,7 +68,9 @@ class _EditStockDialogState extends State<EditStockDialog> {
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               'إلغاء',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
           ),
           ElevatedButton(

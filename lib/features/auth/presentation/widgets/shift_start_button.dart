@@ -6,10 +6,7 @@ import '../../../../core/theme/app_dimens.dart';
 
 /// زر تأكيد افتتاح الوردية والانتقال للشاشة الرئيسية
 class ShiftStartButton extends StatelessWidget {
-  const ShiftStartButton({
-    super.key,
-    required this.onPressed,
-  });
+  const ShiftStartButton({super.key, required this.onPressed});
 
   final VoidCallback onPressed;
 

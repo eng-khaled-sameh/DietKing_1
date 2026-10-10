@@ -24,6 +24,7 @@ String? nonNegativeNumber(String? value) {
 String? positiveInteger(String? value) {
   final num = parseNumber(value ?? '');
   if (num == null) return 'أدخل رقماً صحيحاً';
-  if (num <= 0 || num != num.toInt()) return 'يجب أن يكون الرقم صحيحاً وأكبر من صفر';
+  if (num <= 0 || num != num.toInt())
+    return 'يجب أن يكون الرقم صحيحاً وأكبر من صفر';
   return null;
 }

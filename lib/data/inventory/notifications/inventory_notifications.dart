@@ -7,7 +7,7 @@ class InventoryNotifications {
   final SupabaseClient _client;
   final InventoryApi _api;
   RealtimeChannel? _channel;
-  
+
   // Stream to expose new notifications to UI
   final _controller = StreamController<NotificationItem>.broadcast();
   Stream<NotificationItem> get onNotification => _controller.stream;
@@ -20,25 +20,26 @@ class InventoryNotifications {
 
   void subscribe() {
     if (_channel != null) return;
-    _channel = _client.channel('public:notifications')
-      .onPostgresChanges(
-        event: PostgresChangeEvent.insert,
-        schema: 'public',
-        table: 'notifications',
-        callback: (payload) {
-          final newRecord = payload.newRecord;
-          final item = NotificationItem.fromJson(newRecord);
-          _controller.add(item);
-        },
-      )
-      .subscribe();
+    _channel = _client
+        .channel('public:notifications')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'notifications',
+          callback: (payload) {
+            final newRecord = payload.newRecord;
+            final item = NotificationItem.fromJson(newRecord);
+            _controller.add(item);
+          },
+        )
+        .subscribe();
   }
 
   void unsubscribe() {
     _channel?.unsubscribe();
     _channel = null;
   }
-  
+
   void dispose() {
     unsubscribe();
     _controller.close();

@@ -81,10 +81,7 @@ class _ItemMovementsDialogState extends State<ItemMovementsDialog> {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
         children: [
-          const Icon(
-            Icons.history_rounded,
-            color: AppColors.primary,
-          ),
+          const Icon(Icons.history_rounded, color: AppColors.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -127,8 +124,7 @@ class _ItemMovementsDialogState extends State<ItemMovementsDialog> {
       return Center(
         child: Text(
           _error!,
-          style:
-              GoogleFonts.ibmPlexSansArabic(color: AppColors.statusRed),
+          style: GoogleFonts.ibmPlexSansArabic(color: AppColors.statusRed),
           textAlign: TextAlign.center,
         ),
       );
@@ -138,7 +134,8 @@ class _ItemMovementsDialogState extends State<ItemMovementsDialog> {
         child: Text(
           'لا توجد حركات مسجلة لهذا الصنف',
           style: GoogleFonts.ibmPlexSansArabic(
-              color: AppColors.onSurfaceVariant),
+            color: AppColors.onSurfaceVariant,
+          ),
         ),
       );
     }
@@ -147,8 +144,7 @@ class _ItemMovementsDialogState extends State<ItemMovementsDialog> {
       children: [
         // رأس الجدول
         Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           color: AppColors.surfaceContainerHigh,
           child: Row(
             children: [
@@ -183,7 +179,8 @@ class _ItemMovementsDialogState extends State<ItemMovementsDialog> {
           child: Text(
             'إغلاق',
             style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurfaceVariant),
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
         ),
       ),
@@ -291,20 +288,21 @@ class _MovementRow extends StatelessWidget {
   }
 
   String _arabicType(String type) => switch (type) {
-        'opening' => 'رصيد افتتاحي',
-        'supply_receipt' => 'استلام توريد',
-        'kitchen_issue' => 'صرف مطبخ',
-        'kitchen_output' => 'إنتاج مطبخ',
-        'branch_transfer_out' => 'صرف لفرع',
-        'branch_transfer_in' => 'استلام من مستودع',
-        'damage' => 'تالف',
-        'stocktake_adjust' => 'تسوية جرد',
-        _ => type,
-      };
+    'opening' => 'رصيد افتتاحي',
+    'supply_receipt' => 'استلام توريد',
+    'kitchen_issue' => 'صرف مطبخ',
+    'kitchen_output' => 'إنتاج مطبخ',
+    'branch_transfer_out' => 'صرف لفرع',
+    'branch_transfer_in' => 'استلام من مستودع',
+    'damage' => 'تالف',
+    'stocktake_adjust' => 'تسوية جرد',
+    _ => type,
+  };
 
   String _fmt(double v) {
     if (v == v.roundToDouble()) return v.toInt().toString();
-    return v.toStringAsFixed(3)
+    return v
+        .toStringAsFixed(3)
         .replaceAll(RegExp(r'0+$'), '')
         .replaceAll(RegExp(r'\.$'), '');
   }

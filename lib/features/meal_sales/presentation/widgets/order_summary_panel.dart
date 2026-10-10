@@ -76,16 +76,18 @@ class OrderSummaryPanel extends StatelessWidget {
                           Icon(
                             Icons.remove_shopping_cart_outlined,
                             size: 44,
-                            color: AppColors.onSurfaceVariant
-                                .withValues(alpha: 0.4),
+                            color: AppColors.onSurfaceVariant.withValues(
+                              alpha: 0.4,
+                            ),
                           ),
                           const SizedBox(height: AppDimens.spaceSm),
                           Text(
                             'لا توجد أصناف مضافة بعد',
                             style: GoogleFonts.ibmPlexSansArabic(
                               fontSize: AppDimens.fontSm,
-                              color: AppColors.onSurfaceVariant
-                                  .withValues(alpha: 0.7),
+                              color: AppColors.onSurfaceVariant.withValues(
+                                alpha: 0.7,
+                              ),
                             ),
                           ),
                           const SizedBox(height: AppDimens.spaceXs),
@@ -94,8 +96,9 @@ class OrderSummaryPanel extends StatelessWidget {
                             textAlign: TextAlign.center,
                             style: GoogleFonts.ibmPlexSansArabic(
                               fontSize: AppDimens.fontXs,
-                              color: AppColors.onSurfaceVariant
-                                  .withValues(alpha: 0.45),
+                              color: AppColors.onSurfaceVariant.withValues(
+                                alpha: 0.45,
+                              ),
                             ),
                           ),
                         ],
@@ -111,10 +114,7 @@ class OrderSummaryPanel extends StatelessWidget {
                       const SizedBox(height: AppDimens.spaceSm),
                   itemBuilder: (context, index) {
                     final line = lines[index];
-                    return OrderLineItem(
-                      key: ValueKey(line.key),
-                      line: line,
-                    );
+                    return OrderLineItem(key: ValueKey(line.key), line: line);
                   },
                 );
               },

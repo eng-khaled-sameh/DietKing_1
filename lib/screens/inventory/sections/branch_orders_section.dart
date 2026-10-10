@@ -47,8 +47,10 @@ class BranchOrdersSection extends StatelessWidget {
         Tooltip(
           message: 'تحديث القائمة',
           child: IconButton(
-            icon: const Icon(Icons.refresh_rounded,
-                color: AppColors.onSurfaceVariant),
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: AppColors.onSurfaceVariant,
+            ),
             onPressed: () {
               context.read<InventoryCubit>()
                 ..clearBranchOrdersCache()
@@ -64,12 +66,15 @@ class BranchOrdersSection extends StatelessWidget {
     return BlocBuilder<InventoryCubit, InventoryState>(
       buildWhen: (p, c) => p.branchOrders != c.branchOrders,
       builder: (context, state) {
-        final submitted =
-            state.branchOrders.where((o) => o.status == BranchOrderStatus.submitted).length;
-        final approved =
-            state.branchOrders.where((o) => o.status == BranchOrderStatus.approved).length;
-        final rejected =
-            state.branchOrders.where((o) => o.status == BranchOrderStatus.rejected).length;
+        final submitted = state.branchOrders
+            .where((o) => o.status == BranchOrderStatus.submitted)
+            .length;
+        final approved = state.branchOrders
+            .where((o) => o.status == BranchOrderStatus.approved)
+            .length;
+        final rejected = state.branchOrders
+            .where((o) => o.status == BranchOrderStatus.rejected)
+            .length;
         return Row(
           children: [
             _chip('قيد الانتظار', submitted, AppColors.primary),
@@ -90,16 +95,16 @@ class BranchOrdersSection extends StatelessWidget {
   }
 
   Widget _chip(String label, int count, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          '$label: $count',
-          style: GoogleFonts.ibmPlexSansArabic(color: color, fontSize: 13),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Text(
+      '$label: $count',
+      style: GoogleFonts.ibmPlexSansArabic(color: color, fontSize: 13),
+    ),
+  );
 
   Widget _buildTable(BuildContext context) {
     return BlocBuilder<InventoryCubit, InventoryState>(
@@ -116,9 +121,8 @@ class BranchOrdersSection extends StatelessWidget {
         if (state.error != null && state.branchOrders.isEmpty) {
           return ReadErrorState(
             message: state.error!,
-            onRetry: () => context
-                .read<InventoryCubit>()
-                .loadBranchOrders(force: true),
+            onRetry: () =>
+                context.read<InventoryCubit>().loadBranchOrders(force: true),
           );
         }
         if (state.branchOrders.isEmpty) {
@@ -126,13 +130,17 @@ class BranchOrdersSection extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.storefront_outlined,
-                    color: AppColors.onSurfaceVariant, size: 48),
+                const Icon(
+                  Icons.storefront_outlined,
+                  color: AppColors.onSurfaceVariant,
+                  size: 48,
+                ),
                 const SizedBox(height: 12),
                 Text(
                   'لا توجد طلبات فروع',
                   style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurfaceVariant),
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -140,11 +148,16 @@ class BranchOrdersSection extends StatelessWidget {
         }
 
         // ترتيب: المقدّمة أولاً ثم الأحدث
-        final orders = [...state.branchOrders]..sort((a, b) {
+        final orders = [...state.branchOrders]
+          ..sort((a, b) {
             if (a.status == BranchOrderStatus.submitted &&
-                b.status != BranchOrderStatus.submitted) { return -1; }
+                b.status != BranchOrderStatus.submitted) {
+              return -1;
+            }
             if (b.status == BranchOrderStatus.submitted &&
-                a.status != BranchOrderStatus.submitted) { return 1; }
+                a.status != BranchOrderStatus.submitted) {
+              return 1;
+            }
             return b.createdAt.compareTo(a.createdAt);
           });
 
@@ -159,11 +172,12 @@ class BranchOrdersSection extends StatelessWidget {
               // رأس الجدول
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: const BoxDecoration(
                   color: AppColors.surfaceContainerHigh,
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(12)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                 ),
                 child: Row(
                   children: [
@@ -179,8 +193,7 @@ class BranchOrdersSection extends StatelessWidget {
               Expanded(
                 child: ListView.builder(
                   itemCount: orders.length,
-                  itemBuilder: (ctx, i) =>
-                      _BranchOrderRow(order: orders[i]),
+                  itemBuilder: (ctx, i) => _BranchOrderRow(order: orders[i]),
                 ),
               ),
             ],
@@ -191,13 +204,16 @@ class BranchOrdersSection extends StatelessWidget {
   }
 
   Widget _th(String label, {int flex = 1}) => Expanded(
-        flex: flex,
-        child: Text(label,
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurface,
-                fontWeight: FontWeight.bold,
-                fontSize: 13)),
-      );
+    flex: flex,
+    child: Text(
+      label,
+      style: GoogleFonts.ibmPlexSansArabic(
+        color: AppColors.onSurface,
+        fontWeight: FontWeight.bold,
+        fontSize: 13,
+      ),
+    ),
+  );
 }
 
 // ── صف طلب الفرع ──────────────────────────────────────────────────────────────
@@ -213,39 +229,49 @@ class _BranchOrderRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
         border: Border(
-            bottom: BorderSide(color: AppColors.surfaceContainerHigh)),
+          bottom: BorderSide(color: AppColors.surfaceContainerHigh),
+        ),
       ),
       child: Row(
         children: [
           Expanded(
             flex: 2,
-            child: Text(order.number,
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant, fontSize: 12)),
+            child: Text(
+              order.number,
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            ),
           ),
           Expanded(
             flex: 3,
-            child: Text(order.branchName,
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurface),
-                overflow: TextOverflow.ellipsis),
+            child: Text(
+              order.branchName,
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           Expanded(
             flex: 2,
-            child: Text(_fmtDate(order.createdAt),
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurface, fontSize: 12)),
+            child: Text(
+              _fmtDate(order.createdAt),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontSize: 12,
+              ),
+            ),
           ),
           Expanded(
             flex: 1,
-            child: Text('${order.lines.length}',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant)),
+            child: Text(
+              '${order.lines.length}',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ),
-          Expanded(
-            flex: 2,
-            child: _StatusBadge(status: order.status),
-          ),
+          Expanded(flex: 2, child: _StatusBadge(status: order.status)),
           Expanded(
             flex: 3,
             child: Row(
@@ -267,8 +293,7 @@ class _BranchOrderRow extends StatelessWidget {
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
             onPressed: () => showDialog<void>(
               context: context,
@@ -277,19 +302,29 @@ class _BranchOrderRow extends StatelessWidget {
                 child: DecideBranchOrderDialog(order: order),
               ),
             ),
-            icon: const Icon(Icons.rate_review_outlined,
-                color: AppColors.onPrimary, size: 16),
-            label: Text('مراجعة',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onPrimary, fontSize: 13)),
+            icon: const Icon(
+              Icons.rate_review_outlined,
+              color: AppColors.onPrimary,
+              size: 16,
+            ),
+            label: Text(
+              'مراجعة',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onPrimary,
+                fontSize: 13,
+              ),
+            ),
           ),
         ),
         // إلغاء (اختياري من المستودع الرئيسي)
         Tooltip(
           message: 'إلغاء الطلب',
           child: IconButton(
-            icon: const Icon(Icons.cancel_outlined,
-                color: AppColors.statusRed, size: 18),
+            icon: const Icon(
+              Icons.cancel_outlined,
+              color: AppColors.statusRed,
+              size: 18,
+            ),
             onPressed: () async {
               final ok = await showConfirmDialog(
                 context,
@@ -306,8 +341,7 @@ class _BranchOrderRow extends StatelessWidget {
                     expectedVersion: order.version,
                   );
                   if (context.mounted) {
-                    showInventorySnack(
-                        context, 'تم رفض الطلب ${order.number}');
+                    showInventorySnack(context, 'تم رفض الطلب ${order.number}');
                   }
                 } catch (e) {
                   if (context.mounted) {
@@ -321,23 +355,32 @@ class _BranchOrderRow extends StatelessWidget {
       ];
     } else if (order.status == BranchOrderStatus.approved) {
       return [
-        Text('جاري التحضير',
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.statusGreen,
-                fontWeight: FontWeight.bold)),
+        Text(
+          'جاري التحضير',
+          style: GoogleFonts.ibmPlexSansArabic(
+            color: AppColors.statusGreen,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ];
     } else if (order.status == BranchOrderStatus.received) {
       return [
-        Text('مستلم',
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.statusGreen,
-                fontWeight: FontWeight.bold)),
+        Text(
+          'مستلم',
+          style: GoogleFonts.ibmPlexSansArabic(
+            color: AppColors.statusGreen,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ];
     } else {
       return [
-        Text(order.status.arabicLabel,
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurfaceVariant)),
+        Text(
+          order.status.arabicLabel,
+          style: GoogleFonts.ibmPlexSansArabic(
+            color: AppColors.onSurfaceVariant,
+          ),
+        ),
       ];
     }
   }
@@ -374,9 +417,10 @@ class _StatusBadge extends StatelessWidget {
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(label,
-          style: GoogleFonts.ibmPlexSansArabic(
-              color: color, fontSize: 12)),
+      child: Text(
+        label,
+        style: GoogleFonts.ibmPlexSansArabic(color: color, fontSize: 12),
+      ),
     );
   }
 }

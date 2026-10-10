@@ -59,20 +59,25 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
       initialTime: TimeOfDay.fromDateTime(initial),
     );
     if (time == null || !mounted) return null;
-    return DateTime(
-        date.year, date.month, date.day, time.hour, time.minute);
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
   Future<void> _save() async {
     final qty = double.tryParse(_qtyCtrl.text.trim()) ?? 0;
     if (qty <= 0) {
-      showInventorySnack(context, 'الكمية يجب أن تكون أكبر من الصفر',
-          isError: true);
+      showInventorySnack(
+        context,
+        'الكمية يجب أن تكون أكبر من الصفر',
+        isError: true,
+      );
       return;
     }
     if (!_useNewItem && _selectedItem == null) {
-      showInventorySnack(context, 'اختر المنتج التام أو أدخل اسم صنف جديد',
-          isError: true);
+      showInventorySnack(
+        context,
+        'اختر المنتج التام أو أدخل اسم صنف جديد',
+        isError: true,
+      );
       return;
     }
     if (_useNewItem && _newItemNameCtrl.text.trim().isEmpty) {
@@ -80,28 +85,30 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
       return;
     }
     if (_finishedAt.isBefore(_producedAt)) {
-      showInventorySnack(context, 'تاريخ الانتهاء يجب أن يكون بعد الإنتاج',
-          isError: true);
+      showInventorySnack(
+        context,
+        'تاريخ الانتهاء يجب أن يكون بعد الإنتاج',
+        isError: true,
+      );
       return;
     }
 
     setState(() => _submitting = true);
     try {
       await context.read<InventoryCubit>().createKitchenBatch(
-            itemId: _useNewItem ? null : _selectedItem?.id,
-            newItemName: _useNewItem ? _newItemNameCtrl.text.trim() : null,
-            newItemUnit:
-                _useNewItem ? _newItemUnitCtrl.text.trim() : null,
-            quantity: qty,
-            productionLine: _prodLineCtrl.text.trim().isEmpty
-                ? null
-                : _prodLineCtrl.text.trim(),
-            producedAt: _producedAt,
-            finishedAt: _finishedAt,
-            qualityNote: _qualityNoteCtrl.text.trim().isEmpty
-                ? null
-                : _qualityNoteCtrl.text.trim(),
-          );
+        itemId: _useNewItem ? null : _selectedItem?.id,
+        newItemName: _useNewItem ? _newItemNameCtrl.text.trim() : null,
+        newItemUnit: _useNewItem ? _newItemUnitCtrl.text.trim() : null,
+        quantity: qty,
+        productionLine: _prodLineCtrl.text.trim().isEmpty
+            ? null
+            : _prodLineCtrl.text.trim(),
+        producedAt: _producedAt,
+        finishedAt: _finishedAt,
+        qualityNote: _qualityNoteCtrl.text.trim().isEmpty
+            ? null
+            : _qualityNoteCtrl.text.trim(),
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -123,8 +130,9 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
         textDirection: TextDirection.rtl,
         child: Dialog(
           backgroundColor: AppColors.surfaceContainer,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: SizedBox(
             width: 620,
             child: Column(
@@ -166,16 +174,18 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
         children: [
           const Icon(Icons.restaurant_menu, color: AppColors.secondary),
           const SizedBox(width: 12),
-          Text('استلام دفعة إنتاج',
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.onSurface,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18)),
+          Text(
+            'استلام دفعة إنتاج',
+            style: GoogleFonts.ibmPlexSansArabic(
+              color: AppColors.onSurface,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.close, color: AppColors.onSurfaceVariant),
-            onPressed:
-                _submitting ? null : () => Navigator.of(context).pop(),
+            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
           ),
         ],
       ),
@@ -186,19 +196,28 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('المنتج التام',
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurface,
-                fontWeight: FontWeight.bold)),
+        Text(
+          'المنتج التام',
+          style: GoogleFonts.ibmPlexSansArabic(
+            color: AppColors.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         // Toggle: موجود أم جديد
         Row(
           children: [
-            _toggleChip('منتج موجود', !_useNewItem,
-                () => setState(() => _useNewItem = false)),
+            _toggleChip(
+              'منتج موجود',
+              !_useNewItem,
+              () => setState(() => _useNewItem = false),
+            ),
             const SizedBox(width: 8),
-            _toggleChip('صنف جديد', _useNewItem,
-                () => setState(() => _useNewItem = true)),
+            _toggleChip(
+              'صنف جديد',
+              _useNewItem,
+              () => setState(() => _useNewItem = true),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -217,17 +236,23 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
                   child: DropdownButton<InventoryItem>(
                     value: _selectedItem,
                     isExpanded: true,
-                    hint: Text('اختر المنتج التام...',
-                        style: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.onSurfaceVariant)),
+                    hint: Text(
+                      'اختر المنتج التام...',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
                     dropdownColor: AppColors.surfaceContainerHigh,
                     style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurface),
+                      color: AppColors.onSurface,
+                    ),
                     items: finished
-                        .map((i) => DropdownMenuItem(
-                              value: i,
-                              child: Text('${i.name} (${i.sku})'),
-                            ))
+                        .map(
+                          (i) => DropdownMenuItem(
+                            value: i,
+                            child: Text('${i.name} (${i.sku})'),
+                          ),
+                        )
                         .toList(),
                     onChanged: (v) => setState(() => _selectedItem = v),
                   ),
@@ -243,7 +268,8 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
                 child: TextField(
                   controller: _newItemNameCtrl,
                   style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurface),
+                    color: AppColors.onSurface,
+                  ),
                   decoration: _dec('اسم المنتج الجديد *'),
                 ),
               ),
@@ -252,7 +278,8 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
                 child: TextField(
                   controller: _newItemUnitCtrl,
                   style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurface),
+                    color: AppColors.onSurface,
+                  ),
                   decoration: _dec('وحدة القياس'),
                 ),
               ),
@@ -262,7 +289,9 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
           Text(
             'سيتم إنشاء الصنف تلقائياً بتصنيف "منتج تام"',
             style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurfaceVariant, fontSize: 12),
+              color: AppColors.onSurfaceVariant,
+              fontSize: 12,
+            ),
           ),
         ],
       ],
@@ -275,10 +304,8 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
         Expanded(
           child: TextField(
             controller: _qtyCtrl,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurface),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
             decoration: _dec('الكمية المنتجة *'),
           ),
         ),
@@ -287,8 +314,7 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
           flex: 2,
           child: TextField(
             controller: _prodLineCtrl,
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurface),
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
             decoration: _dec('خط الإنتاج / الشيف (اختياري)'),
           ),
         ),
@@ -311,9 +337,10 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
           },
           child: InputDecorator(
             decoration: _dec('تاريخ ووقت الإنتاج'),
-            child: Text(_fmtDt(_producedAt),
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurface)),
+            child: Text(
+              _fmtDt(_producedAt),
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -324,9 +351,10 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
           },
           child: InputDecorator(
             decoration: _dec('تاريخ انتهاء الصلاحية'),
-            child: Text(_fmtDt(_finishedAt),
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurface)),
+            child: Text(
+              _fmtDt(_finishedAt),
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+            ),
           ),
         ),
       ],
@@ -349,18 +377,19 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           TextButton(
-            onPressed:
-                _submitting ? null : () => Navigator.of(context).pop(),
-            child: Text('إلغاء',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant)),
+            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+            child: Text(
+              'إلغاء',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.secondary,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
             onPressed: _submitting ? null : _save,
             icon: _submitting
@@ -368,13 +397,18 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.onPrimary))
+                      strokeWidth: 2,
+                      color: AppColors.onPrimary,
+                    ),
+                  )
                 : const Icon(Icons.check, color: AppColors.onPrimary),
-            label: Text('تسجيل الدفعة',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onPrimary,
-                    fontWeight: FontWeight.bold)),
+            label: Text(
+              'تسجيل الدفعة',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -386,32 +420,35 @@ class _NewMealBatchDialogState extends State<NewMealBatchDialog> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: selected
                 ? AppColors.secondary
                 : AppColors.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Text(label,
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: selected
-                      ? AppColors.onPrimary
-                      : AppColors.onSurface,
-                  fontSize: 13)),
+          child: Text(
+            label,
+            style: GoogleFonts.ibmPlexSansArabic(
+              color: selected ? AppColors.onPrimary : AppColors.onSurface,
+              fontSize: 13,
+            ),
+          ),
         ),
       );
 
   InputDecoration _dec(String label) => InputDecoration(
-        labelText: label,
-        labelStyle: GoogleFonts.ibmPlexSansArabic(
-            color: AppColors.onSurfaceVariant),
-        enabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.outlineVariant)),
-        focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.primary)),
-      );
+    labelText: label,
+    labelStyle: GoogleFonts.ibmPlexSansArabic(
+      color: AppColors.onSurfaceVariant,
+    ),
+    enabledBorder: const UnderlineInputBorder(
+      borderSide: BorderSide(color: AppColors.outlineVariant),
+    ),
+    focusedBorder: const UnderlineInputBorder(
+      borderSide: BorderSide(color: AppColors.primary),
+    ),
+  );
 
   String _fmtDt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';

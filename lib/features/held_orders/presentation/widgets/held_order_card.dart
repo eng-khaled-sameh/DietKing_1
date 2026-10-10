@@ -9,11 +9,7 @@ class HeldOrderCard extends StatelessWidget {
   final HeldOrder order;
   final VoidCallback onTap;
 
-  const HeldOrderCard({
-    super.key,
-    required this.order,
-    required this.onTap,
-  });
+  const HeldOrderCard({super.key, required this.order, required this.onTap});
 
   String _getTimeAgo(DateTime dateTime) {
     final diff = DateTime.now().difference(dateTime);
@@ -35,7 +31,7 @@ class HeldOrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSubscription = order.source == HeldOrderSource.subscription;
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -64,7 +60,9 @@ class HeldOrderCard extends StatelessWidget {
                 ),
                 child: Icon(
                   isSubscription ? Icons.card_membership : Icons.point_of_sale,
-                  color: isSubscription ? AppColors.primary : AppColors.tertiary,
+                  color: isSubscription
+                      ? AppColors.primary
+                      : AppColors.tertiary,
                 ),
               ),
               const SizedBox(width: AppDimens.spaceMd),
@@ -89,7 +87,9 @@ class HeldOrderCard extends StatelessWidget {
                       _getTimeAgo(order.heldAt),
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: AppDimens.fontXs,
-                        color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                        color: AppColors.onSurfaceVariant.withValues(
+                          alpha: 0.7,
+                        ),
                       ),
                     ),
                   ],
@@ -107,7 +107,9 @@ class HeldOrderCard extends StatelessWidget {
                     style: GoogleFonts.ibmPlexSansArabic(
                       fontSize: AppDimens.fontMd,
                       fontWeight: FontWeight.w800,
-                      color: isSubscription ? AppColors.primary : AppColors.tertiary,
+                      color: isSubscription
+                          ? AppColors.primary
+                          : AppColors.tertiary,
                     ),
                   ),
                   Text(

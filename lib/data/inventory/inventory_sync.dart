@@ -51,9 +51,10 @@ class InventorySync {
     final cached = await _cache.get(CacheKey.catalog);
     final since = cached?.syncedUpTo;
 
-    final catalogRes = await _client.rpc('inventory_get_catalog', params: {
-      'p_since': ?since,
-    });
+    final catalogRes = await _client.rpc(
+      'inventory_get_catalog',
+      params: {'p_since': ?since},
+    );
     final catalogMap = _asMap(catalogRes);
     final allItems = _toMaps(catalogMap['items']);
     final allCats = _toMaps(catalogMap['categories']);
@@ -67,12 +68,15 @@ class InventorySync {
         listField: 'items',
         delta: allItems,
         newStamp: serverStamp,
-        newSyncedUpTo: latestUpdatedAt ?? DateTime.now().toUtc().toIso8601String(),
+        newSyncedUpTo:
+            latestUpdatedAt ?? DateTime.now().toUtc().toIso8601String(),
       );
       // دمج التصنيفات والوحدات (لا تُحذف — upsert)
       final existing = await _cache.get(CacheKey.catalog);
       final mergedCats = _mergeById(
-        existing: _toMaps((existing?.data['categories'] as List<dynamic>?) ?? []),
+        existing: _toMaps(
+          (existing?.data['categories'] as List<dynamic>?) ?? [],
+        ),
         delta: allCats,
       );
       final mergedUnits = _mergeByCode(
@@ -82,11 +86,7 @@ class InventorySync {
       final ex = existing?.data ?? {};
       await _cache.put(
         key: CacheKey.catalog,
-        data: {
-          ...ex,
-          'categories': mergedCats,
-          'units': mergedUnits,
-        },
+        data: {...ex, 'categories': mergedCats, 'units': mergedUnits},
         stamp: serverStamp,
         syncedUpTo: latestUpdatedAt,
       );
@@ -94,11 +94,7 @@ class InventorySync {
       // تحميل كامل (أول مرة)
       await _cache.put(
         key: CacheKey.catalog,
-        data: {
-          'units': allUnits,
-          'categories': allCats,
-          'items': allItems,
-        },
+        data: {'units': allUnits, 'categories': allCats, 'items': allItems},
         stamp: serverStamp,
         syncedUpTo: latestUpdatedAt,
       );
@@ -113,15 +109,15 @@ class InventorySync {
   Future<CatalogSnapshot> _catalogFromCache() async {
     final entry = await _cache.get(CacheKey.catalog);
     if (entry == null) return CatalogSnapshot.empty;
-    final units = _toMaps((entry.data['units'] as List<dynamic>?) ?? [])
-        .map(InventoryUnit.fromJson)
-        .toList();
-    final cats = _toMaps((entry.data['categories'] as List<dynamic>?) ?? [])
-        .map(InventoryCategory.fromJson)
-        .toList();
-    final items = _toMaps((entry.data['items'] as List<dynamic>?) ?? [])
-        .map(InventoryItem.fromJson)
-        .toList();
+    final units = _toMaps(
+      (entry.data['units'] as List<dynamic>?) ?? [],
+    ).map(InventoryUnit.fromJson).toList();
+    final cats = _toMaps(
+      (entry.data['categories'] as List<dynamic>?) ?? [],
+    ).map(InventoryCategory.fromJson).toList();
+    final items = _toMaps(
+      (entry.data['items'] as List<dynamic>?) ?? [],
+    ).map(InventoryItem.fromJson).toList();
     return CatalogSnapshot(
       units: units,
       categories: cats,
@@ -151,10 +147,10 @@ class InventorySync {
     final cached = await _cache.get(cacheKey);
     final since = cached?.syncedUpTo;
 
-    final res = await _client.rpc('inventory_get_stock', params: {
-      'p_warehouse_id': ?warehouseId,
-      'p_since': ?since,
-    });
+    final res = await _client.rpc(
+      'inventory_get_stock',
+      params: {'p_warehouse_id': ?warehouseId, 'p_since': ?since},
+    );
     final stockMap = _asMap(res);
 
     final delta = _toMaps(stockMap['stock']);
@@ -165,7 +161,8 @@ class InventorySync {
       listField: 'stock',
       delta: delta,
       newStamp: serverStamp,
-      newSyncedUpTo: latestUpdatedAt ?? DateTime.now().toUtc().toIso8601String(),
+      newSyncedUpTo:
+          latestUpdatedAt ?? DateTime.now().toUtc().toIso8601String(),
       idField: 'item_id',
     );
 
@@ -173,17 +170,18 @@ class InventorySync {
   }
 
   Future<StockSnapshot> loadStockFromCache({String? warehouseId}) async {
-    final cacheKey =
-        warehouseId != null ? CacheKey.branchStock(warehouseId) : CacheKey.stock;
+    final cacheKey = warehouseId != null
+        ? CacheKey.branchStock(warehouseId)
+        : CacheKey.stock;
     return _stockFromCache(cacheKey, await _cache.getStamp(cacheKey));
   }
 
   Future<StockSnapshot> _stockFromCache(String cacheKey, int stamp) async {
     final entry = await _cache.get(cacheKey);
     if (entry == null) return StockSnapshot(entries: [], stamp: 0);
-    final entries = _toMaps((entry.data['stock'] as List<dynamic>?) ?? [])
-        .map(StockEntry.fromJson)
-        .toList();
+    final entries = _toMaps(
+      (entry.data['stock'] as List<dynamic>?) ?? [],
+    ).map(StockEntry.fromJson).toList();
     return StockSnapshot(entries: entries, stamp: stamp);
   }
 
@@ -198,8 +196,7 @@ class InventorySync {
       final latestUpdatedAt = stockDelta
           .map((s) => s['updated_at'] as String? ?? '')
           .reduce((a, b) => a.compareTo(b) >= 0 ? a : b);
-      final stamps =
-          (result['stamps'] as Map<String, dynamic>? ?? {});
+      final stamps = (result['stamps'] as Map<String, dynamic>? ?? {});
       final stockStamp = (stamps[CacheKey.stock] as num?)?.toInt() ?? 0;
 
       await _cache.mergeList(

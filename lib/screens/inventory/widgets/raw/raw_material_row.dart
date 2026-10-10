@@ -104,7 +104,8 @@ class RawMaterialRow extends StatelessWidget {
             ),
           ),
           // زر تعديل (يختفي للمنتجات التامة أو النظامية)
-          if (item.category?.kind.name != 'finished' && item.category?.isSystem != true)
+          if (item.category?.kind.name != 'finished' &&
+              item.category?.isSystem != true)
             Tooltip(
               message: 'تعديل الصنف',
               child: IconButton(

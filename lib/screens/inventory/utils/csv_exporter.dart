@@ -25,10 +25,12 @@ class CsvExporter {
 
     // Write Rows
     for (final row in rows) {
-      final formattedRow = row.map((item) {
-        if (item == null) return '';
-        return escapeCsv(item.toString());
-      }).join(',');
+      final formattedRow = row
+          .map((item) {
+            if (item == null) return '';
+            return escapeCsv(item.toString());
+          })
+          .join(',');
       buffer.writeln(formattedRow);
     }
 
@@ -37,9 +39,11 @@ class CsvExporter {
     dir ??= await getApplicationDocumentsDirectory();
 
     final now = DateTime.now();
-    final yyyyMMdd = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-    final hhmm = '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-    
+    final yyyyMMdd =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final hhmm =
+        '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+
     final fileName = '${baseName}_${yyyyMMdd}_$hhmm.csv';
     final filePath = '${dir.path}/$fileName';
 

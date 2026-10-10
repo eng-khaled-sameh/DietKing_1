@@ -60,7 +60,9 @@ class CategoryFilterPill extends StatelessWidget {
               Icon(
                 icon,
                 size: AppDimens.iconSm + 2,
-                color: isActive ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+                color: isActive
+                    ? AppColors.onPrimary
+                    : AppColors.onSurfaceVariant,
               ),
               const SizedBox(width: AppDimens.spaceSm),
               Text(

@@ -28,7 +28,9 @@ class SupplyOrderRow extends StatelessWidget {
             flex: 2,
             child: Text(
               order.number,
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
           ),
           Expanded(
@@ -42,7 +44,9 @@ class SupplyOrderRow extends StatelessWidget {
             flex: 4,
             child: Text(
               '${order.lines.length} أصناف — أولوية: ${order.priority}',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
           ),
           Expanded(
@@ -70,7 +74,11 @@ class SupplyOrderRow extends StatelessWidget {
         Tooltip(
           message: 'اعتماد (إرسال للمورد)',
           child: IconButton(
-            icon: const Icon(Icons.check_circle_outline, color: AppColors.statusGreen, size: 20),
+            icon: const Icon(
+              Icons.check_circle_outline,
+              color: AppColors.statusGreen,
+              size: 20,
+            ),
             onPressed: () {
               showInventorySnack(context, 'تم اعتماد الطلب ${order.number}');
             },
@@ -79,7 +87,11 @@ class SupplyOrderRow extends StatelessWidget {
         Tooltip(
           message: 'رفض',
           child: IconButton(
-            icon: const Icon(Icons.cancel_outlined, color: AppColors.statusRed, size: 20),
+            icon: const Icon(
+              Icons.cancel_outlined,
+              color: AppColors.statusRed,
+              size: 20,
+            ),
             onPressed: () async {
               final confirm = await showConfirmDialog(
                 context,
@@ -98,7 +110,11 @@ class SupplyOrderRow extends StatelessWidget {
         Tooltip(
           message: 'استلام الكمية',
           child: IconButton(
-            icon: const Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
+            icon: const Icon(
+              Icons.inventory_2_outlined,
+              color: AppColors.primary,
+              size: 20,
+            ),
             onPressed: () {
               showInventorySnack(context, 'تم استلام الطلب ${order.number}');
             },
@@ -109,7 +125,10 @@ class SupplyOrderRow extends StatelessWidget {
       return [
         Text(
           'مكتمل',
-          style: GoogleFonts.ibmPlexSansArabic(color: AppColors.statusGreen, fontWeight: FontWeight.bold),
+          style: GoogleFonts.ibmPlexSansArabic(
+            color: AppColors.statusGreen,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ];
     }

@@ -159,24 +159,47 @@ class _AdminPasswordDialogState extends State<AdminPasswordDialog> {
                           filled: true,
                           fillColor: AppColors.surfaceContainer,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                            borderSide: BorderSide(color: AppColors.outlineVariant),
+                            borderRadius: BorderRadius.circular(
+                              AppDimens.radiusSm,
+                            ),
+                            borderSide: BorderSide(
+                              color: AppColors.outlineVariant,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                            borderSide: BorderSide(color: AppColors.outlineVariant),
+                            borderRadius: BorderRadius.circular(
+                              AppDimens.radiusSm,
+                            ),
+                            borderSide: BorderSide(
+                              color: AppColors.outlineVariant,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                            borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            borderRadius: BorderRadius.circular(
+                              AppDimens.radiusSm,
+                            ),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                           errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                            borderSide: BorderSide(color: Colors.redAccent, width: 1.5),
+                            borderRadius: BorderRadius.circular(
+                              AppDimens.radiusSm,
+                            ),
+                            borderSide: BorderSide(
+                              color: Colors.redAccent,
+                              width: 1.5,
+                            ),
                           ),
                           focusedErrorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                            borderSide: BorderSide(color: Colors.redAccent, width: 2),
+                            borderRadius: BorderRadius.circular(
+                              AppDimens.radiusSm,
+                            ),
+                            borderSide: BorderSide(
+                              color: Colors.redAccent,
+                              width: 2,
+                            ),
                           ),
                           errorText: inlineError,
                           errorStyle: GoogleFonts.ibmPlexSansArabic(
@@ -191,7 +214,8 @@ class _AdminPasswordDialogState extends State<AdminPasswordDialog> {
                               color: AppColors.onSurfaceVariant,
                               size: AppDimens.iconSm,
                             ),
-                            onPressed: () => setState(() => _obscure = !_obscure),
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
                           ),
                         ),
                       ),
@@ -221,11 +245,12 @@ class _AdminPasswordDialogState extends State<AdminPasswordDialog> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               foregroundColor: AppColors.onPrimary,
-                              disabledBackgroundColor:
-                                  AppColors.primary.withValues(alpha: 0.4),
+                              disabledBackgroundColor: AppColors.primary
+                                  .withValues(alpha: 0.4),
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(AppDimens.radiusSm),
+                                borderRadius: BorderRadius.circular(
+                                  AppDimens.radiusSm,
+                                ),
                               ),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: AppDimens.spaceLg,
@@ -258,8 +283,9 @@ class _AdminPasswordDialogState extends State<AdminPasswordDialog> {
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.onSurfaceVariant,
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(AppDimens.radiusSm),
+                                borderRadius: BorderRadius.circular(
+                                  AppDimens.radiusSm,
+                                ),
                               ),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: AppDimens.spaceLg,

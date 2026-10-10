@@ -5,7 +5,9 @@ String formatDate(DateTime date) {
 }
 
 String formatDateTime(DateTime date) {
-  final hour = date.hour == 0 ? 12 : (date.hour > 12 ? date.hour - 12 : date.hour);
+  final hour = date.hour == 0
+      ? 12
+      : (date.hour > 12 ? date.hour - 12 : date.hour);
   final amPm = date.hour >= 12 ? 'م' : 'ص';
   final min = date.minute.toString().padLeft(2, '0');
   return '${formatDate(date)} ${hour.toString().padLeft(2, '0')}:$min $amPm';

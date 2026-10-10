@@ -27,7 +27,7 @@ class PosStatusFooter extends StatelessWidget {
 
           // ── يسار: حقوق النشر ────────────────────────────────────────────
           Text(
-            'Diet King © 2027 | Developed by codva',
+            'Diet King © 2027 | Developed by Khaled Sameh | Codva',
             style: GoogleFonts.ibmPlexSansArabic(
               fontSize: 10,
               color: AppColors.onSurfaceVariant.withValues(alpha: 0.45),

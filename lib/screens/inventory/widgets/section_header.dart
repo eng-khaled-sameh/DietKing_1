@@ -41,16 +41,26 @@ class SectionHeader extends StatelessWidget {
                   if (badgeText != null) ...[
                     const SizedBox(width: AppDimens.spaceMd),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
-                        color: (badgeColor ?? AppColors.primaryContainer).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(AppDimens.radiusFull),
+                        color: (badgeColor ?? AppColors.primaryContainer)
+                            .withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(
+                          AppDimens.radiusFull,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (badgeIcon != null) ...[
-                            Icon(badgeIcon, size: 16, color: badgeColor ?? AppColors.primary),
+                            Icon(
+                              badgeIcon,
+                              size: 16,
+                              color: badgeColor ?? AppColors.primary,
+                            ),
                             const SizedBox(width: 4),
                           ],
                           Text(
@@ -68,9 +78,7 @@ class SectionHeader extends StatelessWidget {
                 ],
               ),
             ),
-            Row(
-              children: actions,
-            ),
+            Row(children: actions),
           ],
         ),
         const SizedBox(height: AppDimens.spaceXl),

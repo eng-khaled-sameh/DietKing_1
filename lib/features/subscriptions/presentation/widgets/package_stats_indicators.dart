@@ -9,8 +9,7 @@ class PackageStatsIndicators extends StatefulWidget {
   const PackageStatsIndicators({super.key});
 
   @override
-  State<PackageStatsIndicators> createState() =>
-      _PackageStatsIndicatorsState();
+  State<PackageStatsIndicators> createState() => _PackageStatsIndicatorsState();
 }
 
 class _PackageStatsIndicatorsState extends State<PackageStatsIndicators>
@@ -25,9 +24,10 @@ class _PackageStatsIndicatorsState extends State<PackageStatsIndicators>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.35, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulseAnim = Tween<double>(
+      begin: 0.35,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
   }
 
   @override

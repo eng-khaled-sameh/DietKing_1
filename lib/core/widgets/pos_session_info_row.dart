@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:my_desktop_app/core/theme/app_dimens.dart';
 
@@ -19,10 +21,20 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseCtrl;
   late final Animation<double> _pulseAnim;
+  late Timer _timer;
+  late DateTime _now;
 
   @override
   void initState() {
     super.initState();
+    _now = DateTime.now();
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _now = DateTime.now();
+        });
+      }
+    });
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -35,12 +47,15 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
 
   @override
   void dispose() {
+    _timer.cancel();
     _pulseCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final timeStr = DateFormat('h:mm a', 'ar').format(_now);
+    final dateStr = DateFormat('d MMMM yyyy', 'ar').format(_now);
     return Container(
       height: 48,
       color: AppColors.surfaceContainerLow,
@@ -113,8 +128,9 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
                 const SizedBox(width: AppDimens.spaceXs),
                 // عرض branchCode من SessionCubit في مكان "Register 01"
                 BlocSelector<SessionCubit, SessionState, String>(
-                  selector: (s) =>
-                      s.branchCode.isNotEmpty ? 'متصل - ${s.branchCode}' : 'متصل',
+                  selector: (s) => s.branchCode.isNotEmpty
+                      ? 'متصل - ${s.branchCode}'
+                      : 'متصل',
                   builder: (context, label) => Text(
                     label,
                     style: GoogleFonts.ibmPlexSansArabic(
@@ -130,27 +146,34 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
 
           const Spacer(),
 
-          // ── يسار: الوقت والتاريخ (ثابتين) ─────────────────────────────────
-          // TODO: bind to live clock
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.center,
+          // ── يسار: الوقت والتاريخ ─────────────────────────────────
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '08:25 ص',
+                dateStr,
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontSize: AppDimens.fontSm,
+                  color: AppColors.onSurfaceVariant.withValues(alpha: 0.8),
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceSm,
+                ),
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.onSurfaceVariant.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Text(
+                timeStr,
                 style: GoogleFonts.ibmPlexSansArabic(
                   fontSize: AppDimens.fontMd,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primary,
-                  height: 1.1,
-                ),
-              ),
-              Text(
-                '23 سبتمبر 2026 | 11 ربيع الآخر 1448 هـ',
-                style: GoogleFonts.ibmPlexSansArabic(
-                  fontSize: 10,
-                  color: AppColors.onSurfaceVariant.withValues(alpha: 0.65),
-                  height: 1.2,
                 ),
               ),
             ],

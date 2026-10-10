@@ -66,11 +66,7 @@ class QuickAddonCard extends StatelessWidget {
                     color: AppColors.outlineVariant.withValues(alpha: 0.4),
                   ),
                 ),
-                child: Icon(
-                  icon,
-                  size: 16,
-                  color: AppColors.primary,
-                ),
+                child: Icon(icon, size: 16, color: AppColors.primary),
               ),
 
               const SizedBox(width: AppDimens.spaceSm),
@@ -93,10 +89,7 @@ class QuickAddonCard extends StatelessWidget {
 
               // ── السعر ─────────────────────────────────────────────────────
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceContainerLowest,
                   borderRadius: BorderRadius.circular(AppDimens.radiusFull),

@@ -37,12 +37,16 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
 
   void _addLine(InventoryItem item) {
     if (_lines.any((l) => l.itemId == item.id)) return;
-    setState(() => _lines.add(_IssueLine(
+    setState(
+      () => _lines.add(
+        _IssueLine(
           itemId: item.id,
           itemName: item.name,
           itemSku: item.sku,
           unitCode: item.unitCode,
-        )));
+        ),
+      ),
+    );
   }
 
   void _removeLine(int i) {
@@ -62,30 +66,35 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
     for (final l in _lines) {
       final qty = double.tryParse(l.qtyCtrl.text.trim()) ?? 0;
       if (qty <= 0) {
-        showInventorySnack(context, 'الكمية يجب أن تكون أكبر من الصفر',
-            isError: true);
+        showInventorySnack(
+          context,
+          'الكمية يجب أن تكون أكبر من الصفر',
+          isError: true,
+        );
         return;
       }
     }
 
     setState(() => _submitting = true);
     try {
-      final lines = _lines.map((l) => <String, dynamic>{
-            'item_id': l.itemId,
-            'qty': double.tryParse(l.qtyCtrl.text.trim()) ?? 0,
-          }).toList();
+      final lines = _lines
+          .map(
+            (l) => <String, dynamic>{
+              'item_id': l.itemId,
+              'qty': double.tryParse(l.qtyCtrl.text.trim()) ?? 0,
+            },
+          )
+          .toList();
 
       await context.read<InventoryCubit>().createKitchenIssue(
-            cookPlan: _cookPlanCtrl.text.trim().isEmpty
-                ? null
-                : _cookPlanCtrl.text.trim(),
-            chefName: _chefCtrl.text.trim(),
-            shift: _shift,
-            notes: _notesCtrl.text.trim().isEmpty
-                ? null
-                : _notesCtrl.text.trim(),
-            lines: lines,
-          );
+        cookPlan: _cookPlanCtrl.text.trim().isEmpty
+            ? null
+            : _cookPlanCtrl.text.trim(),
+        chefName: _chefCtrl.text.trim(),
+        shift: _shift,
+        notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        lines: lines,
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -107,8 +116,9 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
         textDirection: TextDirection.rtl,
         child: Dialog(
           backgroundColor: AppColors.surfaceContainer,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: SizedBox(
             width: 680,
             child: Column(
@@ -148,16 +158,18 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
         children: [
           const Icon(Icons.kitchen_outlined, color: AppColors.secondary),
           const SizedBox(width: 12),
-          Text('صرف خامات للمطبخ',
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.onSurface,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18)),
+          Text(
+            'صرف خامات للمطبخ',
+            style: GoogleFonts.ibmPlexSansArabic(
+              color: AppColors.onSurface,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.close, color: AppColors.onSurfaceVariant),
-            onPressed:
-                _submitting ? null : () => Navigator.of(context).pop(),
+            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
           ),
         ],
       ),
@@ -171,8 +183,7 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
           flex: 2,
           child: TextField(
             controller: _chefCtrl,
-            style:
-                GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
             decoration: _dec('الشيف المستلم *'),
           ),
         ),
@@ -181,8 +192,7 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
           child: DropdownButtonFormField<String>(
             initialValue: _shift,
             dropdownColor: AppColors.surfaceContainerHigh,
-            style:
-                GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
             items: [
               DropdownMenuItem(value: 'morning', child: Text('صباحية')),
               DropdownMenuItem(value: 'evening', child: Text('مسائية')),
@@ -196,8 +206,7 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
           flex: 2,
           child: TextField(
             controller: _cookPlanCtrl,
-            style:
-                GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
             decoration: _dec('خطة الطهي (اختياري)'),
           ),
         ),
@@ -221,12 +230,17 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('الخامات المصروفة',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurface,
-                    fontWeight: FontWeight.bold)),
-            _ItemSearchButton(onSelected: _addLine,
-                alreadySelected: {for (final l in _lines) l.itemId}),
+            Text(
+              'الخامات المصروفة',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            _ItemSearchButton(
+              onSelected: _addLine,
+              alreadySelected: {for (final l in _lines) l.itemId},
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -244,10 +258,9 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
           ...List.generate(_lines.length, (i) {
             final l = _lines[i];
             // جلب الرصيد المتاح من الـ state
-            final available = context
-                .read<InventoryCubit>()
-                .state
-                .stockFor(l.itemId);
+            final available = context.read<InventoryCubit>().state.stockFor(
+              l.itemId,
+            );
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
@@ -257,14 +270,20 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(l.itemName,
-                            style: GoogleFonts.ibmPlexSansArabic(
-                                color: AppColors.onSurface,
-                                fontSize: 13)),
-                        Text('${l.itemSku} — ${l.unitCode}',
-                            style: GoogleFonts.ibmPlexSansArabic(
-                                color: AppColors.onSurfaceVariant,
-                                fontSize: 11)),
+                        Text(
+                          l.itemName,
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: AppColors.onSurface,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          '${l.itemSku} — ${l.unitCode}',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: AppColors.onSurfaceVariant,
+                            fontSize: 11,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -272,22 +291,26 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
                     flex: 2,
                     child: TextField(
                       controller: l.qtyCtrl,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(
-                              decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurface),
+                        color: AppColors.onSurface,
+                      ),
                       decoration: InputDecoration(
                         isDense: true,
                         hintText: '0',
                         hintStyle: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.onSurfaceVariant),
+                          color: AppColors.onSurfaceVariant,
+                        ),
                         enabledBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(
-                                color: AppColors.outlineVariant)),
+                          borderSide: BorderSide(
+                            color: AppColors.outlineVariant,
+                          ),
+                        ),
                         focusedBorder: const UnderlineInputBorder(
-                            borderSide:
-                                BorderSide(color: AppColors.primary)),
+                          borderSide: BorderSide(color: AppColors.primary),
+                        ),
                       ),
                     ),
                   ),
@@ -304,8 +327,11 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.remove_circle_outline,
-                        color: AppColors.statusRed, size: 18),
+                    icon: const Icon(
+                      Icons.remove_circle_outline,
+                      color: AppColors.statusRed,
+                      size: 18,
+                    ),
                     onPressed: () => _removeLine(i),
                   ),
                 ],
@@ -324,18 +350,19 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           TextButton(
-            onPressed:
-                _submitting ? null : () => Navigator.of(context).pop(),
-            child: Text('إلغاء',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant)),
+            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+            child: Text(
+              'إلغاء',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.secondary,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
             onPressed: _submitting ? null : _save,
             icon: _submitting
@@ -343,13 +370,18 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.onPrimary))
-                : const Icon(Icons.send_rounded,
-                    color: AppColors.onPrimary),
-            label: Text('تأكيد الصرف',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onPrimary,
-                    fontWeight: FontWeight.bold)),
+                      strokeWidth: 2,
+                      color: AppColors.onPrimary,
+                    ),
+                  )
+                : const Icon(Icons.send_rounded, color: AppColors.onPrimary),
+            label: Text(
+              'تأكيد الصرف',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -357,40 +389,50 @@ class _NewKitchenIssueDialogState extends State<NewKitchenIssueDialog> {
   }
 
   InputDecoration _dec(String label) => InputDecoration(
-        labelText: label,
-        labelStyle: GoogleFonts.ibmPlexSansArabic(
-            color: AppColors.onSurfaceVariant),
-        enabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.outlineVariant)),
-        focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.primary)),
-      );
+    labelText: label,
+    labelStyle: GoogleFonts.ibmPlexSansArabic(
+      color: AppColors.onSurfaceVariant,
+    ),
+    enabledBorder: const UnderlineInputBorder(
+      borderSide: BorderSide(color: AppColors.outlineVariant),
+    ),
+    focusedBorder: const UnderlineInputBorder(
+      borderSide: BorderSide(color: AppColors.primary),
+    ),
+  );
 
   Widget _emptyLinesHint() => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          'اضغط "+ إضافة خامة" لاختيار الخامات المطلوبة',
-          style: GoogleFonts.ibmPlexSansArabic(
-              color: AppColors.onSurfaceVariant, fontSize: 13),
-          textAlign: TextAlign.center,
-        ),
-      );
+    width: double.infinity,
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Text(
+      'اضغط "+ إضافة خامة" لاختيار الخامات المطلوبة',
+      style: GoogleFonts.ibmPlexSansArabic(
+        color: AppColors.onSurfaceVariant,
+        fontSize: 13,
+      ),
+      textAlign: TextAlign.center,
+    ),
+  );
 
   Widget _lh(String label, {int flex = 1}) => Expanded(
-        flex: flex,
-        child: Text(label,
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurfaceVariant, fontSize: 12)),
-      );
+    flex: flex,
+    child: Text(
+      label,
+      style: GoogleFonts.ibmPlexSansArabic(
+        color: AppColors.onSurfaceVariant,
+        fontSize: 12,
+      ),
+    ),
+  );
 
   String _fmt(double v) {
     if (v == v.roundToDouble()) return v.toInt().toString();
-    return v.toStringAsFixed(3)
+    return v
+        .toStringAsFixed(3)
         .replaceAll(RegExp(r'0+$'), '')
         .replaceAll(RegExp(r'\.$'), '');
   }
@@ -429,17 +471,18 @@ class _ItemSearchButton extends StatelessWidget {
     return BlocBuilder<InventoryCubit, InventoryState>(
       buildWhen: (p, c) => p.catalog != c.catalog,
       builder: (context, state) {
-        final items = state.catalog?.items
-                .where((i) =>
-                    i.isActive && !alreadySelected.contains(i.id))
+        final items =
+            state.catalog?.items
+                .where((i) => i.isActive && !alreadySelected.contains(i.id))
                 .toList() ??
             [];
         return OutlinedButton.icon(
           onPressed: () => _showSearch(context, items),
           icon: const Icon(Icons.add, size: 18, color: AppColors.secondary),
-          label: Text('إضافة خامة',
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.secondary)),
+          label: Text(
+            'إضافة خامة',
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.secondary),
+          ),
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: AppColors.secondary),
           ),
@@ -449,7 +492,9 @@ class _ItemSearchButton extends StatelessWidget {
   }
 
   Future<void> _showSearch(
-      BuildContext context, List<InventoryItem> items) async {
+    BuildContext context,
+    List<InventoryItem> items,
+  ) async {
     final selected = await showDialog<InventoryItem>(
       context: context,
       builder: (_) => _ItemSearchDialog(items: items),
@@ -472,10 +517,12 @@ class _ItemSearchDialogState extends State<_ItemSearchDialog> {
   @override
   Widget build(BuildContext context) {
     final filtered = widget.items
-        .where((i) =>
-            _query.isEmpty ||
-            i.name.toLowerCase().contains(_query.toLowerCase()) ||
-            i.sku.toLowerCase().contains(_query.toLowerCase()))
+        .where(
+          (i) =>
+              _query.isEmpty ||
+              i.name.toLowerCase().contains(_query.toLowerCase()) ||
+              i.sku.toLowerCase().contains(_query.toLowerCase()),
+        )
         .toList();
 
     return Directionality(
@@ -483,9 +530,10 @@ class _ItemSearchDialogState extends State<_ItemSearchDialog> {
       child: AlertDialog(
         backgroundColor: AppColors.surfaceContainer,
         contentPadding: EdgeInsets.zero,
-        title: Text('اختيار خامة',
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurface)),
+        title: Text(
+          'اختيار خامة',
+          style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+        ),
         content: SizedBox(
           width: 360,
           height: 380,
@@ -497,18 +545,23 @@ class _ItemSearchDialogState extends State<_ItemSearchDialog> {
                   autofocus: true,
                   onChanged: (v) => setState(() => _query = v),
                   style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurface),
+                    color: AppColors.onSurface,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'بحث...',
                     hintStyle: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurfaceVariant),
-                    prefixIcon: const Icon(Icons.search,
-                        color: AppColors.onSurfaceVariant),
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppColors.onSurfaceVariant,
+                    ),
                     filled: true,
                     fillColor: AppColors.surfaceContainerHigh,
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none),
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
                     isDense: true,
                   ),
                 ),
@@ -520,17 +573,26 @@ class _ItemSearchDialogState extends State<_ItemSearchDialog> {
                     final item = filtered[i];
                     return ListTile(
                       dense: true,
-                      title: Text(item.name,
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurface)),
-                      subtitle: Text(item.sku,
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurfaceVariant,
-                              fontSize: 11)),
-                      trailing: Text(item.unitCode,
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurfaceVariant,
-                              fontSize: 12)),
+                      title: Text(
+                        item.name,
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                      subtitle: Text(
+                        item.sku,
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 11,
+                        ),
+                      ),
+                      trailing: Text(
+                        item.unitCode,
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
                       onTap: () => Navigator.of(ctx).pop(item),
                     );
                   },
@@ -542,9 +604,12 @@ class _ItemSearchDialogState extends State<_ItemSearchDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('إلغاء',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant)),
+            child: Text(
+              'إلغاء',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ),
         ],
       ),

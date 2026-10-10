@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
@@ -86,7 +88,7 @@ class _PosInfoSection extends StatelessWidget {
               ),
             ),
             Text(
-              'محطة الكاشير الرئيسية #01',
+              'محطة كاشير دايت كينج',
               style: GoogleFonts.ibmPlexSansArabic(
                 fontSize: AppDimens.fontSm,
                 fontWeight: FontWeight.w700,
@@ -100,11 +102,39 @@ class _PosInfoSection extends StatelessWidget {
   }
 }
 
-class _DateSection extends StatelessWidget {
+class _DateSection extends StatefulWidget {
   const _DateSection();
 
   @override
+  State<_DateSection> createState() => _DateSectionState();
+}
+
+class _DateSectionState extends State<_DateSection> {
+  late Timer _timer;
+  late DateTime _now;
+
+  @override
+  void initState() {
+    super.initState();
+    _now = DateTime.now();
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      setState(() {
+        _now = DateTime.now();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // تنسيق التاريخ مثل "23 سبتمبر 2026"
+    final dateStr = DateFormat('d MMMM yyyy', 'ar').format(_now);
+
     return Row(
       children: [
         const Icon(
@@ -114,27 +144,11 @@ class _DateSection extends StatelessWidget {
         ),
         const SizedBox(width: AppDimens.spaceXs),
         Text(
-          '23 سبتمبر 2026',
+          dateStr,
           style: GoogleFonts.ibmPlexSansArabic(
             fontSize: AppDimens.fontSm,
             color: AppColors.onSurface,
             fontWeight: FontWeight.w600,
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: AppDimens.spaceSm),
-          width: 4,
-          height: 4,
-          decoration: BoxDecoration(
-            color: AppColors.onSurfaceVariant.withValues(alpha: 0.4),
-            shape: BoxShape.circle,
-          ),
-        ),
-        Text(
-          '11 ربيع الآخر 1448 هـ',
-          style: GoogleFonts.ibmPlexSansArabic(
-            fontSize: AppDimens.fontSm,
-            color: AppColors.onSurfaceVariant.withValues(alpha: 0.8),
           ),
         ),
       ],
@@ -142,11 +156,38 @@ class _DateSection extends StatelessWidget {
   }
 }
 
-class _StatusTimeSection extends StatelessWidget {
+class _StatusTimeSection extends StatefulWidget {
   const _StatusTimeSection();
 
   @override
+  State<_StatusTimeSection> createState() => _StatusTimeSectionState();
+}
+
+class _StatusTimeSectionState extends State<_StatusTimeSection> {
+  late Timer _timer;
+  late DateTime _now;
+
+  @override
+  void initState() {
+    super.initState();
+    _now = DateTime.now();
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      setState(() {
+        _now = DateTime.now();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final timeStr = DateFormat('h:mm a', 'ar').format(_now);
+
     return Row(
       children: [
         // Pill أخضر: متصل بالإنترنت
@@ -186,8 +227,7 @@ class _StatusTimeSection extends StatelessWidget {
         ),
         const SizedBox(width: AppDimens.spaceSm),
 
-        // Pill الساعة (نص ثابت)
-        // TODO: bind to live clock
+        // Pill الساعة
         Container(
           padding: const EdgeInsets.symmetric(
             horizontal: AppDimens.spaceSm,
@@ -206,7 +246,7 @@ class _StatusTimeSection extends StatelessWidget {
               ),
               const SizedBox(width: AppDimens.spaceXs),
               Text(
-                '11:16 ص',
+                timeStr,
                 style: GoogleFonts.ibmPlexSansArabic(
                   fontSize: AppDimens.fontSm,
                   fontWeight: FontWeight.w700,

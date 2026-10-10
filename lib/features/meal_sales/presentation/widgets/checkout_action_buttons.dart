@@ -70,7 +70,6 @@ class CheckoutActionButtons extends StatelessWidget {
             ),
           ),
         ),
-
       ],
     );
   }

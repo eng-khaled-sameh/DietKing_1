@@ -9,10 +9,14 @@ class RawStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isLow ? AppColors.statusRed.withValues(alpha: 0.1) : AppColors.statusGreen.withValues(alpha: 0.1);
+    final bgColor = isLow
+        ? AppColors.statusRed.withValues(alpha: 0.1)
+        : AppColors.statusGreen.withValues(alpha: 0.1);
     final textColor = isLow ? AppColors.statusRed : AppColors.statusGreen;
     final text = isLow ? 'منخفض' : 'متوفر';
-    final icon = isLow ? Icons.warning_amber_rounded : Icons.check_circle_outline;
+    final icon = isLow
+        ? Icons.warning_amber_rounded
+        : Icons.check_circle_outline;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

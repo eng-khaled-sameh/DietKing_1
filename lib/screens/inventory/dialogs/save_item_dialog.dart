@@ -42,11 +42,14 @@ Future<String?> _showPasswordDialog(BuildContext context) {
               decoration: InputDecoration(
                 labelText: 'كلمة مرور المدير',
                 labelStyle: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant),
+                  color: AppColors.onSurfaceVariant,
+                ),
                 enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.outlineVariant)),
+                  borderSide: BorderSide(color: AppColors.outlineVariant),
+                ),
                 focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primary)),
+                  borderSide: BorderSide(color: AppColors.primary),
+                ),
               ),
             ),
             actions: [
@@ -55,21 +58,28 @@ Future<String?> _showPasswordDialog(BuildContext context) {
                   ctrl.dispose();
                   Navigator.pop(ctx);
                 },
-                child: Text('إلغاء',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurfaceVariant)),
+                child: Text(
+                  'إلغاء',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary),
+                  backgroundColor: AppColors.primary,
+                ),
                 onPressed: () {
                   final val = ctrl.text;
                   ctrl.dispose();
                   Navigator.pop(ctx, val);
                 },
-                child: Text('تأكيد',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onPrimary)),
+                child: Text(
+                  'تأكيد',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onPrimary,
+                  ),
+                ),
               ),
             ],
           ),
@@ -79,16 +89,13 @@ Future<String?> _showPasswordDialog(BuildContext context) {
   );
 }
 
-
 // ── نموذج التصريح المؤقت (يُعاد استخدامه بين الفتحات) ──────────────────────
 class _ApprovalCache {
   String? token;
   DateTime? expiresAt;
 
   bool get isValid =>
-      token != null &&
-      expiresAt != null &&
-      DateTime.now().isBefore(expiresAt!);
+      token != null && expiresAt != null && DateTime.now().isBefore(expiresAt!);
 
   void set(String t, DateTime exp) {
     token = t;
@@ -168,17 +175,26 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
 
   String _formatNum(double v) {
     if (v == v.roundToDouble()) return v.toInt().toString();
-    return v.toStringAsFixed(3)
+    return v
+        .toStringAsFixed(3)
         .replaceAll(RegExp(r'0+$'), '')
         .replaceAll(RegExp(r'\.$'), '');
   }
 
   double? _parseNumber(String raw) {
     final normalized = raw
-        .replaceAll('٠', '0').replaceAll('١', '1').replaceAll('٢', '2')
-        .replaceAll('٣', '3').replaceAll('٤', '4').replaceAll('٥', '5')
-        .replaceAll('٦', '6').replaceAll('٧', '7').replaceAll('٨', '8')
-        .replaceAll('٩', '9').replaceAll('،', '.').replaceAll(',', '.');
+        .replaceAll('٠', '0')
+        .replaceAll('١', '1')
+        .replaceAll('٢', '2')
+        .replaceAll('٣', '3')
+        .replaceAll('٤', '4')
+        .replaceAll('٥', '5')
+        .replaceAll('٦', '6')
+        .replaceAll('٧', '7')
+        .replaceAll('٨', '8')
+        .replaceAll('٩', '9')
+        .replaceAll('،', '.')
+        .replaceAll(',', '.');
     return double.tryParse(normalized);
   }
 
@@ -191,9 +207,11 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
   // تصنيفات غير النظام وغير التامة
   List<InventoryCategory> _eligibleCategories(InventoryState state) {
     return state.catalog?.categories
-        .where((c) =>
-            c.isActive && !c.isSystem && c.kind.name != 'finished')
-        .toList() ?? [];
+            .where(
+              (c) => c.isActive && !c.isSystem && c.kind.name != 'finished',
+            )
+            .toList() ??
+        [];
   }
 
   // ── طلب التصريح مع إعادة المحاولة ──────────────────────────────────────────
@@ -206,16 +224,25 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
 
     final cubit = context.read<InventoryCubit>();
     try {
-      final res = await cubit.requestAdminToken(password, 'inventory_item_edit');
+      final res = await cubit.requestAdminToken(
+        password,
+        'inventory_item_edit',
+      );
       if (res == null) {
         if (mounted) {
-          showInventorySnack(context, 'كلمة المرور خاطئة أو غير مخوّل',
-              isError: true);
+          showInventorySnack(
+            context,
+            'كلمة المرور خاطئة أو غير مخوّل',
+            isError: true,
+          );
         }
         return null;
       }
       // التصريح صالح 10 دقائق
-      _itemEditApproval.set(res, DateTime.now().add(const Duration(minutes: 10)));
+      _itemEditApproval.set(
+        res,
+        DateTime.now().add(const Duration(minutes: 10)),
+      );
       return res;
     } catch (e) {
       if (mounted) {
@@ -285,7 +312,9 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
       setState(() => _submitting = false);
       final msg = _friendlyError(e);
       // لو السيرفر رفض التصريح لانتهائه، امسح التوكن وأعِد
-      if (msg.contains('تصريح') || msg.contains('منتهي') || msg.contains('token')) {
+      if (msg.contains('تصريح') ||
+          msg.contains('منتهي') ||
+          msg.contains('token')) {
         _itemEditApproval.clear();
       }
       showInventorySnack(context, msg, isError: true);
@@ -342,7 +371,9 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
           key: _formKey,
           child: AppDialog(
             title: _isEdit ? 'تعديل صنف' : 'إضافة صنف جديد',
-            icon: _isEdit ? Icons.edit_rounded : Icons.add_circle_outline_rounded,
+            icon: _isEdit
+                ? Icons.edit_rounded
+                : Icons.add_circle_outline_rounded,
             maxWidth: 520,
             content: _buildFields(context, state),
             actions: _buildActionButtons(),
@@ -358,7 +389,9 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
         onPressed: _submitting ? null : () => Navigator.of(context).pop(),
         child: Text(
           'إلغاء',
-          style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+          style: GoogleFonts.ibmPlexSansArabic(
+            color: AppColors.onSurfaceVariant,
+          ),
         ),
       ),
       const SizedBox(width: 12),
@@ -374,11 +407,16 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
             ? const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.onPrimary),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.onPrimary,
+                ),
               )
             : Text(
                 'حفظ',
-                style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold),
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
       ),
     ];
@@ -444,10 +482,12 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
                 child: TextFormField(
                   controller: _openingQtyCtrl,
                   validator: _validateOpeningQty,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurface),
+                    color: AppColors.onSurface,
+                  ),
                   decoration: _inputDecoration('الرصيد الافتتاحي'),
                 ),
               ),
@@ -456,10 +496,12 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
                 child: TextFormField(
                   controller: _openingCostCtrl,
                   validator: _validateOpeningCost,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurface),
+                    color: AppColors.onSurface,
+                  ),
                   decoration: _inputDecoration('تكلفة الوحدة'),
                 ),
               ),
@@ -469,10 +511,7 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
         ],
 
         // في التعديل: عرض الرصيد الحالي كنص
-        if (_isEdit) ...[
-          _currentStockInfo(state),
-          const SizedBox(height: 16),
-        ],
+        if (_isEdit) ...[_currentStockInfo(state), const SizedBox(height: 16)],
 
         // متاح للفروع
         _switchRow(
@@ -514,9 +553,12 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
               ...categories.map(
                 (cat) => DropdownMenuItem(
                   value: cat.id,
-                  child: Text(cat.name,
-                      style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurface)),
+                  child: Text(
+                    cat.name,
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      color: AppColors.onSurface,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -527,8 +569,10 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
         Tooltip(
           message: 'إضافة تصنيف جديد',
           child: IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded,
-                color: AppColors.primary),
+            icon: const Icon(
+              Icons.add_circle_outline_rounded,
+              color: AppColors.primary,
+            ),
             onPressed: () => _openAddCategoryDialog(context),
           ),
         ),
@@ -574,12 +618,17 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
             final label = u.label as String;
             return DropdownMenuItem<String>(
               value: code,
-              child: Text('$label ($code)',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurface)),
+              child: Text(
+                '$label ($code)',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onSurface,
+                ),
+              ),
             );
           }).toList(),
-          onChanged: disabled ? null : (v) => setState(() => _selectedUnitCode = v),
+          onChanged: disabled
+              ? null
+              : (v) => setState(() => _selectedUnitCode = v),
         ),
         if (disabled)
           Padding(
@@ -609,8 +658,11 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.inventory_2_outlined,
-              color: AppColors.onSurfaceVariant, size: 18),
+          const Icon(
+            Icons.inventory_2_outlined,
+            color: AppColors.onSurfaceVariant,
+            size: 18,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -626,18 +678,13 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
     );
   }
 
-  Widget _switchRow(
-    String label,
-    bool value,
-    ValueChanged<bool> onChanged,
-  ) {
+  Widget _switchRow(String label, bool value, ValueChanged<bool> onChanged) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style:
-              GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+          style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
         ),
         Switch(
           value: value,
@@ -649,15 +696,20 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
   }
 
   // Actions were moved to _buildActionButtons
-  InputDecoration _inputDecoration(String label,
-      {bool isRequired = false, String? hint}) {
+  InputDecoration _inputDecoration(
+    String label, {
+    bool isRequired = false,
+    String? hint,
+  }) {
     return InputDecoration(
       labelText: isRequired ? '$label *' : label,
       hintText: hint,
       labelStyle: GoogleFonts.ibmPlexSansArabic(
-          color: AppColors.onSurfaceVariant),
-      hintStyle:
-          GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+        color: AppColors.onSurfaceVariant,
+      ),
+      hintStyle: GoogleFonts.ibmPlexSansArabic(
+        color: AppColors.onSurfaceVariant,
+      ),
       filled: true,
       fillColor: AppColors.surfaceContainerHigh,
       border: OutlineInputBorder(

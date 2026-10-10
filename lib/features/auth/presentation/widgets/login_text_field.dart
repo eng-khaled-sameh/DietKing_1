@@ -111,8 +111,9 @@ class _LoginTextFieldState extends State<LoginTextField> {
                         _obscureText
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color:
-                            AppColors.onSurfaceVariant.withValues(alpha: 0.6),
+                        color: AppColors.onSurfaceVariant.withValues(
+                          alpha: 0.6,
+                        ),
                         size: AppDimens.iconMd,
                       ),
                       onPressed: () {

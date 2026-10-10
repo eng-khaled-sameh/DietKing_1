@@ -17,10 +17,7 @@ class ReceiveSupplyResult {
   final List<StockEntry> stockDelta;
   final Map<String, dynamic> stamps;
 
-  const ReceiveSupplyResult({
-    required this.stockDelta,
-    required this.stamps,
-  });
+  const ReceiveSupplyResult({required this.stockDelta, required this.stamps});
 }
 
 /// نتيجة صرف خامة للمطبخ
@@ -28,10 +25,7 @@ class KitchenIssueResult {
   final List<StockEntry> stockDelta;
   final Map<String, dynamic> stamps;
 
-  const KitchenIssueResult({
-    required this.stockDelta,
-    required this.stamps,
-  });
+  const KitchenIssueResult({required this.stockDelta, required this.stamps});
 }
 
 /// نتيجة استلام دفعة إنتاج
@@ -111,11 +105,14 @@ class InventoryApi {
     String? branchId,
     int limit = 100,
   }) async {
-    final res = await _client.rpc('inventory_get_documents', params: {
-      'p_doc_type': docType,
-      'p_branch_id': ?branchId,
-      'p_limit': limit,
-    });
+    final res = await _client.rpc(
+      'inventory_get_documents',
+      params: {
+        'p_doc_type': docType,
+        'p_branch_id': ?branchId,
+        'p_limit': limit,
+      },
+    );
     return _asList(res);
   }
 
@@ -155,10 +152,10 @@ class InventoryApi {
     String itemId, {
     int limit = 50,
   }) async {
-    final res = await _client.rpc('inventory_get_item_movements', params: {
-      'p_item_id': itemId,
-      'p_limit': limit,
-    });
+    final res = await _client.rpc(
+      'inventory_get_item_movements',
+      params: {'p_item_id': itemId, 'p_limit': limit},
+    );
     return _asList(res);
   }
 
@@ -174,15 +171,18 @@ class InventoryApi {
     required List<Map<String, dynamic>> lines,
   }) async {
     final clientId = generateUuidV4();
-    await _client.rpc('create_supply_order', params: {
-      'p_client_id': clientId,
-      'p_supplier_name': supplierName,
-      'p_supplier_phone': supplierPhone,
-      'p_expected_date': expectedDate.toIso8601String().split('T').first,
-      'p_priority': priority,
-      'p_notes': notes,
-      'p_lines': lines,
-    });
+    await _client.rpc(
+      'create_supply_order',
+      params: {
+        'p_client_id': clientId,
+        'p_supplier_name': supplierName,
+        'p_supplier_phone': supplierPhone,
+        'p_expected_date': expectedDate.toIso8601String().split('T').first,
+        'p_priority': priority,
+        'p_notes': notes,
+        'p_lines': lines,
+      },
+    );
   }
 
   /// مراجعة طلب التوريد — المحاسب
@@ -194,13 +194,16 @@ class InventoryApi {
     required List<Map<String, dynamic>> lines,
     required int expectedVersion,
   }) async {
-    await _client.rpc('review_supply_order', params: {
-      'p_order_id': orderId,
-      'p_expected_version': expectedVersion,
-      'p_decision': approve ? 'approved' : 'rejected',
-      'p_rejection_reason': rejectionReason,
-      'p_lines': lines.isEmpty ? null : lines,
-    });
+    await _client.rpc(
+      'review_supply_order',
+      params: {
+        'p_order_id': orderId,
+        'p_expected_version': expectedVersion,
+        'p_decision': approve ? 'approved' : 'rejected',
+        'p_rejection_reason': rejectionReason,
+        'p_lines': lines.isEmpty ? null : lines,
+      },
+    );
   }
 
   /// استلام طلب التوريد — أمين المخزن
@@ -211,13 +214,18 @@ class InventoryApi {
     required int expectedVersion,
   }) async {
     final clientId = generateUuidV4();
-    final res = _asMap(await _client.rpc('receive_supply_order', params: {
-      'p_client_id': clientId,
-      'p_order_id': orderId,
-      'p_general_note': notes,
-      'p_lines': lines,
-      'p_expected_version': expectedVersion,
-    }));
+    final res = _asMap(
+      await _client.rpc(
+        'receive_supply_order',
+        params: {
+          'p_client_id': clientId,
+          'p_order_id': orderId,
+          'p_general_note': notes,
+          'p_lines': lines,
+          'p_expected_version': expectedVersion,
+        },
+      ),
+    );
     return ReceiveSupplyResult(
       stockDelta: _parseStock(res['stock']),
       stamps: _asMap(res['stamps']),
@@ -229,10 +237,10 @@ class InventoryApi {
     required String orderId,
     required int expectedVersion,
   }) async {
-    await _client.rpc('cancel_supply_order', params: {
-      'p_order_id': orderId,
-      'p_expected_version': expectedVersion,
-    });
+    await _client.rpc(
+      'cancel_supply_order',
+      params: {'p_order_id': orderId, 'p_expected_version': expectedVersion},
+    );
   }
 
   // ── المطبخ ────────────────────────────────────────────────────────────────
@@ -246,14 +254,19 @@ class InventoryApi {
     required List<Map<String, dynamic>> lines,
   }) async {
     final clientId = generateUuidV4();
-    final res = _asMap(await _client.rpc('create_kitchen_issue', params: {
-      'p_client_id': clientId,
-      'p_cook_plan': cookPlan,
-      'p_chef_name': chefName,
-      'p_shift': shift,
-      'p_notes': notes,
-      'p_lines': lines,
-    }));
+    final res = _asMap(
+      await _client.rpc(
+        'create_kitchen_issue',
+        params: {
+          'p_client_id': clientId,
+          'p_cook_plan': cookPlan,
+          'p_chef_name': chefName,
+          'p_shift': shift,
+          'p_notes': notes,
+          'p_lines': lines,
+        },
+      ),
+    );
     return KitchenIssueResult(
       stockDelta: _parseStock(res['stock']),
       stamps: _asMap(res['stamps']),
@@ -272,17 +285,22 @@ class InventoryApi {
     String? qualityNote,
   }) async {
     final clientId = generateUuidV4();
-    final res = _asMap(await _client.rpc('create_kitchen_batch', params: {
-      'p_client_id': clientId,
-      'p_item_id': itemId,
-      'p_new_item_name': newItemName,
-      'p_new_item_unit': newItemUnit ?? 'عبوة',
-      'p_quantity': quantity,
-      'p_production_line': productionLine,
-      'p_produced_at': producedAt.toUtc().toIso8601String(),
-      'p_finished_at': finishedAt.toUtc().toIso8601String(),
-      'p_quality_note': qualityNote,
-    }));
+    final res = _asMap(
+      await _client.rpc(
+        'create_kitchen_batch',
+        params: {
+          'p_client_id': clientId,
+          'p_item_id': itemId,
+          'p_new_item_name': newItemName,
+          'p_new_item_unit': newItemUnit ?? 'عبوة',
+          'p_quantity': quantity,
+          'p_production_line': productionLine,
+          'p_produced_at': producedAt.toUtc().toIso8601String(),
+          'p_finished_at': finishedAt.toUtc().toIso8601String(),
+          'p_quality_note': qualityNote,
+        },
+      ),
+    );
     return KitchenBatchResult(
       stockDelta: _parseStock(res['stock']),
       stamps: _asMap(res['stamps']),
@@ -298,12 +316,15 @@ class InventoryApi {
     required List<Map<String, dynamic>> lines,
   }) async {
     final clientId = generateUuidV4();
-    await _client.rpc('create_branch_order', params: {
-      'p_client_id': clientId,
-      'p_branch_id': branchId,
-      'p_notes': notes,
-      'p_lines': lines,
-    });
+    await _client.rpc(
+      'create_branch_order',
+      params: {
+        'p_client_id': clientId,
+        'p_branch_id': branchId,
+        'p_notes': notes,
+        'p_lines': lines,
+      },
+    );
   }
 
   Future<void> updateBranchOrder({
@@ -313,13 +334,16 @@ class InventoryApi {
     required List<Map<String, dynamic>> lines,
   }) async {
     final clientId = generateUuidV4();
-    await _client.rpc('update_branch_order', params: {
-      'p_client_id': clientId,
-      'p_order_id': orderId,
-      'p_expected_version': expectedVersion,
-      'p_notes': notes,
-      'p_lines': lines,
-    });
+    await _client.rpc(
+      'update_branch_order',
+      params: {
+        'p_client_id': clientId,
+        'p_order_id': orderId,
+        'p_expected_version': expectedVersion,
+        'p_notes': notes,
+        'p_lines': lines,
+      },
+    );
   }
 
   Future<void> cancelBranchOrder({
@@ -327,10 +351,10 @@ class InventoryApi {
     required int expectedVersion,
   }) async {
     // ملاحظة: الدالة cancel_branch_order تقبل (p_order_id, p_expected_version) فقط بدون p_client_id
-    await _client.rpc('cancel_branch_order', params: {
-      'p_order_id': orderId,
-      'p_expected_version': expectedVersion,
-    });
+    await _client.rpc(
+      'cancel_branch_order',
+      params: {'p_order_id': orderId, 'p_expected_version': expectedVersion},
+    );
   }
 
   /// قرار طلب الفرع — أمين المخزن
@@ -343,13 +367,18 @@ class InventoryApi {
     required List<Map<String, dynamic>> lines,
     required int expectedVersion,
   }) async {
-    final res = _asMap(await _client.rpc('decide_branch_order', params: {
-      'p_order_id': orderId,
-      'p_expected_version': expectedVersion,
-      'p_decision': approve ? 'approved' : 'rejected',
-      'p_rejection_reason': rejectionReason,
-      'p_lines': lines.isEmpty ? null : lines,
-    }));
+    final res = _asMap(
+      await _client.rpc(
+        'decide_branch_order',
+        params: {
+          'p_order_id': orderId,
+          'p_expected_version': expectedVersion,
+          'p_decision': approve ? 'approved' : 'rejected',
+          'p_rejection_reason': rejectionReason,
+          'p_lines': lines.isEmpty ? null : lines,
+        },
+      ),
+    );
     return BranchOrderDecisionResult(
       stockDelta: _parseStock(res['stock']),
       stamps: _asMap(res['stamps']),
@@ -361,11 +390,14 @@ class InventoryApi {
     required int expectedVersion,
   }) async {
     final clientId = generateUuidV4();
-    await _client.rpc('receive_branch_order', params: {
-      'p_client_id': clientId,
-      'p_order_id': orderId,
-      'p_expected_version': expectedVersion,
-    });
+    await _client.rpc(
+      'receive_branch_order',
+      params: {
+        'p_client_id': clientId,
+        'p_order_id': orderId,
+        'p_expected_version': expectedVersion,
+      },
+    );
   }
 
   // ── الجرد ──────────────────────────────────────────────────────────────────
@@ -378,14 +410,17 @@ class InventoryApi {
     required List<Map<String, dynamic>> lines,
   }) async {
     final clientId = generateUuidV4();
-    final res = await _client.rpc('apply_stocktake', params: {
-      'p_client_id': clientId,
-      'p_token': token,          // null صريح في المعاينة — التوقيع يقبله
-      'p_dry_run': dryRun,
-      'p_warehouse_id': warehouseId, // null صريح بدون ? لضمان إرسال المفتاح
-      'p_notes': notes,
-      'p_lines': lines,
-    });
+    final res = await _client.rpc(
+      'apply_stocktake',
+      params: {
+        'p_client_id': clientId,
+        'p_token': token, // null صريح في المعاينة — التوقيع يقبله
+        'p_dry_run': dryRun,
+        'p_warehouse_id': warehouseId, // null صريح بدون ? لضمان إرسال المفتاح
+        'p_notes': notes,
+        'p_lines': lines,
+      },
+    );
     return StocktakePreview.fromJson(res as Map<String, dynamic>);
   }
 
@@ -401,12 +436,15 @@ class InventoryApi {
     final clientId = generateUuidV4();
     // دمج items والـ categories في قائمة واحدة p_rows
     // كل صف يحتوي على: name, category_name, unit_code, opening_qty?, unit_cost?, ...
-    final res = await _client.rpc('import_inventory_items', params: {
-      'p_client_id': clientId,
-      'p_token': dryRun ? null : token,
-      'p_dry_run': dryRun,
-      'p_rows': items,
-    });
+    final res = await _client.rpc(
+      'import_inventory_items',
+      params: {
+        'p_client_id': clientId,
+        'p_token': dryRun ? null : token,
+        'p_dry_run': dryRun,
+        'p_rows': items,
+      },
+    );
     return res as Map<String, dynamic>;
   }
 
@@ -415,7 +453,10 @@ class InventoryApi {
   /// إنشاء أو تعديل صنف مخزون عبر save_inventory_item
   Future<ItemSaveResult> saveItem(Map<String, dynamic> params) async {
     try {
-      final res = await _client.rpc('save_inventory_item', params: {'p': params});
+      final res = await _client.rpc(
+        'save_inventory_item',
+        params: {'p': params},
+      );
       return ItemSaveResult.fromJson(res as Map<String, dynamic>);
     } on Exception catch (e) {
       throw _mapNetworkError(e);
@@ -425,7 +466,10 @@ class InventoryApi {
   /// إنشاء أو تعديل تصنيف عبر save_inventory_category
   Future<CategorySaveResult> saveCategory(Map<String, dynamic> params) async {
     try {
-      final res = await _client.rpc('save_inventory_category', params: {'p': params});
+      final res = await _client.rpc(
+        'save_inventory_category',
+        params: {'p': params},
+      );
       return CategorySaveResult.fromJson(res as Map<String, dynamic>);
     } on Exception catch (e) {
       throw _mapNetworkError(e);
@@ -448,10 +492,10 @@ class InventoryApi {
     String password,
     String action,
   ) async {
-    final res = await _client.rpc('admin_issue_approval', params: {
-      'p_password': password,
-      'p_action': action,
-    });
+    final res = await _client.rpc(
+      'admin_issue_approval',
+      params: {'p_password': password, 'p_action': action},
+    );
     return res as Map<String, dynamic>;
   }
 
@@ -459,9 +503,10 @@ class InventoryApi {
 
   /// جلب بصمات السيرفر لقائمة مفاتيح — طلب < 300 بايت
   Future<Map<String, int>> getStamps(List<String> keys) async {
-    final res = await _client.rpc('inventory_get_stamps', params: {
-      'p_keys': keys,
-    });
+    final res = await _client.rpc(
+      'inventory_get_stamps',
+      params: {'p_keys': keys},
+    );
     if (res == null) return {};
     final map = res as Map<String, dynamic>;
     return map.map((k, v) => MapEntry(k, (v as num).toInt()));
@@ -474,12 +519,15 @@ class InventoryApi {
     int offset = 0,
     int limit = 1000,
   }) async {
-    final res = await _client.rpc('inventory_get_catalog', params: {
-      'p_part': part,
-      'p_since': ?since,
-      'p_offset': offset,
-      'p_limit': limit,
-    });
+    final res = await _client.rpc(
+      'inventory_get_catalog',
+      params: {
+        'p_part': part,
+        'p_since': ?since,
+        'p_offset': offset,
+        'p_limit': limit,
+      },
+    );
     return res as Map<String, dynamic>;
   }
 
@@ -488,21 +536,20 @@ class InventoryApi {
     String? warehouseId,
     String? since,
   }) async {
-    final res = await _client.rpc('inventory_get_stock', params: {
-      'p_warehouse_id': ?warehouseId,
-      'p_since': ?since,
-    });
+    final res = await _client.rpc(
+      'inventory_get_stock',
+      params: {'p_warehouse_id': ?warehouseId, 'p_since': ?since},
+    );
     return res as Map<String, dynamic>;
   }
 
   // ── الإشعارات ─────────────────────────────────────────────────────────────
 
-  Future<NotificationSummary> getNotificationsSummary({
-    int limit = 50,
-  }) async {
-    final res = await _client.rpc('notifications_summary', params: {
-      'p_limit': limit,
-    });
+  Future<NotificationSummary> getNotificationsSummary({int limit = 50}) async {
+    final res = await _client.rpc(
+      'notifications_summary',
+      params: {'p_limit': limit},
+    );
     return NotificationSummary.fromJson(res as Map<String, dynamic>);
   }
 
@@ -520,7 +567,9 @@ class InventoryApi {
   Future<List<StockValuation>> fetchStockValuation() async {
     final res = await _client
         .from('v_stock_valuation')
-        .select('warehouse_id, warehouse_name, item_id, sku, item_name, category_name, quantity, avg_cost, total_value');
+        .select(
+          'warehouse_id, warehouse_name, item_id, sku, item_name, category_name, quantity, avg_cost, total_value',
+        );
     return res.map((j) => StockValuation.fromJson(j)).toList();
   }
 
@@ -528,7 +577,9 @@ class InventoryApi {
   Future<List<LowStockReport>> fetchLowStock() async {
     final res = await _client
         .from('v_low_stock')
-        .select('item_id, sku, item_name, min_level, current_qty, shortage, shortage_value');
+        .select(
+          'item_id, sku, item_name, min_level, current_qty, shortage, shortage_value',
+        );
     return res.map((j) => LowStockReport.fromJson(j)).toList();
   }
 }

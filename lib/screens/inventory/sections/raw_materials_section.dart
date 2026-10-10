@@ -79,10 +79,14 @@ class RawMaterialsSection extends StatelessWidget {
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: AppColors.primary),
+                              strokeWidth: 2,
+                              color: AppColors.primary,
+                            ),
                           )
-                        : const Icon(Icons.sync_rounded,
-                            color: AppColors.onSurfaceVariant),
+                        : const Icon(
+                            Icons.sync_rounded,
+                            color: AppColors.onSurfaceVariant,
+                          ),
                     onPressed: state.isLoading
                         ? null
                         : cubit.refreshCatalogAndStock,
@@ -101,18 +105,25 @@ class RawMaterialsSection extends StatelessWidget {
                         child: const ImportItemsDialog(),
                       ),
                     ),
-                    icon: const Icon(Icons.file_upload_outlined,
-                        color: AppColors.onSurface, size: 18),
+                    icon: const Icon(
+                      Icons.file_upload_outlined,
+                      color: AppColors.onSurface,
+                      size: 18,
+                    ),
                     label: Text(
                       'استيراد Excel',
                       style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurface),
+                        color: AppColors.onSurface,
+                      ),
                     ),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(
-                          color: AppColors.surfaceContainerHigh),
+                        color: AppColors.surfaceContainerHigh,
+                      ),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -126,9 +137,12 @@ class RawMaterialsSection extends StatelessWidget {
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.onPrimary,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     onPressed: () => showDialog<void>(
                       context: context,
@@ -142,7 +156,8 @@ class RawMaterialsSection extends StatelessWidget {
                     label: Text(
                       'إضافة صنف',
                       style: GoogleFonts.ibmPlexSansArabic(
-                          fontWeight: FontWeight.bold),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),

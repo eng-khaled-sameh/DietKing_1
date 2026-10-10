@@ -12,8 +12,7 @@ class PosAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// مجموع ارتفاع الصفوف الثلاثة:
   /// titleBarHeight(40) + sessionInfoRow(48) + navTabs(44) = 132
-  static const double _totalHeight =
-      AppDimens.titleBarHeight + 48.0 + 44.0;
+  static const double _totalHeight = AppDimens.titleBarHeight + 48.0 + 44.0;
 
   @override
   Size get preferredSize => const Size.fromHeight(_totalHeight);

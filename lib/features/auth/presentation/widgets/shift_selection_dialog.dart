@@ -32,8 +32,9 @@ class ShiftSelectionDialog extends StatefulWidget {
 
 class _ShiftSelectionDialogState extends State<ShiftSelectionDialog> {
   String _selectedShiftId = 'evening'; // الافتراضي: الوردية المسائية
-  final TextEditingController _cashFloatController =
-      TextEditingController(text: '500');
+  final TextEditingController _cashFloatController = TextEditingController(
+    text: '500',
+  );
 
   final List<Map<String, dynamic>> _shifts = [
     {
@@ -84,9 +85,7 @@ class _ShiftSelectionDialogState extends State<ShiftSelectionDialog> {
     // إغلاق النافذة والانتقال لشاشة البيع بالوجبة الرئيسية
     Navigator.of(context).pop();
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const MealSalesScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const MealSalesScreen()),
     );
   }
 
@@ -152,9 +151,12 @@ class _ShiftSelectionDialogState extends State<ShiftSelectionDialog> {
                             onTap: () {
                               setState(() {
                                 _selectedShiftId = id;
-                                ShiftInfo.currentShiftTitle = shift['title'] as String;
-                                ShiftInfo.cashierName = shift['cashierName'] as String;
-                                ShiftInfo.branchName = shift['branchName'] as String;
+                                ShiftInfo.currentShiftTitle =
+                                    shift['title'] as String;
+                                ShiftInfo.cashierName =
+                                    shift['cashierName'] as String;
+                                ShiftInfo.branchName =
+                                    shift['branchName'] as String;
                               });
                             },
                           ),
@@ -175,9 +177,7 @@ class _ShiftSelectionDialogState extends State<ShiftSelectionDialog> {
                     const SizedBox(height: AppDimens.spaceXl),
 
                     // 4. زر التأكيد وافتتاح الوردية
-                    ShiftStartButton(
-                      onPressed: _handleStartShift,
-                    ),
+                    ShiftStartButton(onPressed: _handleStartShift),
                   ],
                 ),
               ),

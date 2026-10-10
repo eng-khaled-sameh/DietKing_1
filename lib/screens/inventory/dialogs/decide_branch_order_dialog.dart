@@ -21,8 +21,7 @@ class DecideBranchOrderDialog extends StatefulWidget {
       _DecideBranchOrderDialogState();
 }
 
-class _DecideBranchOrderDialogState
-    extends State<DecideBranchOrderDialog> {
+class _DecideBranchOrderDialogState extends State<DecideBranchOrderDialog> {
   final _rejectionCtrl = TextEditingController();
   late final List<_DecideLine> _lines;
   bool _submitting = false;
@@ -61,8 +60,8 @@ class _DecideBranchOrderDialogState
 
     try {
       final lines = _lines.map((l) {
-        final qty = double.tryParse(l.approvedCtrl.text.trim()) ??
-            l.line.qtyRequested;
+        final qty =
+            double.tryParse(l.approvedCtrl.text.trim()) ?? l.line.qtyRequested;
         return <String, dynamic>{
           'line_id': l.line.id,
           'qty_approved': approve ? qty : 0.0,
@@ -70,13 +69,12 @@ class _DecideBranchOrderDialogState
       }).toList();
 
       await context.read<InventoryCubit>().decideBranchOrder(
-            orderId: widget.order.id,
-            approve: approve,
-            rejectionReason:
-                approve ? null : _rejectionCtrl.text.trim(),
-            lines: lines,
-            expectedVersion: widget.order.version,
-          );
+        orderId: widget.order.id,
+        approve: approve,
+        rejectionReason: approve ? null : _rejectionCtrl.text.trim(),
+        lines: lines,
+        expectedVersion: widget.order.version,
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -103,8 +101,9 @@ class _DecideBranchOrderDialogState
         textDirection: TextDirection.rtl,
         child: Dialog(
           backgroundColor: AppColors.surfaceContainer,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: SizedBox(
             width: 680,
             child: Column(
@@ -148,22 +147,27 @@ class _DecideBranchOrderDialogState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('قرار طلب الفرع',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurface,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18)),
-                Text('رقم: ${widget.order.number} — ${widget.order.branchName}',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurfaceVariant,
-                        fontSize: 12)),
+                Text(
+                  'قرار طلب الفرع',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                Text(
+                  'رقم: ${widget.order.number} — ${widget.order.branchName}',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),
           IconButton(
             icon: const Icon(Icons.close, color: AppColors.onSurfaceVariant),
-            onPressed:
-                _submitting ? null : () => Navigator.of(context).pop(),
+            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
           ),
         ],
       ),
@@ -189,22 +193,26 @@ class _DecideBranchOrderDialogState
   }
 
   Widget _row(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 90,
-              child: Text(label,
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurfaceVariant,
-                      fontSize: 13)),
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 90,
+          child: Text(
+            label,
+            style: GoogleFonts.ibmPlexSansArabic(
+              color: AppColors.onSurfaceVariant,
+              fontSize: 13,
             ),
-            Text(value,
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurface)),
-          ],
+          ),
         ),
-      );
+        Text(
+          value,
+          style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildLinesTable(BuildContext context) {
     return BlocBuilder<InventoryCubit, InventoryState>(
@@ -220,7 +228,9 @@ class _DecideBranchOrderDialogState
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 color: AppColors.surfaceContainerHigh,
                 child: Row(
                   children: [
@@ -235,22 +245,27 @@ class _DecideBranchOrderDialogState
                 final l = _lines[i];
                 final item = itemsById[l.line.itemId];
                 final available = state.stockFor(l.line.itemId);
-                
+
                 return StatefulBuilder(
                   builder: (context, setStateLine) {
-                    final currentVal = double.tryParse(l.approvedCtrl.text) ?? 0.0;
+                    final currentVal =
+                        double.tryParse(l.approvedCtrl.text) ?? 0.0;
                     final isInsufficient = available < currentVal;
-                    
+
                     return Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: isInsufficient
                             ? AppColors.statusRed.withValues(alpha: 0.05)
                             : null,
                         border: const Border(
-                            bottom: BorderSide(
-                                color: AppColors.surfaceContainerHigh)),
+                          bottom: BorderSide(
+                            color: AppColors.surfaceContainerHigh,
+                          ),
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -261,9 +276,11 @@ class _DecideBranchOrderDialogState
                           Expanded(
                             flex: 2,
                             child: Text(
-                                formatCatalogQuantity(l.line.qtyRequested, item),
-                                style: GoogleFonts.ibmPlexSansArabic(
-                                    color: AppColors.onSurfaceVariant)),
+                              formatCatalogQuantity(l.line.qtyRequested, item),
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
                           ),
                           Expanded(
                             flex: 2,
@@ -284,18 +301,31 @@ class _DecideBranchOrderDialogState
                                 Expanded(
                                   child: TextField(
                                     controller: l.approvedCtrl,
-                                    keyboardType: const TextInputType.numberWithOptions(
-                                        decimal: true),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                     style: GoogleFonts.ibmPlexSansArabic(
-                                        color: isInsufficient ? AppColors.statusRed : AppColors.onSurface),
+                                      color: isInsufficient
+                                          ? AppColors.statusRed
+                                          : AppColors.onSurface,
+                                    ),
                                     onChanged: (val) {
                                       final v = double.tryParse(val) ?? 0.0;
                                       if (v > l.line.qtyRequested) {
-                                        l.approvedCtrl.text = l.line.qtyRequested.toStringAsFixed(0);
-                                        l.approvedCtrl.selection = TextSelection.collapsed(offset: l.approvedCtrl.text.length);
+                                        l.approvedCtrl.text = l
+                                            .line
+                                            .qtyRequested
+                                            .toStringAsFixed(0);
+                                        l.approvedCtrl.selection =
+                                            TextSelection.collapsed(
+                                              offset:
+                                                  l.approvedCtrl.text.length,
+                                            );
                                       } else if (v < 0) {
                                         l.approvedCtrl.text = '0';
-                                        l.approvedCtrl.selection = TextSelection.collapsed(offset: 1);
+                                        l.approvedCtrl.selection =
+                                            TextSelection.collapsed(offset: 1);
                                       }
                                       setStateLine(() {});
                                     },
@@ -303,13 +333,18 @@ class _DecideBranchOrderDialogState
                                       isDense: true,
                                       suffixText: item?.unitCode ?? '',
                                       hintStyle: GoogleFonts.ibmPlexSansArabic(
-                                          color: AppColors.onSurfaceVariant),
+                                        color: AppColors.onSurfaceVariant,
+                                      ),
                                       enabledBorder: const UnderlineInputBorder(
-                                          borderSide: BorderSide(
-                                              color: AppColors.outlineVariant)),
+                                        borderSide: BorderSide(
+                                          color: AppColors.outlineVariant,
+                                        ),
+                                      ),
                                       focusedBorder: const UnderlineInputBorder(
-                                          borderSide:
-                                              BorderSide(color: AppColors.primary)),
+                                        borderSide: BorderSide(
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -320,12 +355,18 @@ class _DecideBranchOrderDialogState
                                     setStateLine(() {});
                                   },
                                   style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
                                     minimumSize: Size.zero,
                                   ),
-                                  child: Text('غير متوفر',
-                                      style: GoogleFonts.ibmPlexSansArabic(
-                                          color: AppColors.statusRed, fontSize: 12)),
+                                  child: Text(
+                                    'غير متوفر',
+                                    style: GoogleFonts.ibmPlexSansArabic(
+                                      color: AppColors.statusRed,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -351,11 +392,14 @@ class _DecideBranchOrderDialogState
       decoration: InputDecoration(
         labelText: 'سبب الرفض (مطلوب عند الرفض فقط)',
         labelStyle: GoogleFonts.ibmPlexSansArabic(
-            color: AppColors.onSurfaceVariant),
+          color: AppColors.onSurfaceVariant,
+        ),
         enabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.outlineVariant)),
+          borderSide: BorderSide(color: AppColors.outlineVariant),
+        ),
         focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.primary)),
+          borderSide: BorderSide(color: AppColors.primary),
+        ),
       ),
     );
   }
@@ -367,18 +411,19 @@ class _DecideBranchOrderDialogState
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           TextButton(
-            onPressed:
-                _submitting ? null : () => Navigator.of(context).pop(),
-            child: Text('إلغاء',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant)),
+            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+            child: Text(
+              'إلغاء',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: AppColors.statusRed),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
             onPressed: _submitting ? null : () => _submit(false),
             icon: (_submitting && !_approving)
@@ -386,19 +431,25 @@ class _DecideBranchOrderDialogState
                     width: 14,
                     height: 14,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.statusRed))
-                : const Icon(Icons.cancel_outlined,
-                    color: AppColors.statusRed, size: 18),
-            label: Text('رفض',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.statusRed)),
+                      strokeWidth: 2,
+                      color: AppColors.statusRed,
+                    ),
+                  )
+                : const Icon(
+                    Icons.cancel_outlined,
+                    color: AppColors.statusRed,
+                    size: 18,
+                  ),
+            label: Text(
+              'رفض',
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.statusRed),
+            ),
           ),
           const SizedBox(width: 8),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.statusGreen,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
             onPressed: _submitting ? null : () => _submit(true),
             icon: (_submitting && _approving)
@@ -406,13 +457,22 @@ class _DecideBranchOrderDialogState
                     width: 14,
                     height: 14,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.onPrimary))
-                : const Icon(Icons.check_circle_outline,
-                    color: AppColors.onPrimary, size: 18),
-            label: Text('اعتماد وصرف الكميات',
-                style: GoogleFonts.ibmPlexSansArabic(
+                      strokeWidth: 2,
+                      color: AppColors.onPrimary,
+                    ),
+                  )
+                : const Icon(
+                    Icons.check_circle_outline,
                     color: AppColors.onPrimary,
-                    fontWeight: FontWeight.bold)),
+                    size: 18,
+                  ),
+            label: Text(
+              'اعتماد وصرف الكميات',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -420,13 +480,16 @@ class _DecideBranchOrderDialogState
   }
 
   Widget _th(String label, {int flex = 1}) => Expanded(
-        flex: flex,
-        child: Text(label,
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurface,
-                fontWeight: FontWeight.bold,
-                fontSize: 13)),
-      );
+    flex: flex,
+    child: Text(
+      label,
+      style: GoogleFonts.ibmPlexSansArabic(
+        color: AppColors.onSurface,
+        fontWeight: FontWeight.bold,
+        fontSize: 13,
+      ),
+    ),
+  );
 
   String _fmtDate(DateTime d) {
     final l = d.toLocal();

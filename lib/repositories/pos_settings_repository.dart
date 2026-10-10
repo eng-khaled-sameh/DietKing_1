@@ -79,11 +79,10 @@ class PosSettingsRepository {
   /// كتابة القيمة في app_meta تحت المفتاح [_vatCacheKey]
   Future<void> _writeToCache(double rate) async {
     final database = await LocalDb.db;
-    await database.insert(
-      'app_meta',
-      {'key': _vatCacheKey, 'value': rate.toString()},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await database.insert('app_meta', {
+      'key': _vatCacheKey,
+      'value': rate.toString(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 }
 

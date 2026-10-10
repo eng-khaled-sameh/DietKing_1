@@ -206,8 +206,11 @@ class _SaveCategoryDialogState extends State<SaveCategoryDialog> {
       ],
       textCapitalization: TextCapitalization.characters,
       style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
-      decoration: _inputDecoration('الكود المختصر (2–4 حروف)', isRequired: true,
-          hint: 'مثال: RAW, SUP'),
+      decoration: _inputDecoration(
+        'الكود المختصر (2–4 حروف)',
+        isRequired: true,
+        hint: 'مثال: RAW, SUP',
+      ),
     );
   }
 
@@ -257,15 +260,17 @@ class _SaveCategoryDialogState extends State<SaveCategoryDialog> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (selected)
-                const Icon(Icons.check_circle_rounded,
-                    color: AppColors.primary, size: 16),
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: AppColors.primary,
+                  size: 16,
+                ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: GoogleFonts.ibmPlexSansArabic(
                   color: selected ? AppColors.primary : AppColors.onSurface,
-                  fontWeight:
-                      selected ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
             ],
@@ -286,7 +291,8 @@ class _SaveCategoryDialogState extends State<SaveCategoryDialog> {
             child: Text(
               'إلغاء',
               style: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.onSurfaceVariant),
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -294,10 +300,10 @@ class _SaveCategoryDialogState extends State<SaveCategoryDialog> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.onPrimary,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: _submitting ? null : _submit,
             child: _submitting
@@ -305,12 +311,15 @@ class _SaveCategoryDialogState extends State<SaveCategoryDialog> {
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.onPrimary),
+                      strokeWidth: 2,
+                      color: AppColors.onPrimary,
+                    ),
                   )
                 : Text(
                     'حفظ',
                     style: GoogleFonts.ibmPlexSansArabic(
-                        fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
           ),
         ],
@@ -318,15 +327,20 @@ class _SaveCategoryDialogState extends State<SaveCategoryDialog> {
     );
   }
 
-  InputDecoration _inputDecoration(String label,
-      {bool isRequired = false, String? hint}) {
+  InputDecoration _inputDecoration(
+    String label, {
+    bool isRequired = false,
+    String? hint,
+  }) {
     return InputDecoration(
       labelText: isRequired ? '$label *' : label,
       hintText: hint,
-      labelStyle:
-          GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
-      hintStyle:
-          GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+      labelStyle: GoogleFonts.ibmPlexSansArabic(
+        color: AppColors.onSurfaceVariant,
+      ),
+      hintStyle: GoogleFonts.ibmPlexSansArabic(
+        color: AppColors.onSurfaceVariant,
+      ),
       filled: true,
       fillColor: AppColors.surfaceContainerHigh,
       border: OutlineInputBorder(

@@ -48,8 +48,10 @@ class KitchenIssueSection extends StatelessWidget {
             Tooltip(
               message: 'تحديث السجل',
               child: IconButton(
-                icon: const Icon(Icons.refresh_rounded,
-                    color: AppColors.onSurfaceVariant),
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  color: AppColors.onSurfaceVariant,
+                ),
                 onPressed: () {
                   context.read<InventoryCubit>()
                     ..clearKitchenCache()
@@ -61,16 +63,23 @@ class KitchenIssueSection extends StatelessWidget {
             // تصدير
             OutlinedButton.icon(
               onPressed: () => _exportCsv(context),
-              icon: const Icon(Icons.file_download_outlined,
-                  color: AppColors.onSurface, size: 18),
-              label: Text('تصدير',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurface)),
+              icon: const Icon(
+                Icons.file_download_outlined,
+                color: AppColors.onSurface,
+                size: 18,
+              ),
+              label: Text(
+                'تصدير',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onSurface,
+                ),
+              ),
               style: OutlinedButton.styleFrom(
-                side:
-                    const BorderSide(color: AppColors.surfaceContainerHigh),
+                side: const BorderSide(color: AppColors.surfaceContainerHigh),
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
+                  horizontal: 14,
+                  vertical: 12,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -87,13 +96,16 @@ class KitchenIssueSection extends StatelessWidget {
               label: Text(
                 'إصدار صرفية جديدة',
                 style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onPrimary,
-                    fontWeight: FontWeight.bold),
+                  color: AppColors.onPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.secondary,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -106,18 +118,27 @@ class KitchenIssueSection extends StatelessWidget {
     try {
       final state = context.read<InventoryCubit>().state;
       final rows = state.kitchenIssues
-          .map((i) => [
-                i.number,
-                i.cookPlan ?? '',
-                '${i.lines.length} خامات',
-                i.chefName,
-                i.shift.arabicLabel,
-                i.createdAt.toLocal().toString().substring(0, 16),
-              ])
+          .map(
+            (i) => [
+              i.number,
+              i.cookPlan ?? '',
+              '${i.lines.length} خامات',
+              i.chefName,
+              i.shift.arabicLabel,
+              i.createdAt.toLocal().toString().substring(0, 16),
+            ],
+          )
           .toList();
       final path = await CsvExporter.save(
         baseName: 'KitchenIssues',
-        headers: ['رقم الإذن', 'خطة الإنتاج', 'الخامات', 'الشيف', 'الوردية', 'التاريخ'],
+        headers: [
+          'رقم الإذن',
+          'خطة الإنتاج',
+          'الخامات',
+          'الشيف',
+          'الوردية',
+          'التاريخ',
+        ],
         rows: rows,
       );
       if (context.mounted) {

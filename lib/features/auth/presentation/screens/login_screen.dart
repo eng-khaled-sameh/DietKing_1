@@ -63,18 +63,18 @@ class _LoginScreenState extends State<LoginScreen> {
             .toList();
         if (matches.isEmpty) {
           await context.read<AuthCubit>().block(
-                'الفرع المرتبط بحسابك غير نشط، تواصل مع الإدارة',
-              );
+            'الفرع المرتبط بحسابك غير نشط، تواصل مع الإدارة',
+          );
           return;
         }
         profile = await context.read<AuthCubit>().cacheCashierBranch(
-              matches.single,
-            );
+          matches.single,
+        );
         if (!mounted) return;
       } else if (profile.branchName == null || profile.branchCode == null) {
         await context.read<AuthCubit>().block(
-              'تعذر تحميل بيانات الفرع، تواصل مع الإدارة',
-            );
+          'تعذر تحميل بيانات الفرع، تواصل مع الإدارة',
+        );
         return;
       }
     }

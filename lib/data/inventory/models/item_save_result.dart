@@ -38,10 +38,7 @@ class CategorySaveResult {
   final InventoryCategory category;
   final Map<String, int> stamps;
 
-  const CategorySaveResult({
-    required this.category,
-    required this.stamps,
-  });
+  const CategorySaveResult({required this.category, required this.stamps});
 
   factory CategorySaveResult.fromJson(Map<String, dynamic> j) {
     final catJson = j['category'] as Map<String, dynamic>;

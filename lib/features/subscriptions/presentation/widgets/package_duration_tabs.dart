@@ -43,16 +43,14 @@ class PackageDurationTabs extends StatelessWidget {
                   color: selected
                       ? AppColors.primaryContainer
                       : Colors.transparent,
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusSm - 2),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusSm - 2),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   '$days يوم',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: AppDimens.fontSm,
-                    fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     color: selected
                         ? AppColors.onPrimary
                         : AppColors.onSurfaceVariant,

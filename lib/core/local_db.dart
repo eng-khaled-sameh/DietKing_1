@@ -193,7 +193,7 @@ class LocalDb {
             value TEXT NOT NULL
           )
         ''');
-        
+
         await db.execute('''
           CREATE TABLE IF NOT EXISTS inventory_cache (
             key         TEXT PRIMARY KEY,
@@ -257,8 +257,11 @@ class LocalRecordsRepository {
     final database = await LocalDb.db;
     return database.transaction<String>((txn) async {
       final metaKey = 'invoice_seq_${branchCode}_${_todayKey()}';
-      final rows = await txn
-          .query('app_meta', where: 'key = ?', whereArgs: [metaKey]);
+      final rows = await txn.query(
+        'app_meta',
+        where: 'key = ?',
+        whereArgs: [metaKey],
+      );
       int seq = rows.isEmpty ? 0 : int.parse(rows.first['value'] as String);
       seq++;
       if (rows.isEmpty) {
@@ -306,17 +309,16 @@ class LocalRecordsRepository {
   }
 
   /// تحديث السجل كـ failed أو زيادة المحاولات
-  Future<void> markFailed(int id,
-      {required String error, required int newAttempts}) async {
+  Future<void> markFailed(
+    int id, {
+    required String error,
+    required int newAttempts,
+  }) async {
     final database = await LocalDb.db;
     final newStatus = newAttempts >= 5 ? 'failed' : 'pending';
     await database.update(
       'local_records',
-      {
-        'status': newStatus,
-        'attempts': newAttempts,
-        'last_error': error,
-      },
+      {'status': newStatus, 'attempts': newAttempts, 'last_error': error},
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -337,8 +339,7 @@ class LocalRecordsRepository {
   }
 
   /// جلب سجلات جلسة معينة حسب النوع
-  Future<List<LocalRecord>> getBySession(
-      String sessionId, String kind) async {
+  Future<List<LocalRecord>> getBySession(String sessionId, String kind) async {
     final database = await LocalDb.db;
     final rows = await database.query(
       'local_records',
@@ -408,8 +409,8 @@ class LocalRecordsRepository {
       final oldestStr = oldestRows.first['created_at'] as String;
       final oldest = DateTime.parse(oldestStr);
       final fourMonthsAgo = DateTime.now().toUtc().subtract(
-            const Duration(days: 120),
-          );
+        const Duration(days: 120),
+      );
       if (!oldest.isBefore(fourMonthsAgo)) return;
 
       // احذف synced أقدم من شهر واحد
@@ -424,8 +425,11 @@ class LocalRecordsRepository {
 
       // خزّن تاريخ آخر تنظيف
       final key = 'last_purge';
-      final existing = await txn
-          .query('app_meta', where: 'key = ?', whereArgs: [key]);
+      final existing = await txn.query(
+        'app_meta',
+        where: 'key = ?',
+        whereArgs: [key],
+      );
       final now = DateTime.now().toUtc().toIso8601String();
       if (existing.isEmpty) {
         await txn.insert('app_meta', {'key': key, 'value': now});

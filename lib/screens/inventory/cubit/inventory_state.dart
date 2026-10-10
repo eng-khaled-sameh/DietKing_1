@@ -33,9 +33,9 @@ class InventoryState extends Equatable {
   final InventorySection section;
 
   // ── حالة التحميل ──────────────────────────────────────────────────────────
-  final bool isLoading;     // تحميل الكتالوج والأرصدة
+  final bool isLoading; // تحميل الكتالوج والأرصدة
   final bool isLoadingDocs; // تحميل المستندات
-  final bool isSubmitting;  // تنفيذ عملية (إنشاء/مراجعة/استلام...)
+  final bool isSubmitting; // تنفيذ عملية (إنشاء/مراجعة/استلام...)
   final String? error;
 
   // ── الكتالوج والأرصدة (من الكاش) ────────────────────────────────────────
@@ -96,11 +96,12 @@ class InventoryState extends Equatable {
     this.stockValuation = const [],
     this.lowStockReport = const [],
     this.highlightedItemId,
-  }) : catalogItemsById = catalogItemsById ??
-            Map.unmodifiable({
-              for (final item in catalog?.items ?? const <InventoryItem>[])
-                item.id: item,
-            });
+  }) : catalogItemsById =
+           catalogItemsById ??
+           Map.unmodifiable({
+             for (final item in catalog?.items ?? const <InventoryItem>[])
+               item.id: item,
+           });
 
   factory InventoryState.initial() => InventoryState();
 
@@ -131,64 +132,63 @@ class InventoryState extends Equatable {
   }) {
     final nextCatalog = catalog ?? this.catalog;
     return InventoryState(
-      section:              section           ?? this.section,
-      isLoading:            isLoading         ?? this.isLoading,
-      isLoadingDocs:        isLoadingDocs     ?? this.isLoadingDocs,
-      isSubmitting:         isSubmitting      ?? this.isSubmitting,
-      error:                error, // يُعاد ضبطه صراحةً: null = لا خطأ
-      catalog:              nextCatalog,
+      section: section ?? this.section,
+      isLoading: isLoading ?? this.isLoading,
+      isLoadingDocs: isLoadingDocs ?? this.isLoadingDocs,
+      isSubmitting: isSubmitting ?? this.isSubmitting,
+      error: error, // يُعاد ضبطه صراحةً: null = لا خطأ
+      catalog: nextCatalog,
       // نحتفظ بالفهرس فقط إن كان الكتالوج نفسه لم يتغير؛ أما عند وصول
       // كتالوج جديد فيُعاد بناؤه حتى يربط item_id باسم الصنف الصحيح.
-      catalogItemsById:     identical(nextCatalog, this.catalog)
+      catalogItemsById: identical(nextCatalog, this.catalog)
           ? this.catalogItemsById
           : null,
-      stock:                stock             ?? this.stock,
-      rawQuery:             rawQuery          ?? this.rawQuery,
-      rawCategoryIdFilter:  rawCategoryIdFilter, // null مسموح للتصفير
-      rawKindFilter:        rawKindFilter,
-      rawLowOnly:           rawLowOnly        ?? this.rawLowOnly,
-      rawSortColumn:        rawSortColumn     ?? this.rawSortColumn,
-      rawSortAscending:     rawSortAscending  ?? this.rawSortAscending,
-      supplyOrders:         supplyOrders      ?? this.supplyOrders,
-      supplyTab:            supplyTab         ?? this.supplyTab,
-      kitchenIssues:        kitchenIssues     ?? this.kitchenIssues,
-      kitchenBatches:       kitchenBatches    ?? this.kitchenBatches,
-      branchOrders:         branchOrders      ?? this.branchOrders,
-      stocktakeRecords:     stocktakeRecords  ?? this.stocktakeRecords,
-      stockValuation:       stockValuation    ?? this.stockValuation,
-      lowStockReport:       lowStockReport    ?? this.lowStockReport,
-      highlightedItemId:    clearHighlight ? null : (highlightedItemId ?? this.highlightedItemId),
+      stock: stock ?? this.stock,
+      rawQuery: rawQuery ?? this.rawQuery,
+      rawCategoryIdFilter: rawCategoryIdFilter, // null مسموح للتصفير
+      rawKindFilter: rawKindFilter,
+      rawLowOnly: rawLowOnly ?? this.rawLowOnly,
+      rawSortColumn: rawSortColumn ?? this.rawSortColumn,
+      rawSortAscending: rawSortAscending ?? this.rawSortAscending,
+      supplyOrders: supplyOrders ?? this.supplyOrders,
+      supplyTab: supplyTab ?? this.supplyTab,
+      kitchenIssues: kitchenIssues ?? this.kitchenIssues,
+      kitchenBatches: kitchenBatches ?? this.kitchenBatches,
+      branchOrders: branchOrders ?? this.branchOrders,
+      stocktakeRecords: stocktakeRecords ?? this.stocktakeRecords,
+      stockValuation: stockValuation ?? this.stockValuation,
+      lowStockReport: lowStockReport ?? this.lowStockReport,
+      highlightedItemId: clearHighlight
+          ? null
+          : (highlightedItemId ?? this.highlightedItemId),
     );
   }
 
   // --- إزالة الفلاتر القابلة للتصفير ---
 
   InventoryState nullifyRawCategoryFilter() => copyWith(
-        rawCategoryIdFilter: null,
-        rawKindFilter: rawKindFilter, // حافظ على قيمتها
-      );
+    rawCategoryIdFilter: null,
+    rawKindFilter: rawKindFilter, // حافظ على قيمتها
+  );
 
-  InventoryState setRawCategoryIdFilter(String id) => copyWith(
-        rawCategoryIdFilter: id,
-      );
+  InventoryState setRawCategoryIdFilter(String id) =>
+      copyWith(rawCategoryIdFilter: id);
 
-  InventoryState nullifyRawKindFilter() => copyWith(
-        rawKindFilter: null,
-      );
+  InventoryState nullifyRawKindFilter() => copyWith(rawKindFilter: null);
 
-  InventoryState setRawKindFilter(String kind) => copyWith(
-        rawKindFilter: kind,
-      );
+  InventoryState setRawKindFilter(String kind) => copyWith(rawKindFilter: kind);
 
   // ── حسابات مشتقة للـ UI ───────────────────────────────────────────────────
 
   /// خريطة الأرصدة: itemId → quantity
-  Map<String, double> get _stockMap =>
-      {for (final s in stock) s.itemId: s.quantity};
+  Map<String, double> get _stockMap => {
+    for (final s in stock) s.itemId: s.quantity,
+  };
 
   /// خريطة التصنيفات: id → InventoryCategory
-  Map<String, InventoryCategory> get _categoriesMap =>
-      {for (final c in catalog?.categories ?? <InventoryCategory>[]) c.id: c};
+  Map<String, InventoryCategory> get _categoriesMap => {
+    for (final c in catalog?.categories ?? <InventoryCategory>[]) c.id: c,
+  };
 
   /// الأصناف الظاهرة مع تطبيق جميع الفلاتر
   List<InventoryItemWithStock> get visibleItems {
@@ -199,33 +199,36 @@ class InventoryState extends Equatable {
 
     var filtered = catalog!.items
         .where((item) => item.isActive)
-        .map((item) => InventoryItemWithStock(
-              item: item,
-              stockQty: stockMap[item.id] ?? 0.0,
-              category: categoriesMap[item.categoryId],
-            ))
+        .map(
+          (item) => InventoryItemWithStock(
+            item: item,
+            stockQty: stockMap[item.id] ?? 0.0,
+            category: categoriesMap[item.categoryId],
+          ),
+        )
         .where((iws) {
-      // فلتر النوع (raw/supply/finished)
-      if (rawKindFilter != null) {
-        final kind = iws.category?.kind.name;
-        if (kind != rawKindFilter) return false;
-      }
-      // فلتر التصنيف
-      if (rawCategoryIdFilter != null &&
-          iws.item.categoryId != rawCategoryIdFilter) {
-        return false;
-      }
-      // فلتر النواقص
-      if (rawLowOnly && !iws.isLow) return false;
-      // بحث نصي
-      if (query.isNotEmpty) {
-        if (!iws.item.name.toLowerCase().contains(query) &&
-            !iws.item.sku.toLowerCase().contains(query)) {
-          return false;
-        }
-      }
-      return true;
-    }).toList();
+          // فلتر النوع (raw/supply/finished)
+          if (rawKindFilter != null) {
+            final kind = iws.category?.kind.name;
+            if (kind != rawKindFilter) return false;
+          }
+          // فلتر التصنيف
+          if (rawCategoryIdFilter != null &&
+              iws.item.categoryId != rawCategoryIdFilter) {
+            return false;
+          }
+          // فلتر النواقص
+          if (rawLowOnly && !iws.isLow) return false;
+          // بحث نصي
+          if (query.isNotEmpty) {
+            if (!iws.item.name.toLowerCase().contains(query) &&
+                !iws.item.sku.toLowerCase().contains(query)) {
+              return false;
+            }
+          }
+          return true;
+        })
+        .toList();
 
     // ترتيب
     if (rawSortColumn != null) {
@@ -296,13 +299,16 @@ class InventoryState extends Equatable {
     });
   }
 
-  int get pendingSupplyCount =>
-      supplyOrders.where((o) => o.status == SupplyOrderStatus.pendingReview).length;
+  int get pendingSupplyCount => supplyOrders
+      .where((o) => o.status == SupplyOrderStatus.pendingReview)
+      .length;
 
   int get activeSupplyCount => supplyOrders
-      .where((o) =>
-          o.status == SupplyOrderStatus.pendingReview ||
-          o.status == SupplyOrderStatus.approved)
+      .where(
+        (o) =>
+            o.status == SupplyOrderStatus.pendingReview ||
+            o.status == SupplyOrderStatus.approved,
+      )
       .length;
 
   List<SupplyOrder> supplyOrdersFor(SupplyOrderStatus status) =>
@@ -312,9 +318,11 @@ class InventoryState extends Equatable {
       branchOrders.where((o) => o.status == BranchOrderStatus.submitted).length;
 
   int get activeBranchOrdersCount => branchOrders
-      .where((o) =>
-          o.status == BranchOrderStatus.submitted ||
-          o.status == BranchOrderStatus.approved)
+      .where(
+        (o) =>
+            o.status == BranchOrderStatus.submitted ||
+            o.status == BranchOrderStatus.approved,
+      )
       .length;
 
   /// رصيد صنف معيّن في المستودع الرئيسي
@@ -322,27 +330,27 @@ class InventoryState extends Equatable {
 
   @override
   List<Object?> get props => [
-        section,
-        isLoading,
-        isLoadingDocs,
-        isSubmitting,
-        error,
-        catalog,
-        stock,
-        rawQuery,
-        rawCategoryIdFilter,
-        rawKindFilter,
-        rawLowOnly,
-        rawSortColumn,
-        rawSortAscending,
-        supplyOrders,
-        supplyTab,
-        kitchenIssues,
-        kitchenBatches,
-        branchOrders,
-        stocktakeRecords,
-        stockValuation,
-        lowStockReport,
-        highlightedItemId,
-      ];
+    section,
+    isLoading,
+    isLoadingDocs,
+    isSubmitting,
+    error,
+    catalog,
+    stock,
+    rawQuery,
+    rawCategoryIdFilter,
+    rawKindFilter,
+    rawLowOnly,
+    rawSortColumn,
+    rawSortAscending,
+    supplyOrders,
+    supplyTab,
+    kitchenIssues,
+    kitchenBatches,
+    branchOrders,
+    stocktakeRecords,
+    stockValuation,
+    lowStockReport,
+    highlightedItemId,
+  ];
 }

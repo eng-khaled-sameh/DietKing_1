@@ -65,7 +65,7 @@ class LoginLogoHeader extends StatelessWidget {
 
         // ── العنوان الرئيسي والفرعي ───────────────────────────────────────────
         Text(
-          'تسجيل دخول الكاشير',
+          'تسجيل دخول الموظف',
           style: GoogleFonts.ibmPlexSansArabic(
             fontSize: AppDimens.fontXxl,
             fontWeight: FontWeight.w800,

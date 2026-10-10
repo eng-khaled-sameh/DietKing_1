@@ -38,11 +38,7 @@ class ActionDockBar extends StatelessWidget {
           // ── يمين: اختصارات الكيبورد الثابتة ─────────────────────────────
           _KbShortcut(key_: 'Enter', label: 'تأكيد الاختيار'),
           const SizedBox(width: AppDimens.spaceMd),
-          _KbShortcut(
-            key_: 'Esc',
-            label: 'إلغاء التحديد',
-            onTap: onCancel,
-          ),
+          _KbShortcut(key_: 'Esc', label: 'إلغاء التحديد', onTap: onCancel),
 
           const Spacer(),
 
@@ -67,8 +63,7 @@ class ActionDockBar extends StatelessWidget {
                     'الباقة المحددة: ',
                     style: GoogleFonts.ibmPlexSansArabic(
                       fontSize: AppDimens.fontXs,
-                      color:
-                          AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                      color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
                     ),
                   ),
                   Text(
@@ -114,8 +109,7 @@ class ActionDockBar extends StatelessWidget {
                   'قيمة الاشتراك: ',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: AppDimens.fontXs,
-                    color:
-                        AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                    color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
                 ),
                 Text(
@@ -144,11 +138,7 @@ class ActionDockBar extends StatelessWidget {
 }
 
 class _KbShortcut extends StatelessWidget {
-  const _KbShortcut({
-    required this.key_,
-    required this.label,
-    this.onTap,
-  });
+  const _KbShortcut({required this.key_, required this.label, this.onTap});
 
   final String key_;
   final String label;
@@ -234,8 +224,7 @@ class _ContinueButtonState extends State<_ContinueButton> {
             boxShadow: _hovered
                 ? [
                     BoxShadow(
-                      color:
-                          AppColors.primaryContainer.withValues(alpha: 0.3),
+                      color: AppColors.primaryContainer.withValues(alpha: 0.3),
                       blurRadius: 12,
                     ),
                   ]

@@ -152,10 +152,7 @@ class SubPlanCard extends StatelessWidget {
           // ── تفاصيل الوجبات والسناكات ──────────────────────────────────────
           Row(
             children: [
-              _InfoChip(
-                icon: Icons.restaurant_rounded,
-                text: mealsCountText,
-              ),
+              _InfoChip(icon: Icons.restaurant_rounded, text: mealsCountText),
               const SizedBox(width: AppDimens.spaceSm),
               _InfoChip(
                 icon: Icons.bakery_dining_rounded,
@@ -221,8 +218,7 @@ class SubPlanCard extends StatelessWidget {
                 isSelected ? 'الباقة المختارة حالياً' : 'اختيار هذه الباقة',
                 style: GoogleFonts.ibmPlexSansArabic(
                   fontSize: AppDimens.fontMd,
-                  fontWeight:
-                      isSelected ? FontWeight.w800 : FontWeight.w600,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                 ),
               ),
             ),
@@ -234,10 +230,7 @@ class SubPlanCard extends StatelessWidget {
 }
 
 class _InfoChip extends StatelessWidget {
-  const _InfoChip({
-    required this.icon,
-    required this.text,
-  });
+  const _InfoChip({required this.icon, required this.text});
 
   final IconData icon;
   final String text;
@@ -256,11 +249,7 @@ class _InfoChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: AppDimens.iconSm,
-            color: AppColors.primary,
-          ),
+          Icon(icon, size: AppDimens.iconSm, color: AppColors.primary),
           const SizedBox(width: AppDimens.spaceXs),
           Text(
             text,

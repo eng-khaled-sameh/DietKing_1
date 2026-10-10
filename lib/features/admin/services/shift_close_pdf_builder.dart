@@ -87,7 +87,7 @@ Future<Uint8List> buildShiftClosePdf(ShiftCloseReportData data) async {
           font,
           boldFont,
         ),
-        _infoRow('الكاشير:', data.cashierName, font, boldFont),
+        _infoRow('الموظف:', data.cashierName, font, boldFont),
         _infoRow('الوردية:', data.shift, font, boldFont),
         _infoRow('وقت البداية:', fmt(data.openedAt), font, boldFont),
         _infoRow('وقت الإقفال:', fmt(data.closedAt), font, boldFont),

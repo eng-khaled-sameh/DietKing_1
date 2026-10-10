@@ -8,10 +8,7 @@ class CatalogData {
   final List<ProductCategory> categories;
   final List<Product> products;
 
-  const CatalogData({
-    required this.categories,
-    required this.products,
-  });
+  const CatalogData({required this.categories, required this.products});
 }
 
 /// مستودع البيانات للكاتالوج — يتعامل مع Supabase
@@ -29,7 +26,8 @@ class ProductsRepository {
         supabase
             .from('products')
             .select(
-                'id,category_id,name,sku,description,tag,is_active,has_variants,price')
+              'id,category_id,name,sku,description,tag,is_active,has_variants,price',
+            )
             .filter('deleted_at', 'is', null),
         supabase
             .from('product_variants')
@@ -47,8 +45,7 @@ class ProductsRepository {
       final variantsRaw = results[2] as List<dynamic>;
       final variantsByProduct = <String, List<ProductVariant>>{};
       for (final v in variantsRaw) {
-        final variant =
-            ProductVariant.fromJson(v as Map<String, dynamic>);
+        final variant = ProductVariant.fromJson(v as Map<String, dynamic>);
         variantsByProduct.putIfAbsent(variant.productId, () => []).add(variant);
       }
 

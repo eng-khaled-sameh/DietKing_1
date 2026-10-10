@@ -20,8 +20,10 @@ String mapError(Object error) {
     if (original.contains(message)) return message;
   }
   final text = original.toLowerCase();
-  if (text.contains('socket') || text.contains('network') ||
-      text.contains('connection') || text.contains('host')) {
+  if (text.contains('socket') ||
+      text.contains('network') ||
+      text.contains('connection') ||
+      text.contains('host')) {
     return 'تعذر الاتصال بالإنترنت';
   }
   return 'حدث خطأ غير متوقع، حاول مرة أخرى';

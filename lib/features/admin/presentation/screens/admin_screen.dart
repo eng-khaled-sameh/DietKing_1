@@ -22,6 +22,9 @@ import '../../../../screens/inventory/cubit/inventory_state.dart';
 import '../../../../screens/inventory/utils/formatters.dart';
 import '../../../../data/inventory/models/branch_order.dart';
 import '../../../../repositories/expenses_repository.dart';
+import '../widgets/admin_attendance_section.dart';
+import '../widgets/admin_leave_requests_section.dart';
+import '../widgets/admin_deductions_bonuses_section.dart';
 
 // ── الأقسام ───────────────────────────────────────────────────────────────────
 
@@ -130,17 +133,19 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Widget _buildContent() {
+    final branchId = context.read<AuthCubit>().state.profile?.branchId ?? '';
+
     switch (_selectedTab) {
       case _AdminTab.shiftClose:
         return const _ShiftCloseSection();
       case _AdminTab.expenses:
         return const _ExpensesSection();
       case _AdminTab.attendance:
-        return const _AttendanceSection();
+        return AdminAttendanceSection(branchId: branchId);
       case _AdminTab.deductions:
-        return const _DeductionsSection();
+        return AdminDeductionsBonusesSection(branchId: branchId);
       case _AdminTab.vacation:
-        return const _VacationSection();
+        return AdminLeaveRequestsSection(branchId: branchId);
       case _AdminTab.supplies:
         return const _SuppliesSection();
     }
@@ -576,10 +581,28 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
 
         try {
           final pdfBytes = await buildShiftClosePdf(reportData);
-          await Printing.layoutPdf(
-            onLayout: (format) async => pdfBytes,
-            name: 'DietKing_ShiftClose_${session.sessionId.substring(0, 8)}',
-          );
+          final printers = await Printing.listPrinters();
+          Printer? targetPrinter;
+          try {
+            targetPrinter = printers.firstWhere((p) => p.isDefault);
+          } catch (e) {
+            if (printers.isNotEmpty) {
+              targetPrinter = printers.first;
+            }
+          }
+
+          if (targetPrinter != null) {
+            await Printing.directPrintPdf(
+              printer: targetPrinter,
+              onLayout: (format) async => pdfBytes,
+              name: 'DietKing_ShiftClose_${session.sessionId.substring(0, 8)}',
+            );
+          } else {
+            await Printing.layoutPdf(
+              onLayout: (format) async => pdfBytes,
+              name: 'DietKing_ShiftClose_${session.sessionId.substring(0, 8)}',
+            );
+          }
         } catch (printErr) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -638,7 +661,7 @@ class _ShiftCloseSectionState extends State<_ShiftCloseSection> {
                       label: 'الفرع',
                       value: '${session.branchName} (${session.branchCode})',
                     ),
-                    _InfoRow(label: 'الكاشير', value: session.cashierName),
+                    _InfoRow(label: 'الموظف', value: session.cashierName),
                     _InfoRow(label: 'الوردية', value: session.shift),
                     _InfoRow(
                       label: 'الرصيد الافتتاحي',

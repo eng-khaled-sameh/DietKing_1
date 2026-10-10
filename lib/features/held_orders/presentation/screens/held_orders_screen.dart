@@ -34,9 +34,8 @@ class HeldOrdersScreen extends StatelessWidget {
     } else if (order.source == HeldOrderSource.mealSale) {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (_, _, _) => MealSalesScreen(
-            initialCartLines: order.payload,
-          ),
+          pageBuilder: (_, _, _) =>
+              MealSalesScreen(initialCartLines: order.payload),
           transitionDuration: Duration.zero,
           reverseTransitionDuration: Duration.zero,
         ),

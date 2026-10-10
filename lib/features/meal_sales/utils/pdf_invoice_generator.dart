@@ -8,18 +8,22 @@ import '../presentation/services/invoice_pdf_builder.dart';
 
 /// واجهة توافقية قديمة — تُحوِّل من [CartState] إلى [InvoiceData] ثم تُفوِّض لـ [buildInvoicePdf].
 /// يُفضَّل استخدام [buildInvoicePdf] مباشرة مع [InvoiceData] في الكود الجديد.
-@Deprecated('Use buildInvoicePdf(InvoiceData) from invoice_pdf_builder.dart instead')
+@Deprecated(
+  'Use buildInvoicePdf(InvoiceData) from invoice_pdf_builder.dart instead',
+)
 class PdfInvoiceGenerator {
   static Future<Uint8List> generateInvoice(CartState cartState) async {
     final invoiceItems = cartState.lines
-        .map((line) => InvoiceLineItem(
-              name: line.variantLabel.isNotEmpty
-                  ? '${line.name} (${line.variantLabel})'
-                  : line.name,
-              quantity: line.quantity,
-              unitPrice: line.unitPrice,
-              totalPrice: line.lineTotal,
-            ))
+        .map(
+          (line) => InvoiceLineItem(
+            name: line.variantLabel.isNotEmpty
+                ? '${line.name} (${line.variantLabel})'
+                : line.name,
+            quantity: line.quantity,
+            unitPrice: line.unitPrice,
+            totalPrice: line.lineTotal,
+          ),
+        )
         .toList();
 
     // TODO: bind to real session

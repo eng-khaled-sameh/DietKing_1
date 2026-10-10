@@ -49,8 +49,10 @@ class KitchenReceiptsSection extends StatelessWidget {
             Tooltip(
               message: 'تحديث السجل',
               child: IconButton(
-                icon: const Icon(Icons.refresh_rounded,
-                    color: AppColors.onSurfaceVariant),
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  color: AppColors.onSurfaceVariant,
+                ),
                 onPressed: () {
                   context.read<InventoryCubit>()
                     ..clearKitchenCache()
@@ -62,16 +64,23 @@ class KitchenReceiptsSection extends StatelessWidget {
             // تصدير
             OutlinedButton.icon(
               onPressed: () => _exportCsv(context),
-              icon: const Icon(Icons.file_download_outlined,
-                  color: AppColors.onSurface, size: 18),
-              label: Text('تصدير',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurface)),
+              icon: const Icon(
+                Icons.file_download_outlined,
+                color: AppColors.onSurface,
+                size: 18,
+              ),
+              label: Text(
+                'تصدير',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onSurface,
+                ),
+              ),
               style: OutlinedButton.styleFrom(
-                side:
-                    const BorderSide(color: AppColors.surfaceContainerHigh),
+                side: const BorderSide(color: AppColors.surfaceContainerHigh),
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
+                  horizontal: 14,
+                  vertical: 12,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -88,13 +97,16 @@ class KitchenReceiptsSection extends StatelessWidget {
               label: Text(
                 'استلام دفعة إنتاج',
                 style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onPrimary,
-                    fontWeight: FontWeight.bold),
+                  color: AppColors.onPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.secondary,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -107,20 +119,18 @@ class KitchenReceiptsSection extends StatelessWidget {
     try {
       final state = context.read<InventoryCubit>().state;
       final itemsById = state.catalogItemsById;
-      final rows = state.kitchenBatches
-          .map((batch) {
-            final item = itemsById[batch.itemId];
-            return [
-              batch.number,
-              item?.name ?? 'صنف غير معروف',
-              item?.sku ?? '',
-              item?.unitCode ?? '',
-              formatCatalogQuantity(batch.quantity, item),
-              '${batch.producedAt.toLocal().year}-${batch.producedAt.toLocal().month.toString().padLeft(2, '0')}-${batch.producedAt.toLocal().day.toString().padLeft(2, '0')}',
-              batch.qualityNote ?? '',
-            ];
-          })
-          .toList();
+      final rows = state.kitchenBatches.map((batch) {
+        final item = itemsById[batch.itemId];
+        return [
+          batch.number,
+          item?.name ?? 'صنف غير معروف',
+          item?.sku ?? '',
+          item?.unitCode ?? '',
+          formatCatalogQuantity(batch.quantity, item),
+          '${batch.producedAt.toLocal().year}-${batch.producedAt.toLocal().month.toString().padLeft(2, '0')}-${batch.producedAt.toLocal().day.toString().padLeft(2, '0')}',
+          batch.qualityNote ?? '',
+        ];
+      }).toList();
       final path = await CsvExporter.save(
         baseName: 'KitchenBatches',
         headers: [

@@ -18,10 +18,7 @@ import '../widgets/subscription_package_card.dart';
 class SubscriptionsScreen extends StatefulWidget {
   final Map<String, dynamic>? initialPayload;
 
-  const SubscriptionsScreen({
-    super.key,
-    this.initialPayload,
-  });
+  const SubscriptionsScreen({super.key, this.initialPayload});
 
   @override
   State<SubscriptionsScreen> createState() => _SubscriptionsScreenState();
@@ -150,11 +147,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // ── مؤشرات الإحصائيات ───────────────────────────────
-                      const Row(
-                        children: [
-                          PackageStatsIndicators(),
-                        ],
-                      ),
+                      const Row(children: [PackageStatsIndicators()]),
                       const SizedBox(height: AppDimens.spaceLg),
 
                       // ── شبكة بطاقات الباقات (3 بطاقات) ──────────────────

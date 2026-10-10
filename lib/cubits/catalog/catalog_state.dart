@@ -40,8 +40,15 @@ class CatalogState extends Equatable {
       _findCategory(['وجبات', 'meal', 'بروتين', 'protein', 'رئيسي']);
 
   /// تصنيف "الإضافات" — يبحث بالكلمة المفتاحية (مرن)
-  ProductCategory? get addonsCategory =>
-      _findCategory(['إضافات', 'إضافة', 'addon', 'extra', 'سناك', 'مشروب', 'إكسترا']);
+  ProductCategory? get addonsCategory => _findCategory([
+    'إضافات',
+    'إضافة',
+    'addon',
+    'extra',
+    'سناك',
+    'مشروب',
+    'إكسترا',
+  ]);
 
   ProductCategory? _findCategory(List<String> keywords) {
     try {
@@ -82,14 +89,18 @@ class CatalogState extends Equatable {
     // فقط لو لم يكن هناك تصنيف مخصص للإضافات
     final mealCat = mealsCategory;
     final mealProductIds = mealCat != null
-        ? products.where((p) => p.categoryId == mealCat.id).map((p) => p.id).toSet()
+        ? products
+              .where((p) => p.categoryId == mealCat.id)
+              .map((p) => p.id)
+              .toSet()
         : products.where((p) => p.hasVariants).map((p) => p.id).toSet();
     return products
-        .where((p) => p.isActive && !p.hasVariants && !mealProductIds.contains(p.id))
+        .where(
+          (p) => p.isActive && !p.hasVariants && !mealProductIds.contains(p.id),
+        )
         .toList();
   }
 
   @override
-  List<Object?> get props =>
-      [status, categories, products, errorMessage];
+  List<Object?> get props => [status, categories, products, errorMessage];
 }

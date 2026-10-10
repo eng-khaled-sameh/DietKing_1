@@ -53,11 +53,13 @@ class InventoryCubit extends Cubit<InventoryState> {
       final freshStock = await _sync.syncStock();
       _stockLoaded = true;
 
-      emit(state.copyWith(
-        isLoading: false,
-        catalog: freshCatalog,
-        stock: freshStock.entries,
-      ));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          catalog: freshCatalog,
+          stock: freshStock.entries,
+        ),
+      );
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: _mapError(e)));
     }
@@ -100,11 +102,13 @@ class InventoryCubit extends Cubit<InventoryState> {
       final issues = await _api.getKitchenIssues();
       final batches = await _api.getKitchenBatches();
       _kitchenLoaded = true;
-      emit(state.copyWith(
-        isLoadingDocs: false,
-        kitchenIssues: issues,
-        kitchenBatches: batches,
-      ));
+      emit(
+        state.copyWith(
+          isLoadingDocs: false,
+          kitchenIssues: issues,
+          kitchenBatches: batches,
+        ),
+      );
     } catch (e) {
       emit(state.copyWith(isLoadingDocs: false, error: _mapError(e)));
     }
@@ -139,11 +143,13 @@ class InventoryCubit extends Cubit<InventoryState> {
     try {
       final freshCatalog = await _sync.syncCatalog();
       final freshStock = await _sync.syncStock();
-      emit(state.copyWith(
-        isLoading: false,
-        catalog: freshCatalog,
-        stock: freshStock.entries,
-      ));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          catalog: freshCatalog,
+          stock: freshStock.entries,
+        ),
+      );
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: _mapError(e)));
     }
@@ -236,10 +242,12 @@ class InventoryCubit extends Cubit<InventoryState> {
         lines: lines,
       );
       await loadSupplyOrders(force: true);
-      emit(state.copyWith(
-        isSubmitting: false,
-        supplyTab: SupplyOrderStatus.pendingReview,
-      ));
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          supplyTab: SupplyOrderStatus.pendingReview,
+        ),
+      );
     } catch (e) {
       emit(state.copyWith(isSubmitting: false, error: _mapError(e)));
       rethrow;
@@ -378,7 +386,10 @@ class InventoryCubit extends Cubit<InventoryState> {
       // تحديث الأرصدة + الكتالوج لو أنشأنا صنف تام جديد
       if (result.stockDelta.isNotEmpty) {
         applyRpcStockUpdate(result.stockDelta);
-        await _sync.applyRpcResult({'stock': result.stockDelta.map((s) => s.toJson()).toList(), 'stamps': result.stamps});
+        await _sync.applyRpcResult({
+          'stock': result.stockDelta.map((s) => s.toJson()).toList(),
+          'stamps': result.stamps,
+        });
       }
       // لو الكتالوج تغيّر (صنف تام جديد) أعد تحميله
       if (result.catalogChanged) {
@@ -420,16 +431,19 @@ class InventoryCubit extends Cubit<InventoryState> {
         _stockLoaded = true;
         // تحديث سجل الجرديات
         final records = await _api.getStocktakeRecords();
-        emit(state.copyWith(
-          isSubmitting: false,
-          catalog: freshCatalog,
-          stock: freshStock.entries,
-          stocktakeRecords: records,
-        ));
+        emit(
+          state.copyWith(
+            isSubmitting: false,
+            catalog: freshCatalog,
+            stock: freshStock.entries,
+            stocktakeRecords: records,
+          ),
+        );
       }
       return result;
     } catch (e) {
-      if (!dryRun) emit(state.copyWith(isSubmitting: false, error: _mapError(e)));
+      if (!dryRun)
+        emit(state.copyWith(isSubmitting: false, error: _mapError(e)));
       rethrow;
     }
   }
@@ -537,7 +551,6 @@ class InventoryCubit extends Cubit<InventoryState> {
     );
   }
 
-
   Future<Map<String, dynamic>> importItems({
     String? token,
     bool dryRun = true,
@@ -583,10 +596,12 @@ class InventoryCubit extends Cubit<InventoryState> {
       await _sync.applyRpcResult({'stamps': result.stamps});
     }
     // تمييز الصنف المحفوظ لمدة ثانيتين
-    emit(state.copyWith(
-      catalog: updatedCatalog,
-      highlightedItemId: result.item.id,
-    ));
+    emit(
+      state.copyWith(
+        catalog: updatedCatalog,
+        highlightedItemId: result.item.id,
+      ),
+    );
     Future.delayed(const Duration(seconds: 2), () {
       if (!isClosed) emit(state.copyWith(clearHighlight: true));
     });
@@ -631,7 +646,6 @@ class InventoryCubit extends Cubit<InventoryState> {
   }
 
   // ── تنظيف عند تسجيل الخروج ───────────────────────────────────────────────
-
 
   Future<void> clearSession() async {
     _catalogLoaded = false;

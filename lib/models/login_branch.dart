@@ -6,11 +6,7 @@ class LoginBranch extends Equatable {
   final String name;
   final String code;
 
-  const LoginBranch({
-    required this.id,
-    required this.name,
-    required this.code,
-  });
+  const LoginBranch({required this.id, required this.name, required this.code});
 
   factory LoginBranch.fromJson(Map<String, dynamic> json) {
     return LoginBranch(

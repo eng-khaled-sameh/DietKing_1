@@ -31,7 +31,10 @@ class PlaceholderModuleScreen extends StatelessWidget {
               children: [
                 Icon(module.icon, size: 48, color: AppColors.primary),
                 const SizedBox(height: AppDimens.spaceMd),
-                Text(module.arabicName, style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  module.arabicName,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 const SizedBox(height: AppDimens.spaceSm),
                 Text('الوردية: ${session.shift}'),
                 const Text('إداري'),

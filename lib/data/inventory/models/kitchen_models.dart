@@ -5,14 +5,14 @@ enum KitchenShift { morning, evening }
 
 extension KitchenShiftX on KitchenShift {
   String get value => switch (this) {
-        KitchenShift.morning => 'morning',
-        KitchenShift.evening => 'evening',
-      };
+    KitchenShift.morning => 'morning',
+    KitchenShift.evening => 'evening',
+  };
 
   String get arabicLabel => switch (this) {
-        KitchenShift.morning => 'صباح',
-        KitchenShift.evening => 'مساء',
-      };
+    KitchenShift.morning => 'صباح',
+    KitchenShift.evening => 'مساء',
+  };
 
   static KitchenShift fromString(String v) =>
       v == 'evening' ? KitchenShift.evening : KitchenShift.morning;
@@ -33,18 +33,18 @@ class KitchenIssueLine extends Equatable {
   });
 
   factory KitchenIssueLine.fromJson(Map<String, dynamic> j) => KitchenIssueLine(
-        id:                j['id']                  as String,
-        itemId:            j['item_id']             as String,
-        qty:               (j['qty']                as num).toDouble(),
-        unitCostSnapshot:  (j['unit_cost_snapshot'] as num?)?.toDouble() ?? 0,
-      );
+    id: j['id'] as String,
+    itemId: j['item_id'] as String,
+    qty: (j['qty'] as num).toDouble(),
+    unitCostSnapshot: (j['unit_cost_snapshot'] as num?)?.toDouble() ?? 0,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id':                 id,
-        'item_id':            itemId,
-        'qty':                qty,
-        'unit_cost_snapshot': unitCostSnapshot,
-      };
+    'id': id,
+    'item_id': itemId,
+    'qty': qty,
+    'unit_cost_snapshot': unitCostSnapshot,
+  };
 
   @override
   List<Object?> get props => [id, itemId, qty, unitCostSnapshot];
@@ -75,13 +75,15 @@ class KitchenIssue extends Equatable {
   factory KitchenIssue.fromJson(Map<String, dynamic> j) {
     final rawLines = j['lines'] as List<dynamic>? ?? [];
     return KitchenIssue(
-      id:        j['id']       as String,
-      number:    j['number']   as String,
-      cookPlan:  j['cook_plan'] as String?,
-      chefName:  j['chef_name'] as String,
-      shift:     KitchenShiftX.fromString(j['shift'] as String),
-      notes:     j['notes']   as String?,
-      lines:     rawLines.map((l) => KitchenIssueLine.fromJson(l as Map<String, dynamic>)).toList(),
+      id: j['id'] as String,
+      number: j['number'] as String,
+      cookPlan: j['cook_plan'] as String?,
+      chefName: j['chef_name'] as String,
+      shift: KitchenShiftX.fromString(j['shift'] as String),
+      notes: j['notes'] as String?,
+      lines: rawLines
+          .map((l) => KitchenIssueLine.fromJson(l as Map<String, dynamic>))
+          .toList(),
       createdAt: DateTime.parse(j['created_at'] as String),
     );
   }
@@ -115,16 +117,16 @@ class KitchenBatch extends Equatable {
   });
 
   factory KitchenBatch.fromJson(Map<String, dynamic> j) => KitchenBatch(
-        id:             j['id']             as String,
-        number:         j['number']         as String,
-        itemId:         j['item_id']        as String,
-        quantity:       (j['quantity']      as num).toDouble(),
-        productionLine: j['production_line'] as String?,
-        producedAt:     DateTime.parse(j['produced_at']  as String),
-        finishedAt:     DateTime.parse(j['finished_at']  as String),
-        qualityNote:    j['quality_note']   as String?,
-        createdAt:      DateTime.parse(j['created_at']   as String),
-      );
+    id: j['id'] as String,
+    number: j['number'] as String,
+    itemId: j['item_id'] as String,
+    quantity: (j['quantity'] as num).toDouble(),
+    productionLine: j['production_line'] as String?,
+    producedAt: DateTime.parse(j['produced_at'] as String),
+    finishedAt: DateTime.parse(j['finished_at'] as String),
+    qualityNote: j['quality_note'] as String?,
+    createdAt: DateTime.parse(j['created_at'] as String),
+  );
 
   @override
   List<Object?> get props => [id, number, itemId, quantity, producedAt];

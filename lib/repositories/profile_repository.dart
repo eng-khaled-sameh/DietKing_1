@@ -19,7 +19,8 @@ class ProfileRepository {
           .select('role,is_active,branch_id,full_name')
           .eq('id', userId)
           .maybeSingle();
-      if (row == null) throw const AppException('حسابك غير مفعّل، تواصل مع الإدارة');
+      if (row == null)
+        throw const AppException('حسابك غير مفعّل، تواصل مع الإدارة');
       final profile = _fromRow(userId, email, row);
       await _writeCache(profile);
       return profile;
@@ -64,15 +65,22 @@ class ProfileRepository {
       'branch_name': profile.branchName,
       'branch_code': profile.branchCode,
     });
-    await db.insert('app_meta', {'key': _cacheKey(profile.userId), 'value': value},
-        conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert('app_meta', {
+      'key': _cacheKey(profile.userId),
+      'value': value,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<UserProfile?> _readCache(String userId, String email) async {
     final db = await LocalDb.db;
-    final rows = await db.query('app_meta', where: 'key = ?', whereArgs: [_cacheKey(userId)]);
+    final rows = await db.query(
+      'app_meta',
+      where: 'key = ?',
+      whereArgs: [_cacheKey(userId)],
+    );
     if (rows.isEmpty) return null;
-    final data = jsonDecode(rows.first['value'] as String) as Map<String, dynamic>;
+    final data =
+        jsonDecode(rows.first['value'] as String) as Map<String, dynamic>;
     if (data['user_id'] != userId) return null;
     return UserProfile(
       userId: userId,
@@ -88,7 +96,9 @@ class ProfileRepository {
 
   bool _isNetworkError(Object error) {
     final value = error.toString().toLowerCase();
-    return value.contains('socket') || value.contains('network') ||
-        value.contains('connection') || value.contains('host');
+    return value.contains('socket') ||
+        value.contains('network') ||
+        value.contains('connection') ||
+        value.contains('host');
   }
 }

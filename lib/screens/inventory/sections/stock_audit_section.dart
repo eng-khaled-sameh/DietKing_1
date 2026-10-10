@@ -53,33 +53,46 @@ class StockAuditSection extends StatelessWidget {
             // تنزيل نموذج الجرد
             OutlinedButton.icon(
               onPressed: () => _downloadTemplate(context),
-              icon: const Icon(Icons.download_outlined,
-                  color: AppColors.onSurface, size: 18),
-              label: Text('نموذج الجرد',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurface)),
+              icon: const Icon(
+                Icons.download_outlined,
+                color: AppColors.onSurface,
+                size: 18,
+              ),
+              label: Text(
+                'نموذج الجرد',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onSurface,
+                ),
+              ),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(
-                    color: AppColors.surfaceContainerHigh),
+                side: const BorderSide(color: AppColors.surfaceContainerHigh),
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
             const SizedBox(width: 12),
             // استيراد ملف الجرد
             ElevatedButton.icon(
               onPressed: () => _pickAndProcess(context),
-              icon: const Icon(Icons.file_upload_outlined,
-                  color: AppColors.onPrimary, size: 18),
+              icon: const Icon(
+                Icons.file_upload_outlined,
+                color: AppColors.onPrimary,
+                size: 18,
+              ),
               label: Text(
                 'استيراد ومعاينة نتائج الجرد',
                 style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onPrimary),
+                  color: AppColors.onPrimary,
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -95,7 +108,8 @@ class StockAuditSection extends StatelessWidget {
         color: AppColors.primaryContainer.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-            color: AppColors.primaryContainer.withValues(alpha: 0.4)),
+          color: AppColors.primaryContainer.withValues(alpha: 0.4),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,14 +117,24 @@ class StockAuditSection extends StatelessWidget {
           Text(
             'تعليمات الجرد',
             style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurface,
-                fontWeight: FontWeight.bold),
+              color: AppColors.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
-          _instrRow('1', 'نزّل نموذج الجرد — يحتوي كل الأصناف مع رصيدها الحالي في النظام'),
-          _instrRow('2', 'املأ عمود "العدد المعدود فعلياً" والعمود "التالف" لكل صنف'),
+          _instrRow(
+            '1',
+            'نزّل نموذج الجرد — يحتوي كل الأصناف مع رصيدها الحالي في النظام',
+          ),
+          _instrRow(
+            '2',
+            'املأ عمود "العدد المعدود فعلياً" والعمود "التالف" لكل صنف',
+          ),
           _instrRow('3', 'ارفع الملف الجرد — ستظهر معاينة بالفروقات أولاً'),
-          _instrRow('4', 'تأكيد التسوية يتطلب كلمة مرور المدير ويُسجّل في دفتر الحركات'),
+          _instrRow(
+            '4',
+            'تأكيد التسوية يتطلب كلمة مرور المدير ويُسجّل في دفتر الحركات',
+          ),
         ],
       ),
     );
@@ -130,17 +154,24 @@ class StockAuditSection extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
-            child: Text(num,
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onPrimaryContainer,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold)),
+            child: Text(
+              num,
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onPrimaryContainer,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(text,
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurface, fontSize: 13)),
+            child: Text(
+              text,
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontSize: 13,
+              ),
+            ),
           ),
         ],
       ),
@@ -162,7 +193,8 @@ class StockAuditSection extends StatelessWidget {
         if (state.error != null && state.stocktakeRecords.isEmpty) {
           return ReadErrorState(
             message: state.error!,
-            onRetry: () => context.read<InventoryCubit>().loadStocktakeRecords(),
+            onRetry: () =>
+                context.read<InventoryCubit>().loadStocktakeRecords(),
           );
         }
         if (state.stocktakeRecords.isEmpty) {
@@ -170,12 +202,18 @@ class StockAuditSection extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.history_toggle_off_outlined,
-                    color: AppColors.onSurfaceVariant, size: 48),
+                const Icon(
+                  Icons.history_toggle_off_outlined,
+                  color: AppColors.onSurfaceVariant,
+                  size: 48,
+                ),
                 const SizedBox(height: 12),
-                Text('لا توجد جرديات سابقة',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurfaceVariant)),
+                Text(
+                  'لا توجد جرديات سابقة',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
           );
@@ -191,11 +229,12 @@ class StockAuditSection extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: const BoxDecoration(
                   color: AppColors.surfaceContainerHigh,
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(12)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                 ),
                 child: Row(
                   children: [
@@ -224,13 +263,16 @@ class StockAuditSection extends StatelessWidget {
   }
 
   Widget _th(String label, {int flex = 1}) => Expanded(
-        flex: flex,
-        child: Text(label,
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurface,
-                fontWeight: FontWeight.bold,
-                fontSize: 13)),
-      );
+    flex: flex,
+    child: Text(
+      label,
+      style: GoogleFonts.ibmPlexSansArabic(
+        color: AppColors.onSurface,
+        fontWeight: FontWeight.bold,
+        fontSize: 13,
+      ),
+    ),
+  );
 
   // ── العمليات ─────────────────────────────────────────────────────────────
 
@@ -239,7 +281,11 @@ class StockAuditSection extends StatelessWidget {
       final cubit = context.read<InventoryCubit>();
       final state = cubit.state;
       if (state.catalog == null) {
-        showInventorySnack(context, 'الكتالوج غير محمّل بعد — انتظر لحظة', isError: true);
+        showInventorySnack(
+          context,
+          'الكتالوج غير محمّل بعد — انتظر لحظة',
+          isError: true,
+        );
         return;
       }
       final stockMap = {for (final s in state.stock) s.itemId: s.quantity};
@@ -277,27 +323,38 @@ class StockAuditSection extends StatelessWidget {
     // قراءة الملف وإرسال dry_run
     try {
       final service = InventoryExcelService();
-      final rows = await service.readAndNormalize(
-        path,
-        'الجرد',
-        ['رمز SKU', 'اسم الصنف', 'التصنيف', 'الرصيد الدفتري', 'العدد المعدود فعلياً', 'التالف', 'ملاحظات'],
-      );
+      final rows = await service.readAndNormalize(path, 'الجرد', [
+        'رمز SKU',
+        'اسم الصنف',
+        'التصنيف',
+        'الرصيد الدفتري',
+        'العدد المعدود فعلياً',
+        'التالف',
+        'ملاحظات',
+      ]);
 
       if (rows == null || rows.isEmpty) {
         if (context.mounted) {
-          showInventorySnack(context, 'الملف فارغ أو تنسيق غير صحيح', isError: true);
+          showInventorySnack(
+            context,
+            'الملف فارغ أو تنسيق غير صحيح',
+            isError: true,
+          );
         }
         return;
       }
 
-      final lines = rows.map((r) => <String, dynamic>{
-            'sku': r['رمز SKU'],
-            'counted_qty':
-                double.tryParse(r['العدد المعدود فعلياً'].toString()) ?? 0,
-            'damaged_qty':
-                double.tryParse(r['التالف'].toString()) ?? 0,
-            'note': r['ملاحظات'],
-          }).toList();
+      final lines = rows
+          .map(
+            (r) => <String, dynamic>{
+              'sku': r['رمز SKU'],
+              'counted_qty':
+                  double.tryParse(r['العدد المعدود فعلياً'].toString()) ?? 0,
+              'damaged_qty': double.tryParse(r['التالف'].toString()) ?? 0,
+              'note': r['ملاحظات'],
+            },
+          )
+          .toList();
 
       if (!context.mounted) return;
 
@@ -329,33 +386,37 @@ class _HistoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
         border: Border(
-            bottom: BorderSide(color: AppColors.surfaceContainerHigh)),
+          bottom: BorderSide(color: AppColors.surfaceContainerHigh),
+        ),
       ),
       child: Row(
         children: [
           Expanded(
             flex: 2,
-            child: Text(record.number,
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurfaceVariant, fontSize: 12)),
+            child: Text(
+              record.number,
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            ),
           ),
           Expanded(
             flex: 3,
             child: Text(
               _fmtDt(record.createdAt),
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.onSurface),
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
             ),
           ),
           Expanded(
             flex: 2,
-            child: Text('${record.totalItems}',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: AppColors.onSurface)),
+            child: Text(
+              '${record.totalItems}',
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+            ),
           ),
           Expanded(
             flex: 2,
@@ -372,8 +433,7 @@ class _HistoryRow extends StatelessWidget {
             flex: 2,
             child: Text(
               '-${record.totalDamage.toStringAsFixed(1)}',
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.statusRed),
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.statusRed),
             ),
           ),
         ],
@@ -398,8 +458,7 @@ class _StocktakePreviewDialog extends StatefulWidget {
       _StocktakePreviewDialogState();
 }
 
-class _StocktakePreviewDialogState
-    extends State<_StocktakePreviewDialog> {
+class _StocktakePreviewDialogState extends State<_StocktakePreviewDialog> {
   bool _loading = true;
   StocktakePreview? _preview;
   String? _error;
@@ -413,12 +472,21 @@ class _StocktakePreviewDialogState
 
   Future<void> _runDryRun() async {
     try {
-      final preview = await context
-          .read<InventoryCubit>()
-          .applyStocktake(dryRun: true, lines: widget.lines);
-      if (mounted) setState(() { _preview = preview; _loading = false; });
+      final preview = await context.read<InventoryCubit>().applyStocktake(
+        dryRun: true,
+        lines: widget.lines,
+      );
+      if (mounted)
+        setState(() {
+          _preview = preview;
+          _loading = false;
+        });
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (mounted)
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
     }
   }
 
@@ -431,36 +499,44 @@ class _StocktakePreviewDialogState
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           backgroundColor: AppColors.surfaceContainer,
-          title: Text('تصريح الإدارة',
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.onSurface)),
+          title: Text(
+            'تصريح الإدارة',
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
+          ),
           content: TextField(
             controller: ctrl,
             obscureText: true,
             autofocus: true,
             onSubmitted: (v) => Navigator.pop(ctx, v),
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurface),
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
             decoration: InputDecoration(
               labelText: 'كلمة مرور المدير',
               labelStyle: GoogleFonts.ibmPlexSansArabic(
-                  color: AppColors.onSurfaceVariant),
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('إلغاء',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onSurfaceVariant)),
+              child: Text(
+                'إلغاء',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary),
+                backgroundColor: AppColors.primary,
+              ),
               onPressed: () => Navigator.pop(ctx, ctrl.text),
-              child: Text('تأكيد',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      color: AppColors.onPrimary)),
+              child: Text(
+                'تأكيد',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.onPrimary,
+                ),
+              ),
             ),
           ],
         ),
@@ -471,8 +547,10 @@ class _StocktakePreviewDialogState
     setState(() => _committing = true);
     try {
       final cubit = context.read<InventoryCubit>();
-      final token =
-          await cubit.requestAdminToken(password, 'inventory_stocktake');
+      final token = await cubit.requestAdminToken(
+        password,
+        'inventory_stocktake',
+      );
       if (token == null) {
         if (mounted) {
           setState(() {
@@ -484,10 +562,11 @@ class _StocktakePreviewDialogState
       }
 
       await cubit.applyStocktake(
-          dryRun: false,
-          token: token,
-          notes: 'جرد دوري',
-          lines: widget.lines);
+        dryRun: false,
+        token: token,
+        notes: 'جرد دوري',
+        lines: widget.lines,
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -495,7 +574,10 @@ class _StocktakePreviewDialogState
       }
     } catch (e) {
       if (mounted) {
-        setState(() { _committing = false; _error = e.toString(); });
+        setState(() {
+          _committing = false;
+          _error = e.toString();
+        });
       }
     }
   }
@@ -515,17 +597,24 @@ class _StocktakePreviewDialogState
               // رأس
               Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 16),
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 child: Row(
                   children: [
-                    const Icon(Icons.fact_check_outlined,
-                        color: AppColors.primary),
+                    const Icon(
+                      Icons.fact_check_outlined,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 12),
-                    Text('معاينة نتائج الجرد',
-                        style: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.onSurface,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18)),
+                    Text(
+                      'معاينة نتائج الجرد',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: AppColors.onSurface,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
                     const Spacer(),
                     if (!_loading && _preview != null)
                       Text(
@@ -533,8 +622,9 @@ class _StocktakePreviewDialogState
                         'تعديل: ${_preview!.totalAdjust.toStringAsFixed(1)} | '
                         'تالف: ${_preview!.totalDamage.toStringAsFixed(1)}',
                         style: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.onSurfaceVariant,
-                            fontSize: 12),
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
                       ),
                   ],
                 ),
@@ -546,15 +636,23 @@ class _StocktakePreviewDialogState
               if (_error != null && _preview != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 4),
-                  child: Text(_error!,
-                      style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.statusRed, fontSize: 12)),
+                    horizontal: 24,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    _error!,
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      color: AppColors.statusRed,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               // footer
               Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -562,9 +660,12 @@ class _StocktakePreviewDialogState
                       onPressed: _committing
                           ? null
                           : () => Navigator.of(context).pop(),
-                      child: Text('إغلاق',
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.onSurfaceVariant)),
+                      child: Text(
+                        'إغلاق',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     if (!_loading && _preview != null && _preview!.ok)
@@ -572,7 +673,9 @@ class _StocktakePreviewDialogState
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
                         ),
                         onPressed: _committing ? null : _commit,
                         icon: _committing
@@ -580,14 +683,21 @@ class _StocktakePreviewDialogState
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.onPrimary))
-                            : const Icon(Icons.check,
-                                color: AppColors.onPrimary),
-                        label: Text('اعتماد وتسوية الفروقات',
-                            style: GoogleFonts.ibmPlexSansArabic(
+                                  strokeWidth: 2,
+                                  color: AppColors.onPrimary,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.check,
                                 color: AppColors.onPrimary,
-                                fontWeight: FontWeight.bold)),
+                              ),
+                        label: Text(
+                          'اعتماد وتسوية الفروقات',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: AppColors.onPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -614,9 +724,10 @@ class _StocktakePreviewDialogState
     }
     if (_preview == null) {
       return Center(
-        child: Text(_error ?? 'خطأ غير معروف',
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.statusRed)),
+        child: Text(
+          _error ?? 'خطأ غير معروف',
+          style: GoogleFonts.ibmPlexSansArabic(color: AppColors.statusRed),
+        ),
       );
     }
 
@@ -624,8 +735,7 @@ class _StocktakePreviewDialogState
     return Column(
       children: [
         Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           color: AppColors.surfaceContainerHigh,
           child: Row(
             children: [
@@ -648,18 +758,20 @@ class _StocktakePreviewDialogState
               final statusColor = l.hasError
                   ? AppColors.statusRed
                   : diff != 0 || l.damagedQty > 0
-                      ? AppColors.primary
-                      : AppColors.statusGreen;
+                  ? AppColors.primary
+                  : AppColors.statusGreen;
               return Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: l.hasError
                       ? AppColors.statusRed.withValues(alpha: 0.06)
                       : null,
                   border: const Border(
-                      bottom: BorderSide(
-                          color: AppColors.surfaceContainerHigh)),
+                    bottom: BorderSide(color: AppColors.surfaceContainerHigh),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -668,39 +780,42 @@ class _StocktakePreviewDialogState
                     _td(l.systemQty.toStringAsFixed(0), flex: 2),
                     _td(l.countedQty.toStringAsFixed(0), flex: 2),
                     _td(
-                        l.damagedQty > 0
-                            ? '-${l.damagedQty.toStringAsFixed(0)}'
-                            : '0',
-                        flex: 2,
-                        color: l.damagedQty > 0
-                            ? AppColors.statusRed
-                            : null),
+                      l.damagedQty > 0
+                          ? '-${l.damagedQty.toStringAsFixed(0)}'
+                          : '0',
+                      flex: 2,
+                      color: l.damagedQty > 0 ? AppColors.statusRed : null,
+                    ),
                     _td(
-                        '${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(0)}',
-                        flex: 2,
-                        color: diff > 0
-                            ? AppColors.statusGreen
-                            : diff < 0
-                                ? AppColors.statusRed
-                                : null),
+                      '${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(0)}',
+                      flex: 2,
+                      color: diff > 0
+                          ? AppColors.statusGreen
+                          : diff < 0
+                          ? AppColors.statusRed
+                          : null,
+                    ),
                     Expanded(
                       flex: 2,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color:
-                              statusColor.withValues(alpha: 0.15),
+                          color: statusColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           l.hasError
                               ? 'خطأ'
                               : l.status == 'no_change'
-                                  ? 'مطابق'
-                                  : 'فارق',
+                              ? 'مطابق'
+                              : 'فارق',
                           style: GoogleFonts.ibmPlexSansArabic(
-                              color: statusColor, fontSize: 11),
+                            color: statusColor,
+                            fontSize: 11,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -716,21 +831,27 @@ class _StocktakePreviewDialogState
   }
 
   Widget _th(String label, {int flex = 1}) => Expanded(
-        flex: flex,
-        child: Text(label,
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: AppColors.onSurface,
-                fontWeight: FontWeight.bold,
-                fontSize: 12)),
-      );
+    flex: flex,
+    child: Text(
+      label,
+      style: GoogleFonts.ibmPlexSansArabic(
+        color: AppColors.onSurface,
+        fontWeight: FontWeight.bold,
+        fontSize: 12,
+      ),
+    ),
+  );
 
   Widget _td(String label, {int flex = 1, Color? color, bool small = false}) =>
       Expanded(
         flex: flex,
-        child: Text(label,
-            style: GoogleFonts.ibmPlexSansArabic(
-                color: color ?? AppColors.onSurface,
-                fontSize: small ? 11 : 13),
-            overflow: TextOverflow.ellipsis),
+        child: Text(
+          label,
+          style: GoogleFonts.ibmPlexSansArabic(
+            color: color ?? AppColors.onSurface,
+            fontSize: small ? 11 : 13,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
       );
 }

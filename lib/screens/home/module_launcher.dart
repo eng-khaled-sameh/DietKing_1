@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
+import 'package:my_desktop_app/screens/hr/hr_shell.dart';
 import '../../core/app_modules.dart';
 import '../../cubits/catalog/catalog_cubit.dart';
 import '../../cubits/pos_settings/pos_settings_cubit.dart';
@@ -44,7 +44,9 @@ Future<void> startAndOpenModule(
     );
     if (!context.mounted) return;
     prepareModule(context, module);
-    final route = MaterialPageRoute<void>(builder: (_) => _moduleScreen(module));
+    final route = MaterialPageRoute<void>(
+      builder: (_) => _moduleScreen(module),
+    );
     if (replace) {
       Navigator.of(context).pushReplacement(route);
     } else {
@@ -55,18 +57,16 @@ Future<void> startAndOpenModule(
   final start = await StartShiftDialog.show(context, module, profile);
   if (!context.mounted || start == null) return;
   await context.read<SessionCubit>().start(
-        userId: profile.userId,
-        email: profile.email,
-        fullName: profile.fullName,
-        role: profile.role,
-        module: module,
-        shift: start.shift,
-        selectedBranch:
-            profile.role == AppRole.cashier ? null : start.branch,
-        cashierBranch:
-            profile.role == AppRole.cashier ? start.branch : null,
-        openingCash: start.openingCash,
-      );
+    userId: profile.userId,
+    email: profile.email,
+    fullName: profile.fullName,
+    role: profile.role,
+    module: module,
+    shift: start.shift,
+    selectedBranch: profile.role == AppRole.cashier ? null : start.branch,
+    cashierBranch: profile.role == AppRole.cashier ? start.branch : null,
+    openingCash: start.openingCash,
+  );
   if (!context.mounted) return;
   prepareModule(context, module);
   final route = MaterialPageRoute<void>(builder: (_) => _moduleScreen(module));
@@ -81,7 +81,8 @@ Widget _moduleScreen(AppModule module) {
   return switch (module) {
     AppModule.cashier => const MealSalesScreen(),
     AppModule.inventory => const InventoryScreen(),
-    AppModule.accounts || AppModule.hr => PlaceholderModuleScreen(module: module),
+    AppModule.accounts => PlaceholderModuleScreen(module: module),
+    AppModule.hr => const HrShell(),
   };
 }
 

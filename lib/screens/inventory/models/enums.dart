@@ -6,7 +6,8 @@ enum InventorySection {
   stockAudit('جرد ومطابقة المخزون', Icons.fact_check),
   kitchenIssue('صرف خامات للمطبخ', Icons.soup_kitchen),
   kitchenReceipts('استلام إنتاج المطبخ', Icons.inventory_2),
-  branchOrders('طلبات الفروع', Icons.storefront);
+  branchOrders('طلبات الفروع', Icons.storefront),
+  administration('الإدارة', Icons.admin_panel_settings);
 
   final String label;
   final IconData icon;
@@ -24,6 +25,9 @@ enum RawCategory {
 }
 
 enum RawSortColumn { sku, name, category, stock }
+
 enum SupplyStatus { pending, ordered, received }
+
 enum IssueStatus { pending, issued }
+
 enum BadgeTone { success, warning, danger, info, neutral }

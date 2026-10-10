@@ -28,15 +28,16 @@ class KitchenReceiptsTable extends StatelessWidget {
                   if (state.error != null) {
                     return ReadErrorState(
                       message: state.error!,
-                      onRetry: () => context
-                          .read<InventoryCubit>()
-                          .loadKitchenBatches(),
+                      onRetry: () =>
+                          context.read<InventoryCubit>().loadKitchenBatches(),
                     );
                   }
                   return Center(
                     child: Text(
                       'لا توجد دفعات مستلمة',
-                      style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   );
                 }
@@ -73,28 +74,40 @@ class KitchenReceiptsTable extends StatelessWidget {
             flex: 3,
             child: Text(
               'المنتج / الوجبة',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
               'الكمية',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
               'وقت الإنتاج',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
               'الجودة / الفحص',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const Expanded(flex: 2, child: Text('')), // Actions column

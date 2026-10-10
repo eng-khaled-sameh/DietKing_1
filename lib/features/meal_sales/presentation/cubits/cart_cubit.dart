@@ -28,16 +28,15 @@ class CartState extends Equatable {
     bool? isDiscountPercentage,
     double? vatValue,
     bool? isVatPercentage,
-  }) =>
-      CartState(
-        lines: lines ?? this.lines,
-        discountValue: discountValue ?? this.discountValue,
-        isDiscountPercentage: isDiscountPercentage ?? this.isDiscountPercentage,
-        vatValue: vatValue ?? this.vatValue,
-        isVatPercentage: isVatPercentage ?? this.isVatPercentage,
-      );
+  }) => CartState(
+    lines: lines ?? this.lines,
+    discountValue: discountValue ?? this.discountValue,
+    isDiscountPercentage: isDiscountPercentage ?? this.isDiscountPercentage,
+    vatValue: vatValue ?? this.vatValue,
+    isVatPercentage: isVatPercentage ?? this.isVatPercentage,
+  );
 
-  /// المجموع الفرعي 
+  /// المجموع الفرعي
   double get subtotal => lines.fold(0, (sum, l) => sum + l.lineTotal);
 
   /// قيمة الخصم
@@ -67,12 +66,12 @@ class CartState extends Equatable {
 
   @override
   List<Object?> get props => [
-        lines,
-        discountValue,
-        isDiscountPercentage,
-        vatValue,
-        isVatPercentage,
-      ];
+    lines,
+    discountValue,
+    isDiscountPercentage,
+    vatValue,
+    isVatPercentage,
+  ];
 }
 
 /// سطر واحد في سلة الطلب (قابل للتعديل عبر Cubit)
@@ -95,29 +94,35 @@ class CartLine extends Equatable {
 
   double get lineTotal => unitPrice * quantity;
 
-  CartLine copyWith({int? quantity}) =>
-      CartLine(
-        productId: productId,
-        variantId: variantId,
-        name: name,
-        variantLabel: variantLabel,
-        unitPrice: unitPrice,
-        quantity: quantity ?? this.quantity,
-      );
+  CartLine copyWith({int? quantity}) => CartLine(
+    productId: productId,
+    variantId: variantId,
+    name: name,
+    variantLabel: variantLabel,
+    unitPrice: unitPrice,
+    quantity: quantity ?? this.quantity,
+  );
 
   /// مفتاح الهوية: نفس productId + نفس variantId = نفس الصنف
   String get key => '${productId}_${variantId ?? "null"}';
 
   /// تحويل إلى OrderLine للتوافق مع Widget القائمة القديم
   OrderLine toOrderLine() => OrderLine(
-        name: name,
-        variantLabel: variantLabel,
-        unitPrice: unitPrice.round(),
-        quantity: quantity,
-      );
+    name: name,
+    variantLabel: variantLabel,
+    unitPrice: unitPrice.round(),
+    quantity: quantity,
+  );
 
   @override
-  List<Object?> get props => [productId, variantId, name, variantLabel, unitPrice, quantity];
+  List<Object?> get props => [
+    productId,
+    variantId,
+    name,
+    variantLabel,
+    unitPrice,
+    quantity,
+  ];
 }
 
 // ── Cubit ─────────────────────────────────────────────────────────────────────
@@ -126,10 +131,7 @@ class CartLine extends Equatable {
 class CartCubit extends Cubit<CartState> {
   /// يُهيَّأ بنسبة الضريبة الحالية من PosSettingsCubit
   CartCubit({double initialVatRate = 0.0})
-      : super(CartState(
-          vatValue: initialVatRate,
-          isVatPercentage: true,
-        ));
+    : super(CartState(vatValue: initialVatRate, isVatPercentage: true));
 
   /// إضافة صنف: إن كان موجودًا بنفس المتغير تُزاد الكمية،
   /// وإلا يضاف سطر جديد بكمية 1.
@@ -147,13 +149,15 @@ class CartCubit extends Cubit<CartState> {
     if (idx >= 0) {
       lines[idx] = lines[idx].copyWith(quantity: lines[idx].quantity + 1);
     } else {
-      lines.add(CartLine(
-        productId: productId,
-        variantId: variantId,
-        name: name,
-        variantLabel: variantLabel,
-        unitPrice: unitPrice,
-      ));
+      lines.add(
+        CartLine(
+          productId: productId,
+          variantId: variantId,
+          name: name,
+          variantLabel: variantLabel,
+          unitPrice: unitPrice,
+        ),
+      );
     }
     emit(state.copyWith(lines: lines));
   }
@@ -191,26 +195,21 @@ class CartCubit extends Cubit<CartState> {
   /// مسح الكل — يُعيد vatValue للقيمة الأولية لكن الخصم يرجع 0
   /// [resetVatRate]: لو true يُعيد vatValue للقيمة التي أُنشئ بها الـ Cubit
   void clearAll({double? keepVatRate}) {
-    emit(CartState(
-      vatValue: keepVatRate ?? state.vatValue,
-      isVatPercentage: true,
-    ));
+    emit(
+      CartState(vatValue: keepVatRate ?? state.vatValue, isVatPercentage: true),
+    );
   }
 
   /// تحديد الخصم
   void setDiscount(double value, {required bool isPercentage}) {
-    emit(state.copyWith(
-      discountValue: value,
-      isDiscountPercentage: isPercentage,
-    ));
+    emit(
+      state.copyWith(discountValue: value, isDiscountPercentage: isPercentage),
+    );
   }
 
   /// تحديد الضريبة المضافة (يُستدعى بعد إذن المدير)
   void setVat(double value, {required bool isPercentage}) {
-    emit(state.copyWith(
-      vatValue: value,
-      isVatPercentage: isPercentage,
-    ));
+    emit(state.copyWith(vatValue: value, isVatPercentage: isPercentage));
   }
 
   /// تحديث نسبة الضريبة في السلة لتعكس قيمة PosSettingsCubit الجديدة

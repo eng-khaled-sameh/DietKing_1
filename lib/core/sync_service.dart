@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-
 import 'local_db.dart';
 import 'supabase_client.dart';
 
@@ -58,8 +57,8 @@ class SyncService {
           // نجاح
           String? serverNumber;
           if (response is Map<String, dynamic>) {
-            serverNumber = (response['invoice_number'] ?? response['number'])
-                as String?;
+            serverNumber =
+                (response['invoice_number'] ?? response['number']) as String?;
             // already_exists = true يُعتبر نجاح
           }
 

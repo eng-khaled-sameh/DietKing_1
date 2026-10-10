@@ -23,7 +23,9 @@ class _ModulesScreenState extends State<ModulesScreen> {
     final profile = context.read<AuthCubit>().state.profile;
     if (profile == null) return;
     if (!allowedModules(profile.role).contains(module)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ليس لديك صلاحية لهذا القسم')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ليس لديك صلاحية لهذا القسم')),
+      );
       return;
     }
     setState(() => _isNavigating = true);
@@ -45,18 +47,28 @@ class _ModulesScreenState extends State<ModulesScreen> {
             padding: const EdgeInsetsDirectional.all(AppDimens.spaceLg),
             child: Column(
               children: [
-                Text('اختر القسم', style: GoogleFonts.ibmPlexSansArabic(fontSize: AppDimens.fontXxl, fontWeight: FontWeight.bold)),
+                Text(
+                  'اختر القسم',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    fontSize: AppDimens.fontXxl,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: AppDimens.spaceXxl),
                 Wrap(
                   spacing: AppDimens.spaceLg,
                   runSpacing: AppDimens.spaceLg,
                   alignment: WrapAlignment.center,
-                  children: AppModule.values.map((module) => _ModuleCard(
-                    key: ValueKey(module),
-                    module: module,
-                    unlocked: modules.contains(module),
-                    onTap: () => _open(module),
-                  )).toList(),
+                  children: AppModule.values
+                      .map(
+                        (module) => _ModuleCard(
+                          key: ValueKey(module),
+                          module: module,
+                          unlocked: modules.contains(module),
+                          onTap: () => _open(module),
+                        ),
+                      )
+                      .toList(),
                 ),
               ],
             ),
@@ -68,7 +80,12 @@ class _ModulesScreenState extends State<ModulesScreen> {
 }
 
 class _ModuleCard extends StatelessWidget {
-  const _ModuleCard({super.key, required this.module, required this.unlocked, required this.onTap});
+  const _ModuleCard({
+    super.key,
+    required this.module,
+    required this.unlocked,
+    required this.onTap,
+  });
 
   final AppModule module;
   final bool unlocked;
@@ -78,9 +95,20 @@ class _ModuleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return FocusableActionDetector(
       mouseCursor: SystemMouseCursors.click,
-      actions: {ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) { onTap(); return null; })},
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            onTap();
+            return null;
+          },
+        ),
+      },
       child: InkWell(
-        onTap: unlocked ? onTap : () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ليس لديك صلاحية لهذا القسم'))),
+        onTap: unlocked
+            ? onTap
+            : () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('ليس لديك صلاحية لهذا القسم')),
+              ),
         borderRadius: BorderRadius.circular(AppDimens.radiusMd),
         child: Opacity(
           opacity: unlocked ? 1 : .45,
@@ -88,14 +116,30 @@ class _ModuleCard extends StatelessWidget {
             width: 170,
             height: 150,
             padding: const EdgeInsetsDirectional.all(AppDimens.spaceMd),
-            decoration: BoxDecoration(color: AppColors.surfaceContainer, borderRadius: BorderRadius.circular(AppDimens.radiusMd)),
-            child: Stack(children: [
-              Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(module.icon, color: AppColors.primary, size: 36),
-                const SizedBox(height: AppDimens.spaceMd), Text(module.arabicName),
-              ])),
-              if (!unlocked) const PositionedDirectional(top: 0, end: 0, child: Icon(Icons.lock_outline)),
-            ]),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainer,
+              borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+            ),
+            child: Stack(
+              children: [
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(module.icon, color: AppColors.primary, size: 36),
+                      const SizedBox(height: AppDimens.spaceMd),
+                      Text(module.arabicName),
+                    ],
+                  ),
+                ),
+                if (!unlocked)
+                  const PositionedDirectional(
+                    top: 0,
+                    end: 0,
+                    child: Icon(Icons.lock_outline),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

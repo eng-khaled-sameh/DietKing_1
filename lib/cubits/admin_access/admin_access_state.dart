@@ -1,6 +1,13 @@
 import 'package:equatable/equatable.dart';
 
-enum AdminAccessStatus { idle, verifying, granted, offlineGranted, denied, error }
+enum AdminAccessStatus {
+  idle,
+  verifying,
+  granted,
+  offlineGranted,
+  denied,
+  error,
+}
 
 class AdminAccessState extends Equatable {
   final AdminAccessStatus status;

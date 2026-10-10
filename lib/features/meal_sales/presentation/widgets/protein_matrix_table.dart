@@ -16,10 +16,7 @@ class ProteinMatrixTable extends StatelessWidget {
   /// قائمة المنتجات ذات المتغيرات (وجبات)
   final List<Product> products;
 
-  const ProteinMatrixTable({
-    super.key,
-    required this.products,
-  });
+  const ProteinMatrixTable({super.key, required this.products});
 
   static const Map<String, IconData> _productIcons = {
     'دجاج': Icons.lunch_dining_rounded,
@@ -72,8 +69,7 @@ class ProteinMatrixTable extends StatelessWidget {
             return Column(
               children: [
                 _buildDataRow(context, weight, products),
-                if (!isLast)
-                  const Divider(height: 1, color: Color(0x14FFFFFF)),
+                if (!isLast) const Divider(height: 1, color: Color(0x14FFFFFF)),
               ],
             );
           }),
@@ -92,36 +88,41 @@ class ProteinMatrixTable extends StatelessWidget {
         children: [
           // خلية زاوية فارغة (موضع label الوزن)
           const SizedBox(width: 50),
-          ...products.map((p) => Expanded(
-                child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _iconFor(p.name),
-                        size: 14,
-                        color: AppColors.primary.withValues(alpha: 0.8),
+          ...products.map(
+            (p) => Expanded(
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _iconFor(p.name),
+                      size: 14,
+                      color: AppColors.primary.withValues(alpha: 0.8),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      p.name,
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontSize: AppDimens.fontSm,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.onSurface,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        p.name,
-                        style: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: AppDimens.fontSm,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              )),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildDataRow(
-      BuildContext context, String weight, List<Product> products) {
+    BuildContext context,
+    String weight,
+    List<Product> products,
+  ) {
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -134,8 +135,7 @@ class ProteinMatrixTable extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceContainerHigh,
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusSm - 2),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusSm - 2),
                   border: Border.all(
                     color: AppColors.outlineVariant.withValues(alpha: 0.3),
                   ),
@@ -157,9 +157,7 @@ class ProteinMatrixTable extends StatelessWidget {
             // ابحث عن هذا الوزن في متغيرات المنتج
             ProductVariant? variant;
             try {
-              variant = p.activeVariants.firstWhere(
-                (v) => v.label == weight,
-              );
+              variant = p.activeVariants.firstWhere((v) => v.label == weight);
             } catch (_) {
               variant = null;
             }
@@ -248,9 +246,10 @@ class _MatrixCellState extends State<_MatrixCell>
       vsync: this,
       duration: const Duration(milliseconds: 120),
     );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.93).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnim = Tween<double>(
+      begin: 1.0,
+      end: 0.93,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -263,7 +262,9 @@ class _MatrixCellState extends State<_MatrixCell>
     _controller.forward().then((_) => _controller.reverse());
 
     String finalName = widget.productName;
-    if (finalName.contains('متكامل') || finalName.contains('متكامله') || finalName.contains('متكاملة')) {
+    if (finalName.contains('متكامل') ||
+        finalName.contains('متكامله') ||
+        finalName.contains('متكاملة')) {
       final selectedType = await showDialog<String>(
         context: context,
         builder: (_) => const MealTypeSelectionDialog(),
@@ -274,12 +275,12 @@ class _MatrixCellState extends State<_MatrixCell>
 
     if (!context.mounted) return;
     context.read<CartCubit>().addItem(
-          productId: widget.productId,
-          variantId: widget.variantId,
-          name: finalName,
-          variantLabel: widget.weightLabel,
-          unitPrice: widget.price,
-        );
+      productId: widget.productId,
+      variantId: widget.variantId,
+      name: finalName,
+      variantLabel: widget.weightLabel,
+      unitPrice: widget.price,
+    );
   }
 
   @override

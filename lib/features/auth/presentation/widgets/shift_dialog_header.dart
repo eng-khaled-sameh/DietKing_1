@@ -6,10 +6,7 @@ import '../../../../core/theme/app_dimens.dart';
 
 /// هيدر نافذة اختيار الوردية مع العنوان وزر الإغلاق
 class ShiftDialogHeader extends StatelessWidget {
-  const ShiftDialogHeader({
-    super.key,
-    this.onClose,
-  });
+  const ShiftDialogHeader({super.key, this.onClose});
 
   final VoidCallback? onClose;
 

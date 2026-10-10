@@ -67,11 +67,7 @@ class MealSalesShortcutsRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          Icon(
-            icon,
-            size: AppDimens.iconSm - 2,
-            color: color,
-          ),
+          Icon(icon, size: AppDimens.iconSm - 2, color: color),
           const SizedBox(width: 4),
           Text(
             actionLabel,

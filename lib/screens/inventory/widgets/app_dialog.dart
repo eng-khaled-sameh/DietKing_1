@@ -22,7 +22,7 @@ class AppDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Dialog(

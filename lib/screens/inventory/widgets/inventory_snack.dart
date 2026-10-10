@@ -6,15 +6,21 @@ import '../../../../core/theme/app_colors.dart';
 OverlayEntry? _currentInventorySnack;
 
 /// يعرض رسالة فوق صفحة المخزون أو أي نافذة حوار مفتوحة فيها.
-void showInventorySnack(BuildContext context, String message, {bool isError = false}) {
+void showInventorySnack(
+  BuildContext context,
+  String message, {
+  bool isError = false,
+}) {
   if (!context.mounted) return;
 
   _currentInventorySnack?.remove();
   final overlay = Overlay.of(context, rootOverlay: true);
-  final backgroundColor =
-      isError ? AppColors.errorContainer : AppColors.surfaceContainerHighest;
-  final foregroundColor =
-      isError ? AppColors.onErrorContainer : AppColors.onSurface;
+  final backgroundColor = isError
+      ? AppColors.errorContainer
+      : AppColors.surfaceContainerHighest;
+  final foregroundColor = isError
+      ? AppColors.onErrorContainer
+      : AppColors.onSurface;
 
   late final OverlayEntry entry;
   entry = OverlayEntry(

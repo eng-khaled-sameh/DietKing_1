@@ -47,15 +47,15 @@ class _MealPlanButtonState extends State<MealPlanButton> {
             color: selected
                 ? AppColors.primaryContainer.withValues(alpha: 0.18)
                 : _hovered
-                    ? AppColors.surfaceContainerHigh
-                    : AppColors.surfaceContainerLow,
+                ? AppColors.surfaceContainerHigh
+                : AppColors.surfaceContainerLow,
             borderRadius: BorderRadius.circular(AppDimens.radiusMd),
             border: Border.all(
               color: selected
                   ? AppColors.primaryContainer
                   : _hovered
-                      ? AppColors.outlineVariant.withValues(alpha: 0.6)
-                      : AppColors.outlineVariant.withValues(alpha: 0.3),
+                  ? AppColors.outlineVariant.withValues(alpha: 0.6)
+                  : AppColors.outlineVariant.withValues(alpha: 0.3),
               width: selected ? 1.5 : 1,
             ),
           ),
@@ -71,8 +71,9 @@ class _MealPlanButtonState extends State<MealPlanButton> {
                       widget.label,
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: AppDimens.fontMd,
-                        fontWeight:
-                            selected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         color: selected
                             ? AppColors.primary
                             : AppColors.onSurface,
@@ -131,8 +132,7 @@ class _MealPlanButtonState extends State<MealPlanButton> {
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.primaryContainer.withValues(alpha: 0.25),
-                    borderRadius:
-                        BorderRadius.circular(AppDimens.radiusFull),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusFull),
                   ),
                   child: Text(
                     'محدد حالياً',

@@ -67,7 +67,9 @@ class ShiftOptionCard extends StatelessWidget {
               ),
               child: Icon(
                 icon,
-                color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
+                color: isSelected
+                    ? AppColors.primary
+                    : AppColors.onSurfaceVariant,
                 size: AppDimens.iconLg,
               ),
             ),
@@ -96,7 +98,9 @@ class ShiftOptionCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                          borderRadius: BorderRadius.circular(
+                            AppDimens.radiusSm,
+                          ),
                         ),
                         child: Text(
                           timeRange,

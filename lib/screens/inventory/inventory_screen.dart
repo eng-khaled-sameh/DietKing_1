@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/global_app_layout.dart';
 import 'cubit/inventory_cubit.dart';
 import 'inventory_shell.dart';
 
@@ -26,7 +27,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: InventoryShell(),
+        body: GlobalAppLayout(child: InventoryShell()),
       ),
     );
   }

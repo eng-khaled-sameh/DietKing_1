@@ -81,7 +81,9 @@ class SubSummaryPanel extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: AppColors.primaryContainer.withValues(alpha: 0.2),
+                  backgroundColor: AppColors.primaryContainer.withValues(
+                    alpha: 0.2,
+                  ),
                   child: const Icon(
                     Icons.person_outline_rounded,
                     color: AppColors.primary,
@@ -103,7 +105,9 @@ class SubSummaryPanel extends StatelessWidget {
                       'رقم الجوال: 050XXXXXXX',
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: AppDimens.fontXs,
-                        color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                        color: AppColors.onSurfaceVariant.withValues(
+                          alpha: 0.7,
+                        ),
                       ),
                     ),
                   ],
@@ -120,10 +124,7 @@ class SubSummaryPanel extends StatelessWidget {
             isBold: true,
           ),
           const SizedBox(height: AppDimens.spaceSm),
-          _SummaryRow(
-            label: 'مدة الاشتراك',
-            value: '$selectedDays يومًا',
-          ),
+          _SummaryRow(label: 'مدة الاشتراك', value: '$selectedDays يومًا'),
           const SizedBox(height: AppDimens.spaceSm),
           _SummaryRow(
             label: 'المبلغ الأساسي',

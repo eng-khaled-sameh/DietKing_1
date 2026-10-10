@@ -15,12 +15,18 @@ class SalesRepository {
     } on PostgrestException catch (e) {
       throw Exception(e.message);
     } on SocketException catch (_) {
-      throw Exception('تعذر الاتصال بالإنترنت، لم يتم حفظ الفاتورة، حاول مرة أخرى');
+      throw Exception(
+        'تعذر الاتصال بالإنترنت، لم يتم حفظ الفاتورة، حاول مرة أخرى',
+      );
     } on TimeoutException catch (_) {
-      throw Exception('تعذر الاتصال بالإنترنت، لم يتم حفظ الفاتورة، حاول مرة أخرى');
+      throw Exception(
+        'تعذر الاتصال بالإنترنت، لم يتم حفظ الفاتورة، حاول مرة أخرى',
+      );
     } catch (e) {
       if (e.toString().contains('ClientException')) {
-         throw Exception('تعذر الاتصال بالإنترنت، لم يتم حفظ الفاتورة، حاول مرة أخرى');
+        throw Exception(
+          'تعذر الاتصال بالإنترنت، لم يتم حفظ الفاتورة، حاول مرة أخرى',
+        );
       }
       throw Exception('حدث خطأ أثناء حفظ الفاتورة');
     }

@@ -39,7 +39,8 @@ class SubscriptionPackageCard extends StatefulWidget {
     String durationLabel,
     String mealLabel,
     int price,
-  )? onPlanSelected;
+  )?
+  onPlanSelected;
 
   /// Callback عند الضغط على نفس الخطة لإلغاء التحديد
   final VoidCallback? onPlanDeselected;
@@ -127,9 +128,7 @@ class _SubscriptionPackageCardState extends State<SubscriptionPackageCard> {
 
           // ── Tabs المدة: 20 / 26 / 30 يوم ──────────────────────────────
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimens.spaceMd,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
             child: PackageDurationTabs(
               selectedDays: _selectedDays,
               onChanged: _onDurationChanged,
@@ -176,12 +175,10 @@ class _SubscriptionPackageCardState extends State<SubscriptionPackageCard> {
                   color: featured
                       ? AppColors.primaryContainer.withValues(alpha: 0.2)
                       : AppColors.surfaceContainerHigh,
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusMd),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                   border: Border.all(
                     color: featured
-                        ? AppColors.primaryContainer
-                            .withValues(alpha: 0.4)
+                        ? AppColors.primaryContainer.withValues(alpha: 0.4)
                         : AppColors.outlineVariant.withValues(alpha: 0.3),
                   ),
                 ),
@@ -212,8 +209,9 @@ class _SubscriptionPackageCardState extends State<SubscriptionPackageCard> {
                       pkg.subtitle,
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: AppDimens.fontXs,
-                        color: AppColors.onSurfaceVariant
-                            .withValues(alpha: 0.65),
+                        color: AppColors.onSurfaceVariant.withValues(
+                          alpha: 0.65,
+                        ),
                       ),
                     ),
                   ],
@@ -227,10 +225,8 @@ class _SubscriptionPackageCardState extends State<SubscriptionPackageCard> {
                   vertical: 3,
                 ),
                 decoration: BoxDecoration(
-                  color:
-                      AppColors.tertiaryContainer.withValues(alpha: 0.15),
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusFull),
+                  color: AppColors.tertiaryContainer.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusFull),
                   border: Border.all(
                     color: AppColors.tertiary.withValues(alpha: 0.3),
                   ),
@@ -309,8 +305,7 @@ class _SubscriptionPackageCardState extends State<SubscriptionPackageCard> {
               style: GoogleFonts.ibmPlexSansArabic(
                 fontSize: 10,
                 fontStyle: FontStyle.italic,
-                color:
-                    AppColors.onSurfaceVariant.withValues(alpha: 0.55),
+                color: AppColors.onSurfaceVariant.withValues(alpha: 0.55),
               ),
             ),
           ),

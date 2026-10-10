@@ -30,8 +30,8 @@ class BranchesCubit extends Cubit<BranchesState> {
   final BranchesRepository _repository;
 
   BranchesCubit({BranchesRepository? repository})
-      : _repository = repository ?? BranchesRepository(),
-        super(const BranchesState());
+    : _repository = repository ?? BranchesRepository(),
+      super(const BranchesState());
 
   /// جلب الفروع — الكاش في الذاكرة:
   /// لو الحالة loaded أو loading وforce=false: ارجع فوراً
@@ -47,15 +47,14 @@ class BranchesCubit extends Cubit<BranchesState> {
 
     try {
       final branches = await _repository.fetchLoginBranches();
-      emit(BranchesState(
-        status: BranchesStatus.loaded,
-        branches: branches,
-      ));
+      emit(BranchesState(status: BranchesStatus.loaded, branches: branches));
     } catch (e) {
-      emit(BranchesState(
-        status: BranchesStatus.failure,
-        errorMessage: e.toString().replaceFirst('Exception: ', ''),
-      ));
+      emit(
+        BranchesState(
+          status: BranchesStatus.failure,
+          errorMessage: e.toString().replaceFirst('Exception: ', ''),
+        ),
+      );
     }
   }
 

@@ -23,10 +23,7 @@ class KitchenReceiptRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
         children: [
-          Expanded(
-            flex: 3,
-            child: CatalogItemDetails(item: item),
-          ),
+          Expanded(flex: 3, child: CatalogItemDetails(item: item)),
           Expanded(
             flex: 2,
             child: Text(
@@ -38,14 +35,19 @@ class KitchenReceiptRow extends StatelessWidget {
             flex: 2,
             child: Text(
               '${batch.producedAt.year}-${batch.producedAt.month.toString().padLeft(2, '0')}-${batch.producedAt.day.toString().padLeft(2, '0')} ${batch.producedAt.hour.toString().padLeft(2, '0')}:${batch.producedAt.minute.toString().padLeft(2, '0')}',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurfaceVariant),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
               batch.qualityNote ?? '—',
-              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.statusGreen, fontSize: 12),
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.statusGreen,
+                fontSize: 12,
+              ),
             ),
           ),
           Expanded(
@@ -56,9 +58,16 @@ class KitchenReceiptRow extends StatelessWidget {
                 Tooltip(
                   message: 'طباعة باركود',
                   child: IconButton(
-                    icon: const Icon(Icons.print_outlined, color: AppColors.primary, size: 20),
+                    icon: const Icon(
+                      Icons.print_outlined,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                     onPressed: () {
-                      showInventorySnack(context, 'جاري طباعة باركود الدفعة ${batch.number}');
+                      showInventorySnack(
+                        context,
+                        'جاري طباعة باركود الدفعة ${batch.number}',
+                      );
                     },
                   ),
                 ),

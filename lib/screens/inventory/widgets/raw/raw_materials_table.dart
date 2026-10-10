@@ -49,7 +49,8 @@ class RawMaterialsTable extends StatelessWidget {
                           ? 'جارٍ تحميل الكتالوج...'
                           : 'لا توجد أصناف مطابقة',
                       style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurfaceVariant),
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   );
                 }

@@ -12,11 +12,7 @@ class ProteinItemCard extends StatelessWidget {
   final ProteinItem item;
   final ValueChanged<WeightOption>? onWeightSelected;
 
-  const ProteinItemCard({
-    super.key,
-    required this.item,
-    this.onWeightSelected,
-  });
+  const ProteinItemCard({super.key, required this.item, this.onWeightSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +80,9 @@ class ProteinItemCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: AppDimens.fontXs + 1,
-                        color: AppColors.onSurfaceVariant.withValues(alpha: 0.8),
+                        color: AppColors.onSurfaceVariant.withValues(
+                          alpha: 0.8,
+                        ),
                         height: 1.3,
                       ),
                     ),
@@ -119,10 +117,7 @@ class ProteinItemCard extends StatelessWidget {
 
           const SizedBox(height: AppDimens.spaceMd),
 
-          const Divider(
-            height: 1,
-            color: Color(0x1AFFFFFF),
-          ),
+          const Divider(height: 1, color: Color(0x1AFFFFFF)),
 
           const SizedBox(height: AppDimens.spaceMd),
 

@@ -42,9 +42,20 @@ class SessionState extends Equatable {
 
   @override
   List<Object?> get props => [
-        isActive, userId, email, cashierName, branchId, branchName, branchCode,
-        shift, sessionId, startedAt, role, module, openingCash,
-      ];
+    isActive,
+    userId,
+    email,
+    cashierName,
+    branchId,
+    branchName,
+    branchCode,
+    shift,
+    sessionId,
+    startedAt,
+    role,
+    module,
+    openingCash,
+  ];
 }
 
 class SessionCubit extends Cubit<SessionState> {
@@ -55,7 +66,8 @@ class SessionCubit extends Cubit<SessionState> {
   static String _cashierSessionKey(String userId) =>
       'active_cashier_session_$userId';
 
-  bool hasModuleSession(AppModule module) => _moduleSessions.containsKey(module);
+  bool hasModuleSession(AppModule module) =>
+      _moduleSessions.containsKey(module);
 
   /// يستعيد وردية الكاشير المفتوحة بعد إعادة تشغيل البرنامج.
   /// الجلسة مرتبطة بمعرّف المستخدم، لذلك لا يمكن لمستخدم آخر استعادتها.
@@ -106,11 +118,7 @@ class SessionCubit extends Cubit<SessionState> {
 
       _moduleSessions[AppModule.cashier] = _ModuleSession(
         shift: shift,
-        branch: LoginBranch(
-          id: branchId,
-          name: branchName,
-          code: branchCode,
-        ),
+        branch: LoginBranch(id: branchId, name: branchName, code: branchCode),
         openingCash: openingCash,
         sessionId: sessionId,
         startedAt: startedAt,
@@ -137,21 +145,23 @@ class SessionCubit extends Cubit<SessionState> {
   }) {
     final existing = _moduleSessions[module];
     if (existing == null) return;
-    emit(SessionState(
-      isActive: true,
-      userId: userId,
-      email: email,
-      cashierName: fullName.isEmpty ? email.split('@').first : fullName,
-      branchId: existing.branch?.id,
-      branchName: existing.branch?.name ?? 'إدارة',
-      branchCode: existing.branch?.code ?? '',
-      shift: existing.shift,
-      sessionId: existing.sessionId,
-      startedAt: existing.startedAt,
-      role: role,
-      module: module,
-      openingCash: existing.openingCash,
-    ));
+    emit(
+      SessionState(
+        isActive: true,
+        userId: userId,
+        email: email,
+        cashierName: fullName.isEmpty ? email.split('@').first : fullName,
+        branchId: existing.branch?.id,
+        branchName: existing.branch?.name ?? 'إدارة',
+        branchCode: existing.branch?.code ?? '',
+        shift: existing.shift,
+        sessionId: existing.sessionId,
+        startedAt: existing.startedAt,
+        role: role,
+        module: module,
+        openingCash: existing.openingCash,
+      ),
+    );
   }
 
   Future<void> start({
@@ -187,21 +197,23 @@ class SessionCubit extends Cubit<SessionState> {
       startedAt: DateTime.now(),
     );
     _moduleSessions[module] = moduleSession;
-    emit(SessionState(
-      isActive: true,
-      userId: userId,
-      email: email,
-      cashierName: fullName.isEmpty ? email.split('@').first : fullName,
-      branchId: moduleSession.branch?.id,
-      branchName: moduleSession.branch?.name ?? 'إدارة',
-      branchCode: moduleSession.branch?.code ?? '',
-      shift: moduleSession.shift,
-      sessionId: moduleSession.sessionId,
-      startedAt: moduleSession.startedAt,
-      role: role,
-      module: module,
-      openingCash: moduleSession.openingCash,
-    ));
+    emit(
+      SessionState(
+        isActive: true,
+        userId: userId,
+        email: email,
+        cashierName: fullName.isEmpty ? email.split('@').first : fullName,
+        branchId: moduleSession.branch?.id,
+        branchName: moduleSession.branch?.name ?? 'إدارة',
+        branchCode: moduleSession.branch?.code ?? '',
+        shift: moduleSession.shift,
+        sessionId: moduleSession.sessionId,
+        startedAt: moduleSession.startedAt,
+        role: role,
+        module: module,
+        openingCash: moduleSession.openingCash,
+      ),
+    );
 
     if (module == AppModule.cashier) {
       await _persistCashierSession(userId, moduleSession);
@@ -237,22 +249,18 @@ class SessionCubit extends Cubit<SessionState> {
       throw StateError('لا يمكن حفظ وردية كاشير بدون فرع');
     }
     final database = await LocalDb.db;
-    await database.insert(
-      'app_meta',
-      {
-        'key': _cashierSessionKey(userId),
-        'value': jsonEncode({
-          'branch_id': branch.id,
-          'branch_name': branch.name,
-          'branch_code': branch.code,
-          'shift': session.shift,
-          'session_id': session.sessionId,
-          'started_at': session.startedAt.toUtc().toIso8601String(),
-          'opening_cash': session.openingCash,
-        }),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await database.insert('app_meta', {
+      'key': _cashierSessionKey(userId),
+      'value': jsonEncode({
+        'branch_id': branch.id,
+        'branch_name': branch.name,
+        'branch_code': branch.code,
+        'shift': session.shift,
+        'session_id': session.sessionId,
+        'started_at': session.startedAt.toUtc().toIso8601String(),
+        'opening_cash': session.openingCash,
+      }),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   static String _generateUuidV4() {

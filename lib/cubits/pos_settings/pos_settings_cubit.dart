@@ -59,8 +59,12 @@ class PosSettingsState extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [defaultVatRate, currentVatRate, status, errorMessage];
+  List<Object?> get props => [
+    defaultVatRate,
+    currentVatRate,
+    status,
+    errorMessage,
+  ];
 }
 
 // ── Cubit ──────────────────────────────────────────────────────────────────────
@@ -77,8 +81,8 @@ class PosSettingsCubit extends Cubit<PosSettingsState> {
   bool _isLoading = false;
 
   PosSettingsCubit({PosSettingsRepository? repository})
-      : _repository = repository ?? PosSettingsRepository(),
-        super(const PosSettingsState());
+    : _repository = repository ?? PosSettingsRepository(),
+      super(const PosSettingsState());
 
   /// يجلب نسبة الضريبة من السيرفر (أو الكاش عند انقطاع الشبكة).
   ///
@@ -99,30 +103,36 @@ class PosSettingsCubit extends Cubit<PosSettingsState> {
       final rate = await _repository.fetchVatRate();
 
       if (!isClosed) {
-        emit(PosSettingsState(
-          defaultVatRate: rate,
-          currentVatRate: rate,
-          status: PosSettingsStatus.loaded,
-        ));
+        emit(
+          PosSettingsState(
+            defaultVatRate: rate,
+            currentVatRate: rate,
+            status: PosSettingsStatus.loaded,
+          ),
+        );
       }
     } on VatRateCacheMissException catch (_) {
       // لا يوجد كاش ولا اتصال بالإنترنت
       if (!isClosed) {
-        emit(PosSettingsState(
-          defaultVatRate: 0.0,
-          currentVatRate: 0.0,
-          status: PosSettingsStatus.failure,
-          errorMessage: 'تعذر تحميل نسبة الضريبة',
-        ));
+        emit(
+          PosSettingsState(
+            defaultVatRate: 0.0,
+            currentVatRate: 0.0,
+            status: PosSettingsStatus.failure,
+            errorMessage: 'تعذر تحميل نسبة الضريبة',
+          ),
+        );
       }
     } catch (e) {
       if (!isClosed) {
-        emit(PosSettingsState(
-          defaultVatRate: 0.0,
-          currentVatRate: 0.0,
-          status: PosSettingsStatus.failure,
-          errorMessage: 'تعذر تحميل نسبة الضريبة',
-        ));
+        emit(
+          PosSettingsState(
+            defaultVatRate: 0.0,
+            currentVatRate: 0.0,
+            status: PosSettingsStatus.failure,
+            errorMessage: 'تعذر تحميل نسبة الضريبة',
+          ),
+        );
       }
     } finally {
       _isLoading = false;

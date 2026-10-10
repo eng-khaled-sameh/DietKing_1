@@ -6,7 +6,10 @@ import '../models/inventory_unit.dart';
 
 class InventoryExcelService {
   /// توليد نموذج استيراد الأصناف
-  List<int> generateItemsTemplate(List<InventoryCategory> categories, List<InventoryUnit> units) {
+  List<int> generateItemsTemplate(
+    List<InventoryCategory> categories,
+    List<InventoryUnit> units,
+  ) {
     var excel = Excel.createExcel();
     final sheet = excel['الأصناف'];
     excel.setDefaultSheet('الأصناف');
@@ -16,22 +19,30 @@ class InventoryExcelService {
 
     // إضافة العناوين
     final headers = [
-      'كود الصنف (SKU)', 'اسم الصنف', 'التصنيف', 'وحدة القياس', 
-      'الحد الأدنى', 'الرصيد الافتتاحي', 'تكلفة الوحدة', 'متاح للفروع', 'نشط', 'ملاحظات'
+      'كود الصنف (SKU)',
+      'اسم الصنف',
+      'التصنيف',
+      'وحدة القياس',
+      'الحد الأدنى',
+      'الرصيد الافتتاحي',
+      'تكلفة الوحدة',
+      'متاح للفروع',
+      'نشط',
+      'ملاحظات',
     ];
     sheet.appendRow(headers.map((h) => TextCellValue(h)).toList());
 
     // مثال لصفين
     sheet.appendRow([
-      TextCellValue(''), 
-      TextCellValue('طماطم فريش'), 
+      TextCellValue(''),
+      TextCellValue('طماطم فريش'),
       TextCellValue('VEG'), // assuming code
-      TextCellValue('كجم'), 
-      IntCellValue(50), 
-      IntCellValue(100), 
-      DoubleCellValue(15.5), 
-      TextCellValue('نعم'), 
-      TextCellValue('نعم'), 
+      TextCellValue('كجم'),
+      IntCellValue(50),
+      IntCellValue(100),
+      DoubleCellValue(15.5),
+      TextCellValue('نعم'),
+      TextCellValue('نعم'),
       TextCellValue('للسلطات'),
     ]);
 
@@ -96,9 +107,9 @@ class InventoryExcelService {
         TextCellValue(item.name),
         TextCellValue(catName),
         DoubleCellValue(sysQty),
-        TextCellValue(''),   // العدد المعدود — يملأه المستخدم
-        TextCellValue(''),   // التالف
-        TextCellValue(''),   // ملاحظات
+        TextCellValue(''), // العدد المعدود — يملأه المستخدم
+        TextCellValue(''), // التالف
+        TextCellValue(''), // ملاحظات
       ]);
     }
 
@@ -106,7 +117,11 @@ class InventoryExcelService {
   }
 
   /// قراءة ملف وتطبيع البيانات إلى قائمة Maps حسب العناوين المحددة
-  Future<List<Map<String, dynamic>>?> readAndNormalize(String path, String sheetName, List<String> expectedHeaders) async {
+  Future<List<Map<String, dynamic>>?> readAndNormalize(
+    String path,
+    String sheetName,
+    List<String> expectedHeaders,
+  ) async {
     final bytes = await File(path).readAsBytes();
     final excel = Excel.decodeBytes(bytes);
     final sheet = excel.tables[sheetName];
@@ -115,11 +130,15 @@ class InventoryExcelService {
     final rows = sheet.rows;
     if (rows.isEmpty) return null;
 
-    final headerRow = rows.first.map((c) => c?.value?.toString().trim() ?? '').toList();
+    final headerRow = rows.first
+        .map((c) => c?.value?.toString().trim() ?? '')
+        .toList();
     // Validate headers format
     for (int i = 0; i < expectedHeaders.length; i++) {
       if (i >= headerRow.length || headerRow[i] != expectedHeaders[i]) {
-        throw Exception('رأس العمود غير مطابق: المتوقع "${expectedHeaders[i]}" لكن وجد "${i < headerRow.length ? headerRow[i] : 'فارغ'}"');
+        throw Exception(
+          'رأس العمود غير مطابق: المتوقع "${expectedHeaders[i]}" لكن وجد "${i < headerRow.length ? headerRow[i] : 'فارغ'}"',
+        );
       }
     }
 
@@ -127,13 +146,20 @@ class InventoryExcelService {
     for (int i = 1; i < rows.length; i++) {
       final row = rows[i];
       // Skip completely empty rows
-      if (row.every((cell) => cell == null || cell.value == null || cell.value.toString().trim().isEmpty)) {
+      if (row.every(
+        (cell) =>
+            cell == null ||
+            cell.value == null ||
+            cell.value.toString().trim().isEmpty,
+      )) {
         continue;
       }
-      
+
       final rowMap = <String, dynamic>{};
       for (int j = 0; j < expectedHeaders.length; j++) {
-        final cellValue = j < row.length ? row[j]?.value?.toString().trim() ?? '' : '';
+        final cellValue = j < row.length
+            ? row[j]?.value?.toString().trim() ?? ''
+            : '';
         rowMap[expectedHeaders[j]] = _normalizeArabicNumbers(cellValue);
       }
       result.add(rowMap);

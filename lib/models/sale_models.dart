@@ -14,8 +14,8 @@ class SaleDraft extends Equatable {
   final String? notes;
   final List<SaleItemDraft> items;
   // ── حقول المزامنة المضافة ──────────────────────────────────────────────────
-  final String? sessionId;  // session_id من SessionCubit
-  final String? soldAt;     // ISO8601 UTC وقت الفاتورة
+  final String? sessionId; // session_id من SessionCubit
+  final String? soldAt; // ISO8601 UTC وقت الفاتورة
 
   const SaleDraft({
     required this.clientId,
@@ -57,21 +57,21 @@ class SaleDraft extends Equatable {
 
   @override
   List<Object?> get props => [
-        clientId,
-        branchId,
-        shift,
-        paymentMethod,
-        localNumber,
-        discountAmount,
-        discountPercent,
-        vatRate,
-        vatAmount,
-        total,
-        notes,
-        items,
-        sessionId,
-        soldAt,
-      ];
+    clientId,
+    branchId,
+    shift,
+    paymentMethod,
+    localNumber,
+    discountAmount,
+    discountPercent,
+    vatRate,
+    vatAmount,
+    total,
+    notes,
+    items,
+    sessionId,
+    soldAt,
+  ];
 }
 
 class SaleItemDraft extends Equatable {

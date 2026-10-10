@@ -57,7 +57,9 @@ class SubDurationSelector extends StatelessWidget {
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: AppColors.primaryContainer.withValues(alpha: 0.3),
+                            color: AppColors.primaryContainer.withValues(
+                              alpha: 0.3,
+                            ),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -74,9 +76,13 @@ class SubDurationSelector extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.onPrimaryContainer.withValues(alpha: 0.2)
+                            ? AppColors.onPrimaryContainer.withValues(
+                                alpha: 0.2,
+                              )
                             : AppColors.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(AppDimens.radiusFull),
+                        borderRadius: BorderRadius.circular(
+                          AppDimens.radiusFull,
+                        ),
                       ),
                       child: Text(
                         badge,
@@ -96,8 +102,9 @@ class SubDurationSelector extends StatelessWidget {
                       label,
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: AppDimens.fontLg,
-                        fontWeight:
-                            isSelected ? FontWeight.w800 : FontWeight.w600,
+                        fontWeight: isSelected
+                            ? FontWeight.w800
+                            : FontWeight.w600,
                         color: isSelected
                             ? AppColors.onPrimary
                             : AppColors.onSurface,

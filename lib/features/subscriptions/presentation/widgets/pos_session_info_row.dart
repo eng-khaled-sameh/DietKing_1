@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
@@ -17,27 +19,41 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseCtrl;
   late final Animation<double> _pulseAnim;
+  late Timer _timer;
+  late DateTime _now;
 
   @override
   void initState() {
     super.initState();
+    _now = DateTime.now();
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _now = DateTime.now();
+        });
+      }
+    });
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulseAnim = Tween<double>(
+      begin: 0.4,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
   }
 
   @override
   void dispose() {
+    _timer.cancel();
     _pulseCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final timeStr = DateFormat('h:mm a', 'ar').format(_now);
+    final dateStr = DateFormat('d MMMM yyyy', 'ar').format(_now);
     return Container(
       height: 48,
       color: AppColors.surfaceContainerLow,
@@ -45,21 +61,33 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
       child: Row(
         children: [
           // Dynamic cashier and branch info
-          _InfoChip(icon: Icons.badge_outlined, label: 'الكاشير:', value: ShiftInfo.cashierName),
+          _InfoChip(
+            icon: Icons.badge_outlined,
+            label: 'الكاشير:',
+            value: ShiftInfo.cashierName,
+          ),
           Container(
             width: 1,
             height: 18,
             margin: const EdgeInsets.symmetric(horizontal: AppDimens.spaceSm),
             color: AppColors.outlineVariant.withValues(alpha: 0.4),
           ),
-          _InfoChip(icon: Icons.store_outlined, label: 'الفرع:', value: ShiftInfo.branchName),
+          _InfoChip(
+            icon: Icons.store_outlined,
+            label: 'الفرع:',
+            value: ShiftInfo.branchName,
+          ),
           Container(
             width: 1,
             height: 18,
             margin: const EdgeInsets.symmetric(horizontal: AppDimens.spaceSm),
             color: AppColors.outlineVariant.withValues(alpha: 0.4),
           ),
-          _InfoChip(icon: Icons.watch_later_outlined, label: 'الوردية:', value: ShiftInfo.currentShiftTitle),
+          _InfoChip(
+            icon: Icons.watch_later_outlined,
+            label: 'الوردية:',
+            value: ShiftInfo.currentShiftTitle,
+          ),
 
           const Spacer(),
 
@@ -104,27 +132,34 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
 
           const Spacer(),
 
-          // ── (3) يسار: الوقت والتاريخ (ثابتين) ───────────────────────────
-          // TODO: bind to live clock
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.center,
+          // ── (3) يسار: الوقت والتاريخ ───────────────────────────
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '08:25 ص',
+                dateStr,
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontSize: AppDimens.fontSm,
+                  color: AppColors.onSurfaceVariant.withValues(alpha: 0.8),
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceSm,
+                ),
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.onSurfaceVariant.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Text(
+                timeStr,
                 style: GoogleFonts.ibmPlexSansArabic(
                   fontSize: AppDimens.fontMd,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primary,
-                  height: 1.1,
-                ),
-              ),
-              Text(
-                '23 سبتمبر 2026 | 11 ربيع الآخر 1448 هـ',
-                style: GoogleFonts.ibmPlexSansArabic(
-                  fontSize: 10,
-                  color: AppColors.onSurfaceVariant.withValues(alpha: 0.65),
-                  height: 1.2,
                 ),
               ),
             ],

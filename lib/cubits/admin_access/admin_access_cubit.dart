@@ -17,24 +17,41 @@ class AdminAccessCubit extends Cubit<AdminAccessState> {
 
       switch (result) {
         case AdminAccessResult.granted:
-          emit(state.copyWith(status: AdminAccessStatus.granted, failedAttempts: 0, clearError: true));
+          emit(
+            state.copyWith(
+              status: AdminAccessStatus.granted,
+              failedAttempts: 0,
+              clearError: true,
+            ),
+          );
           break;
         case AdminAccessResult.offlineGranted:
-          emit(state.copyWith(status: AdminAccessStatus.offlineGranted, failedAttempts: 0, clearError: true));
+          emit(
+            state.copyWith(
+              status: AdminAccessStatus.offlineGranted,
+              failedAttempts: 0,
+              clearError: true,
+            ),
+          );
           break;
         case AdminAccessResult.denied:
           final attempts = state.failedAttempts + 1;
-          emit(state.copyWith(
-            status: AdminAccessStatus.denied,
-            errorMessage: 'الباسورد غير صحيح',
-            failedAttempts: attempts,
-          ));
+          emit(
+            state.copyWith(
+              status: AdminAccessStatus.denied,
+              errorMessage: 'الباسورد غير صحيح',
+              failedAttempts: attempts,
+            ),
+          );
           break;
         case AdminAccessResult.offlineUnavailable:
-          emit(state.copyWith(
-            status: AdminAccessStatus.error,
-            errorMessage: 'يلزم الاتصال بالإنترنت لأول مرة للدخول إلى الإدارة',
-          ));
+          emit(
+            state.copyWith(
+              status: AdminAccessStatus.error,
+              errorMessage:
+                  'يلزم الاتصال بالإنترنت لأول مرة للدخول إلى الإدارة',
+            ),
+          );
           break;
       }
     } catch (e) {

@@ -9,8 +9,8 @@ class CatalogCubit extends Cubit<CatalogState> {
   final ProductsRepository _repository;
 
   CatalogCubit({ProductsRepository? repository})
-      : _repository = repository ?? ProductsRepository(),
-        super(const CatalogState());
+    : _repository = repository ?? ProductsRepository(),
+      super(const CatalogState());
 
   /// جلب الكاتالوج — الكاش في الذاكرة:
   /// - لو الحالة [loaded] أو [loading] وforce = false: ارجع فوراً
@@ -33,24 +33,24 @@ class CatalogCubit extends Cubit<CatalogState> {
 
     try {
       final data = await _repository.fetchCatalog();
-      emit(CatalogState(
-        status: CatalogStatus.loaded,
-        categories: data.categories,
-        products: data.products,
-      ));
+      emit(
+        CatalogState(
+          status: CatalogStatus.loaded,
+          categories: data.categories,
+          products: data.products,
+        ),
+      );
     } catch (e) {
       final errorMsg = e.toString().replaceFirst('Exception: ', '');
       // لو عندنا بيانات قديمة: احتفظ بها ولا تمسحها
       if (state.categories.isNotEmpty || state.products.isNotEmpty) {
-        emit(state.copyWith(
-          status: CatalogStatus.failure,
-          errorMessage: errorMsg,
-        ));
+        emit(
+          state.copyWith(status: CatalogStatus.failure, errorMessage: errorMsg),
+        );
       } else {
-        emit(CatalogState(
-          status: CatalogStatus.failure,
-          errorMessage: errorMsg,
-        ));
+        emit(
+          CatalogState(status: CatalogStatus.failure, errorMessage: errorMsg),
+        );
       }
     }
   }

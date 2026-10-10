@@ -26,13 +26,13 @@ class RawMaterial {
   bool get isLow => stock <= minLevel;
 
   RawMaterial copyWithStock(double newStock) => RawMaterial(
-        sku: sku,
-        name: name,
-        category: category,
-        categoryLabel: categoryLabel,
-        stock: newStock,
-        minLevel: minLevel,
-        unit: unit,
-        icon: icon,
-      );
+    sku: sku,
+    name: name,
+    category: category,
+    categoryLabel: categoryLabel,
+    stock: newStock,
+    minLevel: minLevel,
+    unit: unit,
+    icon: icon,
+  );
 }

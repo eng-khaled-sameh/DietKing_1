@@ -79,6 +79,11 @@ class InventorySidebar extends StatelessWidget {
                           : null,
                       badgeColor: AppColors.secondaryContainer,
                     ),
+                    _SidebarItem(
+                      section: InventorySection.administration,
+                      isActive:
+                          state.section == InventorySection.administration,
+                    ),
                   ],
                 );
               },

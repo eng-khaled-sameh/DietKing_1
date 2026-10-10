@@ -43,20 +43,20 @@ class SalesCubit extends Cubit<SalesState> {
 
   void submitSale(SaleDraft draft) async {
     _currentClientId ??= _generateUuidV4Formatted();
-    
+
     final draftWithClientId = SaleDraft(
-       clientId: _currentClientId!,
-       branchId: draft.branchId,
-       shift: draft.shift,
-       paymentMethod: draft.paymentMethod,
-       localNumber: draft.localNumber,
-       discountAmount: draft.discountAmount,
-       discountPercent: draft.discountPercent,
-       vatRate: draft.vatRate,
-       vatAmount: draft.vatAmount,
-       total: draft.total,
-       notes: draft.notes,
-       items: draft.items,
+      clientId: _currentClientId!,
+      branchId: draft.branchId,
+      shift: draft.shift,
+      paymentMethod: draft.paymentMethod,
+      localNumber: draft.localNumber,
+      discountAmount: draft.discountAmount,
+      discountPercent: draft.discountPercent,
+      vatRate: draft.vatRate,
+      vatAmount: draft.vatAmount,
+      total: draft.total,
+      notes: draft.notes,
+      items: draft.items,
     );
 
     emit(SalesSubmitting());
@@ -80,6 +80,6 @@ class SalesCubit extends Cubit<SalesState> {
     bytes[6] = (bytes[6] & 0x0f) | 0x40;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
     final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).toList();
-    return '${hex.sublist(0,4).join()}-${hex.sublist(4,6).join()}-${hex.sublist(6,8).join()}-${hex.sublist(8,10).join()}-${hex.sublist(10,16).join()}';
+    return '${hex.sublist(0, 4).join()}-${hex.sublist(4, 6).join()}-${hex.sublist(6, 8).join()}-${hex.sublist(8, 10).join()}-${hex.sublist(10, 16).join()}';
   }
 }
