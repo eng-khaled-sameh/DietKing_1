@@ -63,7 +63,7 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
           // Dynamic cashier and branch info
           _InfoChip(
             icon: Icons.badge_outlined,
-            label: 'الكاشير:',
+            label: 'الموظف:',
             value: ShiftInfo.cashierName,
           ),
           Container(

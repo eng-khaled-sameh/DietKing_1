@@ -7,14 +7,38 @@ import '../../../data/hr/models/attendance_model.dart';
 import '../cubit/hr_attendance_cubit.dart';
 import 'package:intl/intl.dart';
 import '../../../data/hr/hr_api.dart';
+import '../../../data/hr/hr_date_utils.dart';
 
-class AttendanceAbsencesSection extends StatelessWidget {
+class AttendanceAbsencesSection extends StatefulWidget {
   const AttendanceAbsencesSection({super.key});
 
   @override
+  State<AttendanceAbsencesSection> createState() =>
+      _AttendanceAbsencesSectionState();
+}
+
+class _AttendanceAbsencesSectionState
+    extends State<AttendanceAbsencesSection> {
+  late final HrAttendanceCubit _cubit;
+
+  @override
+  void initState() {
+    super.initState();
+    _cubit = HrAttendanceCubit();
+    // تأكد أن التاريخ دائماً يوم اليوم عند فتح الصفحة
+    _cubit.refreshToToday();
+  }
+
+  @override
+  void dispose() {
+    _cubit.close();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => HrAttendanceCubit(),
+    return BlocProvider.value(
+      value: _cubit,
       child: const _AttendanceView(),
     );
   }
@@ -83,8 +107,27 @@ class _AttendanceView extends StatelessWidget {
           ),
           BlocBuilder<HrAttendanceCubit, HrAttendanceState>(
             builder: (context, state) {
+              final today = DateTime.now();
+              final isToday = state.selectedDate.year == today.year &&
+                  state.selectedDate.month == today.month &&
+                  state.selectedDate.day == today.day;
               return Row(
                 children: [
+                  // زر الانتقال ليوم اليوم مع ريفريش
+                  Tooltip(
+                    message: 'العودة لليوم',
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.today,
+                        color: isToday
+                            ? AppColors.primary
+                            : AppColors.onSurfaceVariant,
+                      ),
+                      onPressed: () =>
+                          context.read<HrAttendanceCubit>().refreshToToday(),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   IconButton(
                     icon: const Icon(Icons.chevron_right),
                     onPressed: () {
@@ -95,9 +138,10 @@ class _AttendanceView extends StatelessWidget {
                   ),
                   Text(
                     DateFormat('yyyy-MM-dd').format(state.selectedDate),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: isToday ? AppColors.primary : null,
                     ),
                   ),
                   IconButton(
@@ -117,6 +161,7 @@ class _AttendanceView extends StatelessWidget {
     );
   }
 }
+
 
 class _EmployeeAttendanceCard extends StatelessWidget {
   final AttendanceEmployeeEntry emp;
@@ -360,34 +405,80 @@ class _MonthlyAttendanceDialogState extends State<_MonthlyAttendanceDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final retentionEarliest = HrDateUtils.getRetentionEarliestDate();
+    final latestDate = HrDateUtils.getRetentionLatestDate();
+
+    final prevMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
+    final nextMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+    final canGoPrev = !prevMonth.isBefore(DateTime(retentionEarliest.year, retentionEarliest.month, 1));
+    final canGoNext = !nextMonth.isAfter(DateTime(latestDate.year, latestDate.month, 1));
+
+    // حدود صلاحية الموظف
+    final empStart = widget.employee.hireDate ?? widget.employee.createdAt ?? DateTime(2020);
+    final empStartDay = DateTime(empStart.year, empStart.month, empStart.day);
+    final empEndDay = (widget.employee.status != 'active' && widget.employee.statusChangedAt != null)
+        ? DateTime(widget.employee.statusChangedAt!.year, widget.employee.statusChangedAt!.month, widget.employee.statusChangedAt!.day)
+        : latestDate;
+
+    // استخراج الأيام الصالحة للعرض فقط
+    final daysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
+    final validDays = <DateTime>[];
+    for (int i = 1; i <= daysInMonth; i++) {
+      final d = DateTime(_currentMonth.year, _currentMonth.month, i);
+      // إخفاء أي يوم قبل تاريخ تعيين/إنشاء الموظف أو بعد تاريخ وقفه/فصله أو خارج نافذة الاحتفاظ
+      if (d.isBefore(empStartDay) || d.isAfter(empEndDay) || d.isBefore(retentionEarliest)) {
+        continue;
+      }
+      validDays.add(d);
+    }
+
+    final isEmployeeActive = widget.employee.status == 'active';
+
     return AlertDialog(
       title: Row(
         children: [
-          Expanded(child: Text('سجل الحضور: ${widget.employee.fullName}')),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'سجل الحضور: ${widget.employee.fullName}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'الحالة: ${widget.employee.status == 'active' ? 'نشط' : 'غير نشط (${widget.employee.status})'} | البداية: ${DateFormat('yyyy-MM-dd').format(empStartDay)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isEmployeeActive ? AppColors.statusGreen : AppColors.error,
+                  ),
+                ),
+              ],
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.chevron_right),
-            onPressed: () {
-              setState(
-                () => _currentMonth = DateTime(
-                  _currentMonth.year,
-                  _currentMonth.month - 1,
-                ),
-              );
-              _loadRecords();
-            },
+            tooltip: canGoPrev ? 'الشهر السابق' : 'خارج نطاق البيانات المحفوظة',
+            onPressed: canGoPrev
+                ? () {
+                    setState(() => _currentMonth = prevMonth);
+                    _loadRecords();
+                  }
+                : null,
           ),
-          Text(DateFormat('yyyy-MM').format(_currentMonth)),
+          Text(
+            DateFormat('yyyy-MM').format(_currentMonth),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           IconButton(
             icon: const Icon(Icons.chevron_left),
-            onPressed: () {
-              setState(
-                () => _currentMonth = DateTime(
-                  _currentMonth.year,
-                  _currentMonth.month + 1,
-                ),
-              );
-              _loadRecords();
-            },
+            tooltip: canGoNext ? 'الشهر التالي' : 'لا يمكن اختيار تاريخ مستقبلي',
+            onPressed: canGoNext
+                ? () {
+                    setState(() => _currentMonth = nextMonth);
+                    _loadRecords();
+                  }
+                : null,
           ),
         ],
       ),
@@ -396,35 +487,53 @@ class _MonthlyAttendanceDialogState extends State<_MonthlyAttendanceDialog> {
         height: 400,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : ListView.builder(
-                itemCount: DateTime(
-                  _currentMonth.year,
-                  _currentMonth.month + 1,
-                  0,
-                ).day,
-                itemBuilder: (context, index) {
-                  final date = DateTime(
-                    _currentMonth.year,
-                    _currentMonth.month,
-                    index + 1,
-                  );
-                  final record = _records
-                      .where((r) => r.recordDate.day == date.day)
-                      .firstOrNull;
+            : validDays.isEmpty
+                ? const Center(
+                    child: Text('لا توجد أيام مسجلة للموظف في هذا الشهر ضمن نطاق تعيينه وحفظ البيانات'),
+                  )
+                : ListView.builder(
+                    itemCount: validDays.length,
+                    itemBuilder: (context, index) {
+                      final date = validDays[index];
+                      final record = _records
+                          .where((r) => r.recordDate.day == date.day && r.recordDate.month == date.month)
+                          .firstOrNull;
 
-                  return ListTile(
-                    leading: Text(DateFormat('yyyy-MM-dd').format(date)),
-                    title: Text(record?.statusLabel ?? 'لم يسجل'),
-                    subtitle: record?.notes != null
-                        ? Text(record!.notes!)
-                        : null,
-                    trailing: IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _editRecord(date, record),
-                    ),
-                  );
-                },
-              ),
+                      final isFuture = date.isAfter(DateTime.now());
+                      final isOnLeave = record?.status == 'on_leave';
+                      final canEdit = isEmployeeActive && !isFuture && !isOnLeave;
+
+                      return ListTile(
+                        leading: Text(DateFormat('yyyy-MM-dd (EEEE)', 'ar').format(date)),
+                        title: Text(
+                          record?.statusLabel ?? 'لم يسجل',
+                          style: TextStyle(
+                            color: record?.status == 'present'
+                                ? AppColors.statusGreen
+                                : (record?.status == 'absent' ? AppColors.error : null),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: record?.notes != null ? Text(record!.notes!) : null,
+                        trailing: canEdit
+                            ? IconButton(
+                                icon: const Icon(Icons.edit, size: 18),
+                                tooltip: 'تعديل الحضور',
+                                onPressed: () => _editRecord(date, record),
+                              )
+                            : Tooltip(
+                                message: !isEmployeeActive
+                                    ? 'لا يمكن تسجيل حضور لموظف غير نشط'
+                                    : (isOnLeave ? 'الموظف في إجازة معتمدة' : 'تاريخ غير قابل للتعديل'),
+                                child: Icon(
+                                  Icons.lock_outline,
+                                  size: 18,
+                                  color: AppColors.onSurfaceVariant.withOpacity(0.5),
+                                ),
+                              ),
+                      );
+                    },
+                  ),
       ),
       actions: [
         TextButton(
@@ -435,3 +544,4 @@ class _MonthlyAttendanceDialogState extends State<_MonthlyAttendanceDialog> {
     );
   }
 }
+

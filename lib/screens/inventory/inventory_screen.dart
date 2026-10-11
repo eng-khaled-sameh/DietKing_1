@@ -27,8 +27,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: GlobalAppLayout(child: InventoryShell()),
+        body: _InventoryBody(),
       ),
     );
   }
 }
+
+class _InventoryBody extends StatelessWidget {
+  const _InventoryBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlobalAppLayout(
+      onRefresh: () => context.read<InventoryCubit>().forceRefresh(),
+      child: const InventoryShell(),
+    );
+  }
+}
+

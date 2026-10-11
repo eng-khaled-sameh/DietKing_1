@@ -13,6 +13,7 @@ class DeductionBonusRequest {
   final String notes;
   final String status; // 'pending' | 'approved' | 'rejected'
   final double? finalCashAmount;
+  final double? basicSalary;
   final DateTime createdAt;
 
   const DeductionBonusRequest({
@@ -30,6 +31,7 @@ class DeductionBonusRequest {
     required this.notes,
     required this.status,
     this.finalCashAmount,
+    this.basicSalary,
     required this.createdAt,
   });
 
@@ -42,7 +44,7 @@ class DeductionBonusRequest {
   };
 
   String get amountLabel {
-    if (amountType == 'cash') return '${cashAmount?.toStringAsFixed(2)} ج.م';
+    if (amountType == 'cash') return '${cashAmount?.toStringAsFixed(2)} ر.س';
     return '${daysAmount} يوم';
   }
 
@@ -62,6 +64,7 @@ class DeductionBonusRequest {
         notes: j['notes'] as String,
         status: j['status'] as String,
         finalCashAmount: (j['final_cash_amount'] as num?)?.toDouble(),
+        basicSalary: (j['basic_salary'] as num?)?.toDouble(),
         createdAt: DateTime.parse(j['created_at'] as String),
       );
 }

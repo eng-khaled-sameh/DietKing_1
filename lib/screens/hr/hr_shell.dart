@@ -22,10 +22,8 @@ class HrShell extends StatelessWidget {
       child: const Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
-          backgroundColor: Color(
-            0xFF1E1E1E,
-          ), // Match app background (assuming it's dark theme)
-          body: GlobalAppLayout(child: _HrShellContent()),
+          backgroundColor: Color(0xFF1E1E1E),
+          body: _HrShellContent(),
         ),
       ),
     );
@@ -37,30 +35,36 @@ class _HrShellContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const HrSidebar(),
-        Expanded(
-          child: BlocBuilder<HrCubit, HrState>(
-            buildWhen: (previous, current) =>
-                previous.section != current.section,
-            builder: (context, state) {
-              switch (state.section) {
-                case HrSection.employees:
-                  return const EmployeesSection();
-                case HrSection.leaveRequests:
-                  return const LeaveRequestsSection();
-                case HrSection.attendanceAbsences:
-                  return const AttendanceAbsencesSection();
-                case HrSection.deductionsBonuses:
-                  return const DeductionsBonusesSection();
-                case HrSection.monthlyReport:
-                  return const MonthlyReportSection();
-              }
-            },
+    final hrCubit = context.read<HrCubit>();
+    return GlobalAppLayout(
+      // زر Refresh يُعيد بناء القسم الحالي بجلب البيانات من السيرفر
+      onRefresh: hrCubit.refresh,
+      child: Row(
+        children: [
+          const HrSidebar(),
+          Expanded(
+            child: BlocBuilder<HrCubit, HrState>(
+              builder: (context, state) {
+                // ValueKey مركّب يضمن إعادة إنشاء الـ widget عند تغيير القسم أو الريفريش
+                final key = ValueKey('${state.section.name}_${state.refreshVersion}');
+                return switch (state.section) {
+                  HrSection.employees =>
+                    EmployeesSection(key: key),
+                  HrSection.leaveRequests =>
+                    LeaveRequestsSection(key: key),
+                  HrSection.attendanceAbsences =>
+                    AttendanceAbsencesSection(key: key),
+                  HrSection.deductionsBonuses =>
+                    DeductionsBonusesSection(key: key),
+                  HrSection.monthlyReport =>
+                    MonthlyReportSection(key: key),
+                };
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
+

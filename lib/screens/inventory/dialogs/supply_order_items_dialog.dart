@@ -221,14 +221,14 @@ class SupplyOrderItemsDialog extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'الوحدة: ${line.unitCost.toStringAsFixed(2)} ج.م',
+                  'الوحدة: ${line.unitCost.toStringAsFixed(2)} ر.س',
                   style: GoogleFonts.ibmPlexSansArabic(
                     color: AppColors.onSurfaceVariant,
                     fontSize: 12,
                   ),
                 ),
                 Text(
-                  'الإجمالي: ${total.toStringAsFixed(2)} ج.م',
+                  'الإجمالي: ${total.toStringAsFixed(2)} ر.س',
                   style: GoogleFonts.ibmPlexSansArabic(
                     color: AppColors.onSurface,
                     fontWeight: FontWeight.bold,
@@ -281,7 +281,7 @@ class SupplyOrderItemsDialog extends StatelessWidget {
               ),
             ),
             Text(
-              '${_calculateTotal(order).toStringAsFixed(2)} ج.م',
+              '${_calculateTotal(order).toStringAsFixed(2)} ر.س',
               style: GoogleFonts.ibmPlexSansArabic(
                 color: AppColors.primary,
                 fontSize: 16,

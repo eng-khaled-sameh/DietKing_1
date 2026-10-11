@@ -10,8 +10,13 @@ import '../../cubits/session/session_cubit.dart';
 import '../theme/app_colors.dart';
 
 /// شريط معلومات الجلسة: الكاشير + الفرع + الوردية + حالة الاتصال + الوقت والتاريخ
+///
+/// [onRefresh] — اختياري، إذا تم تمريره يظهر زر ريفريش.
 class PosSessionInfoRow extends StatefulWidget {
-  const PosSessionInfoRow({super.key});
+  /// عند تمريره يظهر زر Refresh في شريط الجلسة.
+  final Future<void> Function()? onRefresh;
+
+  const PosSessionInfoRow({super.key, this.onRefresh});
 
   @override
   State<PosSessionInfoRow> createState() => _PosSessionInfoRowState();
@@ -77,7 +82,7 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
                 children: [
                   _InfoChip(
                     icon: Icons.badge_outlined,
-                    label: 'الكاشير:',
+                    label: 'الموظف:',
                     value: info.cashierName,
                   ),
                   _divider(),
@@ -146,10 +151,13 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
 
           const Spacer(),
 
-          // ── يسار: الوقت والتاريخ ─────────────────────────────────
+          // ── يسار: زر ريفريش + الوقت والتاريخ ──────────────────────────
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // زر الريفريش (يظهر فقط لأقسام الإدارة)
+              if (widget.onRefresh != null)
+                _RefreshButton(onRefresh: widget.onRefresh!),
               Text(
                 dateStr,
                 style: GoogleFonts.ibmPlexSansArabic(
@@ -189,6 +197,69 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
       height: 18,
       margin: const EdgeInsets.symmetric(horizontal: AppDimens.spaceSm),
       color: AppColors.outlineVariant.withValues(alpha: 0.4),
+    );
+  }
+}
+
+/// زر ريفريش صغير مع animation دوران
+class _RefreshButton extends StatefulWidget {
+  final Future<void> Function() onRefresh;
+  const _RefreshButton({required this.onRefresh});
+
+  @override
+  State<_RefreshButton> createState() => _RefreshButtonState();
+}
+
+class _RefreshButtonState extends State<_RefreshButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleTap() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    _ctrl.repeat();
+    try {
+      await widget.onRefresh();
+    } finally {
+      _ctrl.stop();
+      _ctrl.reset();
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'تحديث البيانات من السيرفر',
+      child: RotationTransition(
+        turns: _ctrl,
+        child: IconButton(
+          icon: Icon(
+            Icons.sync,
+            size: AppDimens.iconSm,
+            color: _loading ? AppColors.primary : AppColors.onSurfaceVariant,
+          ),
+          onPressed: _loading ? null : _handleTap,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+        ),
+      ),
     );
   }
 }

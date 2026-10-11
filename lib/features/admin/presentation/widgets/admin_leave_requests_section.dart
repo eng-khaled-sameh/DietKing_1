@@ -54,8 +54,8 @@ class _AdminLeaveRequestsSectionState extends State<AdminLeaveRequestsSection> {
         ),
       ]);
 
-      _branchEmployees = List<EmployeeSimple>.from(futures[0] as List);
-      _myRequests = futures[1] as List<dynamic>;
+      _branchEmployees = List<EmployeeSimple>.from(futures[0]);
+      _myRequests = futures[1];
 
       if (mounted) setState(() => _isLoading = false);
     } catch (e) {

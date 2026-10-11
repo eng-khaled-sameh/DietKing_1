@@ -21,7 +21,6 @@ import 'features/auth/presentation/screens/login_screen.dart';
 import 'repositories/pos_settings_repository.dart';
 import 'repositories/sales_repository.dart';
 import 'data/inventory/inventory_api.dart';
-import 'data/inventory/inventory_cache.dart';
 import 'data/inventory/inventory_sync.dart';
 import 'screens/inventory/cubit/inventory_cubit.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -83,10 +82,10 @@ Future<void> main() async {
         BlocProvider(
           create: (_) {
             final client = supabase;
-            final cache = InventoryCache();
+            // InventorySync يجلب من السيرفر مباشرة (بدون SQLite cache)
             return InventoryCubit(
               InventoryApi(client),
-              InventorySync(client, cache),
+              InventorySync(client),
             );
           },
           lazy: true, // لا يُنشَأ حتى أول استخدام

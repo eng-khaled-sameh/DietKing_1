@@ -379,6 +379,51 @@ class _EmployeeFormState extends State<EmployeeForm> {
                       label: 'ملاحظات',
                       maxLines: 3,
                     ),
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _notesController,
+                      builder: (context, val, _) {
+                        if (val.text.trim().isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        return Container(
+                          margin: const EdgeInsets.only(top: AppDimens.spaceSm),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(
+                              AppDimens.radiusSm,
+                            ),
+                            border: Border.all(
+                              color: Colors.amber.shade700,
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.amber.shade700,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'تنبيه: تم وضع ملاحظة — سيتم تمييز هذا الموظف في النظام بوجود تحذير ملاحظة.',
+                                  style: TextStyle(
+                                    color: Colors.amber.shade300,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),

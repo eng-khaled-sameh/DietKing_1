@@ -54,8 +54,8 @@ class _AdminDeductionsBonusesSectionState
         ),
       ]);
 
-      _branchEmployees = List<EmployeeSimple>.from(futures[0] as List);
-      _myRequests = futures[1] as List<dynamic>;
+      _branchEmployees = List<EmployeeSimple>.from(futures[0]);
+      _myRequests = futures[1];
 
       if (mounted) setState(() => _isLoading = false);
     } catch (e) {
@@ -146,7 +146,7 @@ class _AdminDeductionsBonusesSectionState
                     TextFormField(
                       decoration: InputDecoration(
                         labelText: amountType == 'cash'
-                            ? 'القيمة (ج.م)'
+                            ? 'القيمة (ر.س)'
                             : 'عدد الأيام',
                       ),
                       keyboardType: const TextInputType.numberWithOptions(
@@ -258,7 +258,7 @@ class _AdminDeductionsBonusesSectionState
                   final req = _myRequests[index];
                   final isDeduction = req['type'] == 'deduction';
                   final amount = req['amount_type'] == 'cash'
-                      ? '${req['cash_amount']} ج.م'
+                      ? '${req['cash_amount']} ر.س'
                       : '${req['days_amount']} يوم';
 
                   return Card(

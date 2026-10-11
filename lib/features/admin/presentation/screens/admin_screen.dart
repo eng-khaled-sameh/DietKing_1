@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:my_desktop_app/data/inventory/models/inventory_category.dart';
 import 'package:printing/printing.dart';
 import '../../../../core/local_db.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -66,6 +67,17 @@ class AdminScreen extends StatefulWidget {
 
 class _AdminScreenState extends State<AdminScreen> {
   _AdminTab _selectedTab = _AdminTab.shiftClose;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final invCubit = context.read<InventoryCubit>();
+      if (invCubit.state.catalog == null) {
+        invCubit.initModule();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -232,6 +244,15 @@ class _AdminHeader extends StatelessWidget {
               BlocBuilder<SyncCubit, SyncState>(
                 builder: (context, syncState) {
                   return _SyncIndicator(syncState: syncState);
+                },
+              ),
+              const SizedBox(width: AppDimens.spaceSm),
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
+                tooltip: 'تحديث البيانات من السيرفر',
+                onPressed: () {
+                  context.read<InventoryCubit>().forceRefresh();
+                  context.read<CatalogCubit>().load(force: true);
                 },
               ),
             ],
@@ -2251,6 +2272,17 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
   String? _filterCatId;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final cubit = _InventoryCubitProvider.of(context);
+      if (cubit.state.catalog == null) {
+        cubit.initModule();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _searchCtrl.dispose();
     _notesCtrl.dispose();
@@ -2389,10 +2421,16 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
   Widget build(BuildContext context) {
     return _InventoryCubitConsumer(
       builder: (context, invCubit, invState) {
-        final allItems = (invState.catalog?.items ?? [])
-            .where((it) => it.isActive && it.branchOrderable)
-            .toList();
         final allCats = invState.catalog?.categories ?? [];
+        final allItems = (invState.catalog?.items ?? []).where((it) {
+          if (!it.isActive) return false;
+          if (it.branchOrderable) return true;
+          final cat = allCats.cast<InventoryCategory?>().firstWhere(
+            (c) => c?.id == it.categoryId,
+            orElse: () => null,
+          );
+          return cat?.kind == CategoryKind.finished;
+        }).toList();
 
         // فلترة
         final filtered = allItems.where((it) {
@@ -2491,20 +2529,52 @@ class _NewBranchOrderTabState extends State<_NewBranchOrderTab> {
                       onChanged: (v) => setState(() => _filterCatId = v),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                      color: AppColors.primary,
+                    ),
+                    tooltip: 'تحديث الأصناف من السيرفر',
+                    onPressed: () =>
+                        _InventoryCubitProvider.of(context).forceRefresh(),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
 
               // ── كتالوج الأصناف ────────────────────────────────────────────
-              if (filtered.isEmpty)
+              if (invState.isLoading && invState.catalog == null)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 36),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (filtered.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Center(
-                    child: Text(
-                      'لا توجد أصناف مطابقة',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurfaceVariant,
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'لا توجد أصناف مطابقة',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () => _InventoryCubitProvider.of(
+                            context,
+                          ).forceRefresh(),
+                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          label: const Text('إعادة تحميل من السيرفر'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 )

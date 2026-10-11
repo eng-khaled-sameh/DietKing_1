@@ -4,6 +4,7 @@ import 'models/employee_model.dart';
 import 'models/attendance_model.dart';
 import 'models/leave_request_model.dart';
 import 'models/deduction_bonus_model.dart';
+import 'models/report_models.dart';
 
 class HrApi {
   final SupabaseClient _client = Supabase.instance.client;
@@ -84,13 +85,16 @@ class HrApi {
   Future<List<EmployeeSimple>> getBranchEmployees({
     String? branchId,
     String context = 'cashier',
+    DateTime? date,
   }) async {
     try {
+      final targetDate = date ?? DateTime.now();
       final response = await _client.rpc(
         'hr_get_branch_employees',
         params: {
-          if (branchId != null) 'p_branch_id': branchId,
+          if (branchId != null && branchId.isNotEmpty) 'p_branch_id': branchId,
           'p_context': context,
+          'p_date': targetDate.toIso8601String().split('T').first,
         },
       );
       return (response as List)
@@ -101,9 +105,15 @@ class HrApi {
     }
   }
 
-  Future<List<EmployeeSimple>> getDrivers() async {
+  Future<List<EmployeeSimple>> getDrivers({DateTime? date}) async {
     try {
-      final response = await _client.rpc('hr_get_drivers');
+      final targetDate = date ?? DateTime.now();
+      final response = await _client.rpc(
+        'hr_get_drivers',
+        params: {
+          'p_date': targetDate.toIso8601String().split('T').first,
+        },
+      );
       return (response as List)
           .map((e) => EmployeeSimple.fromJson(Map<String, dynamic>.from(e)))
           .toList();
@@ -140,11 +150,12 @@ class HrApi {
     DateTime? date,
   }) async {
     try {
+      final targetDate = date ?? DateTime.now();
       final response = await _client.rpc(
         'hr_get_today_attendance',
         params: {
           'p_employee_ids': employeeIds,
-          if (date != null) 'p_date': date.toIso8601String().split('T').first,
+          'p_date': targetDate.toIso8601String().split('T').first,
         },
       );
       return Map<String, dynamic>.from(response);
@@ -213,7 +224,7 @@ class HrApi {
         'hr_list_leave_requests',
         params: {
           if (status != null) 'p_status': status,
-          if (branchId != null) 'p_branch_id': branchId,
+          if (branchId != null && branchId.isNotEmpty) 'p_branch_id': branchId,
           'p_limit': limit,
           'p_offset': offset,
         },
@@ -242,6 +253,14 @@ class HrApi {
           if (notes != null) 'p_notes': notes,
         },
       );
+    } catch (e) {
+      throw AppException.mapError(e);
+    }
+  }
+
+  Future<void> addDirectLeave(Map<String, dynamic> data) async {
+    try {
+      await _client.rpc('hr_add_direct_leave', params: {'p': data});
     } catch (e) {
       throw AppException.mapError(e);
     }
@@ -302,6 +321,14 @@ class HrApi {
     }
   }
 
+  Future<void> addDirectDeductionBonus(Map<String, dynamic> data) async {
+    try {
+      await _client.rpc('hr_add_direct_deduction_bonus', params: {'p': data});
+    } catch (e) {
+      throw AppException.mapError(e);
+    }
+  }
+
   Future<List<dynamic>> listMyBranchRequests({
     String? branchId,
     String context = 'cashier',
@@ -311,7 +338,7 @@ class HrApi {
       final response = await _client.rpc(
         'hr_list_my_branch_requests',
         params: {
-          if (branchId != null) 'p_branch_id': branchId,
+          if (branchId != null && branchId.isNotEmpty) 'p_branch_id': branchId,
           'p_context': context,
           'p_request_type': requestType,
         },
@@ -321,4 +348,53 @@ class HrApi {
       throw AppException.mapError(e);
     }
   }
+
+  // ── Reports ─────────────────────────────────────────────────────────────────
+
+  Future<List<ComprehensiveReportEntry>> getComprehensiveReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final response = await _client.rpc(
+        'hr_get_comprehensive_report',
+        params: {
+          'p_start_date': startDate.toIso8601String().split('T').first,
+          'p_end_date': endDate.toIso8601String().split('T').first,
+        },
+      );
+      return (response as List)
+          .map(
+            (e) => ComprehensiveReportEntry.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ),
+          )
+          .toList();
+    } catch (e) {
+      throw AppException.mapError(e);
+    }
+  }
+
+  Future<EmployeeDetailedReport> getEmployeeReport({
+    required String employeeId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final response = await _client.rpc(
+        'hr_get_employee_report',
+        params: {
+          'p_employee_id': employeeId,
+          'p_start_date': startDate.toIso8601String().split('T').first,
+          'p_end_date': endDate.toIso8601String().split('T').first,
+        },
+      );
+      return EmployeeDetailedReport.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
+    } catch (e) {
+      throw AppException.mapError(e);
+    }
+  }
 }
+

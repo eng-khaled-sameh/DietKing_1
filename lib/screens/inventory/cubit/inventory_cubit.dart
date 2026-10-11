@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/local_db.dart';
 import '../../../data/inventory/inventory_api.dart';
 import '../../../data/inventory/inventory_sync.dart';
 import '../../../data/inventory/models/catalog_snapshot.dart';
@@ -33,33 +32,27 @@ class InventoryCubit extends Cubit<InventoryState> {
 
   // ── التحميل الأولي ─────────────────────────────────────────────────────────
 
-  /// يُستدعى عند أول دخول لوحدة المخزون في الجلسة.
-  /// يحمّل الكتالوج والأرصدة من الكاش ثم يُحدّث بالبصمات.
+  /// يُستدعى عند دخول وحدة المخزون.
+  /// يجلب الكتالوج والأرصدة مباشرة من السيرفر.
   Future<void> initModule() async {
-    if (_catalogLoaded && _stockLoaded) return; // أول مرة فقط
+    if (_catalogLoaded && _stockLoaded) {
+      return; // تجنب إعادة التحميل في نفس الجلسة
+    }
     emit(state.copyWith(isLoading: true, error: null));
     try {
-      // 1. تحميل الكتالوج من الكاش أولاً (سريع)
-      final cached = await _sync.loadCatalogFromCache();
-      if (cached.stamp > 0) {
-        emit(state.copyWith(catalog: cached));
-      }
-
-      // 2. مزامنة الكتالوج بالبصمات (delta فقط إن لزم)
+      // 1. جلب الكتالوج من السيرفر مباشرة (متاح لجميع الأدوار بما فيها الكاشير)
       final freshCatalog = await _sync.syncCatalog();
       _catalogLoaded = true;
+      emit(state.copyWith(catalog: freshCatalog, isLoading: false));
 
-      // 3. مزامنة الأرصدة
-      final freshStock = await _sync.syncStock();
-      _stockLoaded = true;
-
-      emit(
-        state.copyWith(
-          isLoading: false,
-          catalog: freshCatalog,
-          stock: freshStock.entries,
-        ),
-      );
+      // 2. جلب أرصدة المستودع (مسموح لأمين المخزن والمحاسب فقط)
+      try {
+        final freshStock = await _sync.syncStock();
+        _stockLoaded = true;
+        emit(state.copyWith(stock: freshStock.entries));
+      } catch (_) {
+        // المستخدم كاشير أو لا يملك صلاحية أرصدة المستودع — الكتالوج يعمل بنجاح
+      }
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: _mapError(e)));
     }
@@ -82,6 +75,16 @@ class InventoryCubit extends Cubit<InventoryState> {
   void clearSupplyCache() => _supplyLoaded = false;
   void clearBranchOrdersCache() => _branchOrdersLoaded = false;
   void clearKitchenCache() => _kitchenLoaded = false;
+
+  /// إعادة تحميل كامل من السيرفر (يُستدعى من زر Refresh)
+  Future<void> forceRefresh() async {
+    _catalogLoaded = false;
+    _stockLoaded = false;
+    _supplyLoaded = false;
+    _branchOrdersLoaded = false;
+    _kitchenLoaded = false;
+    await initModule();
+  }
 
   Future<void> loadBranchOrders({bool force = false}) async {
     if (_branchOrdersLoaded && !force) return;
@@ -688,6 +691,3 @@ class InventoryCubit extends Cubit<InventoryState> {
     return msg;
   }
 }
-
-/// دالة مساعدة لإنشاء UUID محلي (مستعارة من local_db)
-String generateUuid() => generateUuidV4();

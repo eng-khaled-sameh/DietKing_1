@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_desktop_app/screens/hr/hr_shell.dart';
@@ -13,12 +14,58 @@ import '../inventory/cubit/inventory_cubit.dart';
 import '../inventory/inventory_screen.dart';
 import 'placeholder_module_screen.dart';
 
+/// التحقق من الاتصال بالإنترنت
+Future<bool> _isOnline() async {
+  final results = await Connectivity().checkConnectivity();
+  return results.any((r) =>
+      r == ConnectivityResult.wifi ||
+      r == ConnectivityResult.ethernet ||
+      r == ConnectivityResult.mobile);
+}
+
+/// عرض dialog عند انقطاع الإنترنت لأقسام الإدارة
+Future<void> _showOfflineDialog(BuildContext context, AppModule module) {
+  return showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Row(
+        children: [
+          const Icon(Icons.wifi_off, color: Colors.orange),
+          const SizedBox(width: 8),
+          const Text('لا يوجد اتصال بالإنترنت'),
+        ],
+      ),
+      content: Text(
+        'قسم "${module.arabicName}" يتطلب اتصالاً بالإنترنت.\n'
+        'تحقق من الاتصال وحاول مجدداً.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('حسناً'),
+        ),
+      ],
+    ),
+  );
+}
+
 Future<void> startAndOpenModule(
   BuildContext context,
   AppModule module,
   UserProfile profile, {
   bool replace = false,
 }) async {
+  // ── فحص الإنترنت لأقسام الإدارة (غير الكاشير) ──────────────────────────
+  // الكاشير يعمل offline — لا حاجة للفحص
+  if (module != AppModule.cashier) {
+    final online = await _isOnline();
+    if (!context.mounted) return;
+    if (!online) {
+      await _showOfflineDialog(context, module);
+      return;
+    }
+  }
+
   // فعّل المزامنة للمستخدم الحالي قبل فتح أي قسم. بذلك تُرسل كل المستندات
   // المحلية فوراً عند وجود اتصال، بدلاً من بقائها pending حتى محاولة لاحقة.
   await context.read<SyncCubit>().onLogin(profile.userId);
@@ -96,3 +143,4 @@ void prepareModule(BuildContext context, AppModule module) {
     context.read<PosSettingsCubit>().load();
   }
 }
+

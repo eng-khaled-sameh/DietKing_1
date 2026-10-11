@@ -7,9 +7,22 @@ import '../cubit/employees_state.dart';
 import 'widgets/employee_form.dart';
 import '../../../../data/hr/models/employee_model.dart';
 import '../models/hr_enums.dart';
+import '../../../../cubits/branches/branches_cubit.dart';
+import '../../../../data/hr/hr_api.dart';
 
-class EmployeesSection extends StatelessWidget {
+class EmployeesSection extends StatefulWidget {
   const EmployeesSection({super.key});
+
+  @override
+  State<EmployeesSection> createState() => _EmployeesSectionState();
+}
+
+class _EmployeesSectionState extends State<EmployeesSection> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<BranchesCubit>().load();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +76,51 @@ class _EmployeesView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (emp.notes != null && emp.notes!.trim().isNotEmpty) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: AppDimens.spaceMd),
+                  padding: const EdgeInsets.all(AppDimens.spaceMd),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                    border: Border.all(
+                      color: Colors.amber.shade700,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.amber.shade700,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'تحذير: ملاحظة مسجلة على الموظف',
+                            style: TextStyle(
+                              color: Colors.amber.shade300,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        emp.notes!,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               _detailRow('كود الموظف', emp.code),
               _detailRow('المسمى الوظيفي', emp.jobRole.label),
               _detailRow('الفرع/الموقع', emp.locationName),
@@ -85,10 +143,24 @@ class _EmployeesView extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
+              _showAddDirectLeaveDialog(context, emp);
+            },
+            child: const Text('إجازة مباشرة'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _showAddDirectDeductionDialog(context, emp);
+            },
+            child: const Text('خصم/مكافأة'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
               _showChangeStatusDialog(context, emp, cubit);
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('تغيير الحالة (إيقاف/فصل)'),
+            child: const Text('تغيير الحالة'),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
@@ -231,6 +303,221 @@ class _EmployeesView extends StatelessWidget {
     );
   }
 
+  void _showAddDirectLeaveDialog(BuildContext context, EmployeeModel emp) {
+    DateTime startDate = DateTime.now();
+    DateTime endDate = DateTime.now();
+    String reason = '';
+    String decisionType = 'without_deduction'; // or 'with_deduction'
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('إضافة إجازة مباشرة'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ListTile(
+                          title: const Text('من', style: TextStyle(fontSize: 12)),
+                          subtitle: Text(startDate.toIso8601String().split('T').first),
+                          onTap: () async {
+                            final d = await showDatePicker(
+                              context: context,
+                              initialDate: startDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (d != null) setState(() => startDate = d);
+                          },
+                        ),
+                      ),
+                      Expanded(
+                        child: ListTile(
+                          title: const Text('إلى', style: TextStyle(fontSize: 12)),
+                          subtitle: Text(endDate.toIso8601String().split('T').first),
+                          onTap: () async {
+                            final d = await showDatePicker(
+                              context: context,
+                              initialDate: endDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (d != null) setState(() => endDate = d);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(labelText: 'نوع الإجازة'),
+                    value: decisionType,
+                    items: const [
+                      DropdownMenuItem(value: 'without_deduction', child: Text('بدون خصم')),
+                      DropdownMenuItem(value: 'with_deduction', child: Text('بخصم')),
+                    ],
+                    onChanged: (v) => setState(() => decisionType = v!),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'السبب / ملاحظات'),
+                    onChanged: (v) => reason = v,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('إلغاء'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (reason.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('الرجاء إدخال السبب')),
+                      );
+                      return;
+                    }
+                    try {
+                      await HrApi().addDirectLeave({
+                        'employee_id': emp.id,
+                        'start_date': startDate.toIso8601String().split('T').first,
+                        'end_date': endDate.toIso8601String().split('T').first,
+                        'reason': reason,
+                        'decision_type': decisionType,
+                      });
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('تم إضافة الإجازة بنجاح')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('حفظ'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAddDirectDeductionDialog(BuildContext context, EmployeeModel emp) {
+    String type = 'deduction';
+    String amtType = 'cash';
+    String amountStr = '';
+    String notes = '';
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('إضافة خصم / مكافأة مباشرة'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(labelText: 'النوع'),
+                    value: type,
+                    items: const [
+                      DropdownMenuItem(value: 'deduction', child: Text('خصم')),
+                      DropdownMenuItem(value: 'bonus', child: Text('مكافأة/إضافة')),
+                    ],
+                    onChanged: (v) => setState(() => type = v!),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(labelText: 'طريقة الحساب'),
+                    value: amtType,
+                    items: const [
+                      DropdownMenuItem(value: 'cash', child: Text('مبلغ نقدي')),
+                      DropdownMenuItem(value: 'days', child: Text('أيام')),
+                    ],
+                    onChanged: (v) => setState(() => amtType = v!),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    decoration: InputDecoration(
+                      labelText: amtType == 'cash' ? 'المبلغ' : 'عدد الأيام',
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => amountStr = v,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'ملاحظات'),
+                    onChanged: (v) => notes = v,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('إلغاء'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (amountStr.isEmpty || notes.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('الرجاء تعبئة جميع الحقول')),
+                      );
+                      return;
+                    }
+                    final val = double.tryParse(amountStr);
+                    if (val == null || val <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('الرجاء إدخال قيمة صحيحة')),
+                      );
+                      return;
+                    }
+                    try {
+                      await HrApi().addDirectDeductionBonus({
+                        'employee_id': emp.id,
+                        'type': type,
+                        'amount_type': amtType,
+                        'cash_amount': amtType == 'cash' ? val : null,
+                        'days_amount': amtType == 'days' ? val : null,
+                        'notes': notes,
+                      });
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('تم إضافة الحركة بنجاح')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('حفظ'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -296,6 +583,74 @@ class _EmployeesView extends StatelessWidget {
             ],
           ),
         ),
+
+        // Filters
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceLg),
+          child: Row(
+            children: [
+              Expanded(
+                child: BlocBuilder<EmployeesCubit, EmployeesState>(
+                  builder: (context, state) {
+                    return DropdownButtonFormField<EmployeeJobRole?>(
+                      decoration: const InputDecoration(
+                        labelText: 'تصفية بالوظيفة',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      value: state.jobRole,
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('الكل')),
+                        ...EmployeeJobRole.values.map(
+                          (r) => DropdownMenuItem(value: r, child: Text(r.label)),
+                        ),
+                      ],
+                      onChanged: (v) {
+                        context.read<EmployeesCubit>().updateFilters(
+                          jobRole: v,
+                          clearJobRole: v == null,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: AppDimens.spaceMd),
+              Expanded(
+                child: BlocBuilder<BranchesCubit, BranchesState>(
+                  builder: (context, branchesState) {
+                    return BlocBuilder<EmployeesCubit, EmployeesState>(
+                      builder: (context, state) {
+                        final branches = branchesState.branches;
+                        return DropdownButtonFormField<String?>(
+                          decoration: const InputDecoration(
+                            labelText: 'تصفية بالفرع',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                          ),
+                          value: state.branchId,
+                          items: [
+                            const DropdownMenuItem(value: null, child: Text('الكل')),
+                            ...branches.map(
+                              (b) => DropdownMenuItem(value: b.id, child: Text(b.name)),
+                            ),
+                          ],
+                          onChanged: (v) {
+                            context.read<EmployeesCubit>().updateFilters(
+                              branchId: v,
+                              clearBranch: v == null,
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppDimens.spaceLg),
 
         // Counters
         BlocBuilder<EmployeesCubit, EmployeesState>(
@@ -402,16 +757,22 @@ class _EmployeesView extends StatelessWidget {
                   }
 
                   final emp = state.employees[index];
+                  final hasNotes = emp.notes != null && emp.notes!.trim().isNotEmpty;
                   return Card(
                     clipBehavior: Clip.antiAlias,
-                    elevation: 1,
+                    elevation: hasNotes ? 3 : 1,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppDimens.radiusLg),
                       side: BorderSide(
-                        color: AppColors.outline.withOpacity(0.1),
+                        color: hasNotes
+                            ? Colors.amber.shade700
+                            : AppColors.outline.withValues(alpha: 0.1),
+                        width: hasNotes ? 1.5 : 1,
                       ),
                     ),
-                    color: AppColors.surfaceContainerLow,
+                    color: hasNotes
+                        ? Colors.amber.withValues(alpha: 0.05)
+                        : AppColors.surfaceContainerLow,
                     child: InkWell(
                       onTap: () => _showEmployeeDetails(context, emp),
                       child: Padding(
@@ -439,12 +800,52 @@ class _EmployeesView extends StatelessWidget {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(
-                                        emp.code,
-                                        style: const TextStyle(
-                                          color: AppColors.primary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            emp.code,
+                                            style: const TextStyle(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          if (hasNotes) ...[
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.amber.withValues(alpha: 0.2),
+                                                borderRadius: BorderRadius.circular(4),
+                                                border: Border.all(
+                                                  color: Colors.amber.shade700,
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.warning_amber_rounded,
+                                                    size: 13,
+                                                    color: Colors.amber.shade700,
+                                                  ),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                    'توجد ملاحظة',
+                                                    style: TextStyle(
+                                                      color: Colors.amber.shade300,
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ],
                                   ),

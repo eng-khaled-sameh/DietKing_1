@@ -17,7 +17,7 @@ class AttendanceRecord {
 
   factory AttendanceRecord.fromJson(Map<String, dynamic> j) => AttendanceRecord(
     id: j['id'] as String,
-    employeeId: j['employee_id'] as String,
+    employeeId: j['employee_id'] as String? ?? '',
     recordDate: DateTime.parse(j['date'] as String),
     status: j['status'] as String,
     recordedFrom: j['recorded_from'] as String?,
@@ -41,6 +41,11 @@ class AttendanceEmployeeEntry {
   final String? branchName;
   final String? attendanceStatus; // null = لم يسجل بعد
   final String? attendanceId;
+  final String? status;
+  final DateTime? hireDate;
+  final DateTime? createdAt;
+  final DateTime? statusChangedAt;
+  final String? notes;
 
   const AttendanceEmployeeEntry({
     required this.id,
@@ -51,6 +56,11 @@ class AttendanceEmployeeEntry {
     this.branchName,
     this.attendanceStatus,
     this.attendanceId,
+    this.status,
+    this.hireDate,
+    this.createdAt,
+    this.statusChangedAt,
+    this.notes,
   });
 
   factory AttendanceEmployeeEntry.fromJson(Map<String, dynamic> j) =>
@@ -63,6 +73,11 @@ class AttendanceEmployeeEntry {
         branchName: j['branch_name'] as String?,
         attendanceStatus: j['attendance_status'] as String?,
         attendanceId: j['attendance_id'] as String?,
+        status: j['status'] as String? ?? 'active',
+        hireDate: j['hire_date'] != null ? DateTime.tryParse(j['hire_date'] as String) : null,
+        createdAt: j['created_at'] != null ? DateTime.tryParse(j['created_at'] as String) : null,
+        statusChangedAt: j['status_changed_at'] != null ? DateTime.tryParse(j['status_changed_at'] as String) : null,
+        notes: j['notes'] as String?,
       );
 }
 
@@ -73,6 +88,10 @@ class EmployeeSimple {
   final String jobRole;
   final String? branchId;
   final String? branchName;
+  final String? notes;
+  final String? status;
+  final DateTime? hireDate;
+  final DateTime? createdAt;
 
   const EmployeeSimple({
     required this.id,
@@ -81,6 +100,10 @@ class EmployeeSimple {
     required this.jobRole,
     this.branchId,
     this.branchName,
+    this.notes,
+    this.status,
+    this.hireDate,
+    this.createdAt,
   });
 
   factory EmployeeSimple.fromJson(Map<String, dynamic> j) => EmployeeSimple(
@@ -90,6 +113,10 @@ class EmployeeSimple {
     jobRole: j['job_role'] as String,
     branchId: j['branch_id'] as String?,
     branchName: j['branch_name'] as String?,
+    notes: j['notes'] as String?,
+    status: j['status'] as String? ?? 'active',
+    hireDate: j['hire_date'] != null ? DateTime.tryParse(j['hire_date'] as String) : null,
+    createdAt: j['created_at'] != null ? DateTime.tryParse(j['created_at'] as String) : null,
   );
 
   String get jobRoleLabel => switch (jobRole) {

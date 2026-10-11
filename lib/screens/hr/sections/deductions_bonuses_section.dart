@@ -206,7 +206,7 @@ class _DeductionBonusCard extends StatelessWidget {
             if (req.status != 'pending' && req.finalCashAmount != null) ...[
               const SizedBox(height: 8),
               Text(
-                'المبلغ المعتمد النهائي: ${req.finalCashAmount!.toStringAsFixed(2)} ج.م',
+                'المبلغ المعتمد النهائي: ${req.finalCashAmount!.toStringAsFixed(2)} ر.س',
                 style: const TextStyle(
                   color: AppColors.secondary,
                   fontWeight: FontWeight.bold,
@@ -255,34 +255,55 @@ class _DeductionBonusCard extends StatelessWidget {
     showDialog(
       context: context,
       builder: (dialogCtx) {
-        String amountStr = req.amountType == 'cash'
-            ? (req.cashAmount?.toString() ?? '')
-            : '';
+        bool isDays = req.amountType == 'days';
+        String inputValue = '';
+        if (isDays && req.daysAmount != null) {
+          inputValue = req.daysAmount.toString();
+        } else if (!isDays && req.cashAmount != null) {
+          inputValue = req.cashAmount.toString();
+        }
+
         return StatefulBuilder(
           builder: (ctx, setState) {
+            double? parsedInput = double.tryParse(inputValue);
+            double calculatedCash = 0;
+
+            if (isDays && parsedInput != null && req.basicSalary != null) {
+              calculatedCash = (req.basicSalary! / 30.0) * parsedInput;
+            } else if (!isDays && parsedInput != null) {
+              calculatedCash = parsedInput;
+            }
+
             return AlertDialog(
               title: Text('الموافقة على ال${req.typeLabel}'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (req.amountType == 'days')
+                  if (isDays)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Text(
-                        'مطلوب خصم/إضافة بالأيام: ${req.daysAmount} يوم\nيرجى تحويلها إلى قيمة نقدية بناءً على راتب الموظف.',
+                        'القيمة النقدية المحسوبة: ${calculatedCash.toStringAsFixed(2)} ر.س (بناءً على الراتب الأساسي)',
                         style: const TextStyle(color: AppColors.secondary),
                       ),
                     ),
                   TextFormField(
-                    initialValue: amountStr,
+                    initialValue: inputValue,
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(
-                      labelText: 'القيمة النقدية المعتمدة (ج.م)',
+                    style: const TextStyle(color: AppColors.onSurface),
+                    decoration: InputDecoration(
+                      labelText: isDays
+                          ? 'عدد الأيام المعتمدة'
+                          : 'القيمة النقدية المعتمدة (ر.س)',
                     ),
-                    onChanged: (v) => amountStr = v,
+                    onChanged: (v) {
+                      setState(() {
+                        inputValue = v;
+                      });
+                    },
                   ),
                 ],
               ),
@@ -293,13 +314,22 @@ class _DeductionBonusCard extends StatelessWidget {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    final val = double.tryParse(amountStr);
-                    if (val == null || val <= 0) return;
+                    double? finalCash;
+                    double? parsed = double.tryParse(inputValue);
+                    if (parsed != null && parsed >= 0) {
+                      if (isDays && req.basicSalary != null) {
+                        finalCash = (req.basicSalary! / 30.0) * parsed;
+                      } else if (!isDays) {
+                        finalCash = parsed;
+                      }
+                    }
+                    if (finalCash == null) return;
+
                     Navigator.of(ctx).pop();
                     context.read<HrDeductionsBonusesCubit>().decideRequest(
                       id: req.id,
                       status: 'approved',
-                      finalCashAmount: val,
+                      finalCashAmount: finalCash,
                     );
                   },
                   child: const Text('تأكيد واعتماد'),

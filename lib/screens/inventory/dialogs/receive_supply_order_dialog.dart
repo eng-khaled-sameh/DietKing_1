@@ -314,7 +314,7 @@ class _ReceiveSupplyOrderDialogState extends State<ReceiveSupplyOrderDialog> {
                       ),
                       decoration: InputDecoration(
                         isDense: true,
-                        hintText: 'ج.م',
+                        hintText: 'ر.س',
                         hintStyle: GoogleFonts.ibmPlexSansArabic(
                           color: AppColors.onSurfaceVariant,
                         ),

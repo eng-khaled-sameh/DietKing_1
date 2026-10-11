@@ -491,6 +491,7 @@ begin
       'notes',            d.notes,
       'status',           d.status,
       'final_cash_amount',d.final_cash_amount,
+      'basic_salary',     e.basic_salary,
       'requested_from',   d.requested_from,
       'created_at',       d.created_at
     ) order by d.created_at desc)
@@ -513,7 +514,10 @@ create or replace function public.hr_decide_deduction_bonus(
   p_notes            text default null
 ) returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare v_rec deduction_bonus_requests%rowtype;
+declare 
+  v_rec deduction_bonus_requests%rowtype;
+  v_emp employees%rowtype;
+  v_calculated_cash numeric;
 begin
   if not public._has_role('hr') then
     raise exception using errcode='42501', message='غير مصرح';
@@ -526,11 +530,24 @@ begin
   if not found then raise exception 'الطلب غير موجود'; end if;
   if v_rec.status <> 'pending' then raise exception 'الطلب تمت معالجته مسبقاً'; end if;
 
+  select * into v_emp from public.employees where id = v_rec.employee_id;
+
+  -- حساب المبلغ نقداً إذا لم يتم توفيره
+  if p_status = 'approved' then
+    if p_final_cash_amount is not null then
+      v_calculated_cash := p_final_cash_amount;
+    elsif v_rec.amount_type = 'days' then
+      v_calculated_cash := (v_emp.basic_salary / 30.0) * v_rec.days_amount;
+    else
+      v_calculated_cash := v_rec.cash_amount;
+    end if;
+  end if;
+
   update public.deduction_bonus_requests
   set status            = p_status,
       decided_by        = auth.uid(),
       decided_at        = now(),
-      final_cash_amount = coalesce(p_final_cash_amount, final_cash_amount),
+      final_cash_amount = v_calculated_cash,
       notes             = coalesce(p_notes, notes),
       updated_at        = now()
   where id = p_id;
@@ -591,5 +608,136 @@ end;
 $$;
 revoke all on function public.hr_list_my_branch_requests(uuid, text, text) from public, anon;
 grant execute on function public.hr_list_my_branch_requests(uuid, text, text) to authenticated;
+
+-- إضافة إجازة مباشرة معتمدة من قبل HR
+create or replace function public.hr_add_direct_leave(p jsonb) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_emp_id   uuid;
+  v_start    date;
+  v_end      date;
+  v_reason   text;
+  v_decision_type text;
+  v_notes    text;
+  v_id       uuid;
+  v_days     int;
+  v_salary   numeric;
+  v_daily    numeric;
+begin
+  if not public._has_role('hr') then
+    raise exception using errcode='42501', message='غير مصرح';
+  end if;
+
+  begin
+    v_emp_id        := (p->>'employee_id')::uuid;
+    v_start         := (p->>'start_date')::date;
+    v_end           := (p->>'end_date')::date;
+    v_decision_type := p->>'decision_type'; -- 'with_deduction' | 'without_deduction'
+  exception when others then
+    raise exception 'بيانات غير صحيحة';
+  end;
+
+  v_reason := btrim(coalesce(p->>'reason',''));
+  v_notes  := btrim(coalesce(p->>'decision_notes',''));
+
+  if v_reason = '' then raise exception 'سبب الإجازة إلزامي'; end if;
+  if v_end < v_start then raise exception 'تاريخ انتهاء الإجازة قبل بدايتها'; end if;
+
+  insert into public.leave_requests (
+    employee_id, requested_from, start_date, end_date, reason, 
+    status, decision_type, decided_by, decided_at, decision_notes, created_by
+  ) values (
+    v_emp_id, 'hr', v_start, v_end, v_reason, 
+    'approved', v_decision_type, auth.uid(), now(), v_notes, auth.uid()
+  ) returning id into v_id;
+
+  -- إذا كان بخصم، يتم إدراج خصم تلقائي
+  if v_decision_type = 'with_deduction' then
+    v_days := (v_end - v_start + 1);
+    select basic_salary into v_salary from public.employees where id = v_emp_id;
+    v_daily := coalesce(v_salary, 0) / 30.0;
+
+    insert into public.deduction_bonus_requests (
+      employee_id, requested_from, type, amount_type, days_amount,
+      cash_amount, notes, status, decided_by, decided_at, final_cash_amount, created_by
+    ) values (
+      v_emp_id, 'hr', 'deduction', 'days', v_days,
+      null, 'خصم إجازة: ' || v_reason,
+      'approved', auth.uid(), now(), v_daily * v_days, auth.uid()
+    );
+  end if;
+
+  return jsonb_build_object('id', v_id, 'status', 'approved');
+end;
+$$;
+revoke all on function public.hr_add_direct_leave(jsonb) from public, anon;
+grant execute on function public.hr_add_direct_leave(jsonb) to authenticated;
+
+-- إضافة خصم / مكافأة مباشرة ومعتمدة من قبل HR
+create or replace function public.hr_add_direct_deduction_bonus(p jsonb) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_emp_id    uuid;
+  v_type      text;
+  v_amt_type  text;
+  v_cash      numeric;
+  v_days      numeric;
+  v_final_cash numeric;
+  v_notes     text;
+  v_id        uuid;
+  v_salary    numeric;
+  v_daily     numeric;
+begin
+  if not public._has_role('hr') then
+    raise exception using errcode='42501', message='غير مصرح';
+  end if;
+
+  begin
+    v_emp_id   := (p->>'employee_id')::uuid;
+    v_cash     := nullif(p->>'cash_amount','')::numeric;
+    v_days     := nullif(p->>'days_amount','')::numeric;
+    v_final_cash := nullif(p->>'final_cash_amount','')::numeric;
+  exception when others then
+    raise exception 'بيانات غير صحيحة';
+  end;
+
+  v_type     := p->>'type';
+  v_amt_type := p->>'amount_type';
+  v_notes    := btrim(coalesce(p->>'notes',''));
+
+  if v_type not in ('deduction','bonus') then raise exception 'النوع غير صحيح'; end if;
+  if v_amt_type not in ('cash','days') then raise exception 'نوع المبلغ غير صحيح'; end if;
+  if v_notes = '' then raise exception 'الملاحظة إلزامية'; end if;
+  if v_amt_type = 'cash' and (v_cash is null or v_cash <= 0) then
+    raise exception 'أدخل مبلغاً صحيحاً';
+  end if;
+  if v_amt_type = 'days' and (v_days is null or v_days <= 0) then
+    raise exception 'أدخل عدد أيام صحيحاً';
+  end if;
+
+  -- حساب القيمة النقدية النهائية إذا لم تكن مرسلة
+  if v_final_cash is null then
+    if v_amt_type = 'cash' then
+      v_final_cash := v_cash;
+    else
+      select basic_salary into v_salary from public.employees where id = v_emp_id;
+      v_daily := coalesce(v_salary, 0) / 30.0;
+      v_final_cash := v_daily * v_days;
+    end if;
+  end if;
+
+  insert into public.deduction_bonus_requests (
+    employee_id, requested_from, type, amount_type, cash_amount, days_amount, 
+    notes, status, decided_by, decided_at, final_cash_amount, created_by
+  ) values (
+    v_emp_id, 'hr', v_type, v_amt_type, v_cash, v_days, 
+    v_notes, 'approved', auth.uid(), now(), v_final_cash, auth.uid()
+  ) returning id into v_id;
+
+  return jsonb_build_object('id', v_id, 'status', 'approved');
+end;
+$$;
+revoke all on function public.hr_add_direct_deduction_bonus(jsonb) from public, anon;
+grant execute on function public.hr_add_direct_deduction_bonus(jsonb) to authenticated;
 
 commit;
