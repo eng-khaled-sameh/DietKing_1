@@ -23,16 +23,16 @@ import 'repositories/sales_repository.dart';
 import 'data/inventory/inventory_api.dart';
 import 'data/inventory/inventory_sync.dart';
 import 'screens/inventory/cubit/inventory_cubit.dart';
+import 'cubits/notifications/notifications_cubit.dart';
+import 'core/widgets/global_notification_overlay.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ar', null);
-
   // Initialize FFI for Windows desktop
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
-
   await Supabase.initialize(
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey, // ignore: deprecated_member_use
@@ -78,6 +78,8 @@ Future<void> main() async {
         BlocProvider(create: (_) => SyncCubit()),
         // AdminAccessCubit — التحقق من باسورد الإدارة
         BlocProvider(create: (_) => AdminAccessCubit(AdminAccessRepository())),
+        // NotificationsCubit — نظام الإشعارات المشترك لجميع الأقسام
+        BlocProvider(create: (_) => NotificationsCubit()),
         // InventoryCubit — وحدة المخزون، حياة طوال الجلسة
         BlocProvider(
           create: (_) {
@@ -104,6 +106,11 @@ class DietKingApp extends StatelessWidget {
     return MaterialApp(
       title: 'دايت كنج POS — تسجيل دخول',
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return GlobalNotificationOverlay(
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
