@@ -8,6 +8,7 @@ import 'package:my_desktop_app/core/theme/app_dimens.dart';
 
 import '../../cubits/session/session_cubit.dart';
 import '../theme/app_colors.dart';
+import 'notification_bell.dart';
 
 /// شريط معلومات الجلسة: الكاشير + الفرع + الوردية + حالة الاتصال + الوقت والتاريخ
 ///
@@ -155,6 +156,9 @@ class _PosSessionInfoRowState extends State<PosSessionInfoRow>
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // جرس الإشعارات المشترك لجميع الأقسام
+              const NotificationBell(),
+              const SizedBox(width: 4),
               // زر الريفريش (يظهر فقط لأقسام الإدارة)
               if (widget.onRefresh != null)
                 _RefreshButton(onRefresh: widget.onRefresh!),

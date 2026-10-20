@@ -484,61 +484,142 @@ class _MonthlyAttendanceDialogState extends State<_MonthlyAttendanceDialog> {
       ),
       content: SizedBox(
         width: 600,
-        height: 400,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : validDays.isEmpty
-                ? const Center(
-                    child: Text('لا توجد أيام مسجلة للموظف في هذا الشهر ضمن نطاق تعيينه وحفظ البيانات'),
-                  )
-                : ListView.builder(
-                    itemCount: validDays.length,
-                    itemBuilder: (context, index) {
-                      final date = validDays[index];
-                      final record = _records
-                          .where((r) => r.recordDate.day == date.day && r.recordDate.month == date.month)
-                          .firstOrNull;
+        height: 440,
+        child: Column(
+          children: [
+            // ── مفتاح الألوان (Legend) ──
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _legendItem('حاضر', AppColors.statusGreen),
+                  _legendItem('إجازة مدفوعة', AppColors.statusGreen),
+                  _legendItem('إجازة بخصم', Colors.orange),
+                  _legendItem('غائب', AppColors.error),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : validDays.isEmpty
+                      ? const Center(
+                          child: Text('لا توجد أيام مسجلة للموظف في هذا الشهر ضمن نطاق تعيينه وحفظ البيانات'),
+                        )
+                      : ListView.builder(
+                          itemCount: validDays.length,
+                          itemBuilder: (context, index) {
+                            final date = validDays[index];
+                            final record = _records
+                                .where((r) => r.recordDate.day == date.day && r.recordDate.month == date.month)
+                                .firstOrNull;
 
-                      final isFuture = date.isAfter(DateTime.now());
-                      final isOnLeave = record?.status == 'on_leave';
-                      final canEdit = isEmployeeActive && !isFuture && !isOnLeave;
+                            final isFuture = date.isAfter(DateTime.now());
+                            final isOnLeave = record?.status == 'on_leave';
+                            final canEdit = isEmployeeActive && !isFuture && !isOnLeave;
 
-                      return ListTile(
-                        leading: Text(DateFormat('yyyy-MM-dd (EEEE)', 'ar').format(date)),
-                        title: Text(
-                          record?.statusLabel ?? 'لم يسجل',
-                          style: TextStyle(
-                            color: record?.status == 'present'
-                                ? AppColors.statusGreen
-                                : (record?.status == 'absent' ? AppColors.error : null),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: record?.notes != null ? Text(record!.notes!) : null,
-                        trailing: canEdit
-                            ? IconButton(
-                                icon: const Icon(Icons.edit, size: 18),
-                                tooltip: 'تعديل الحضور',
-                                onPressed: () => _editRecord(date, record),
-                              )
-                            : Tooltip(
-                                message: !isEmployeeActive
-                                    ? 'لا يمكن تسجيل حضور لموظف غير نشط'
-                                    : (isOnLeave ? 'الموظف في إجازة معتمدة' : 'تاريخ غير قابل للتعديل'),
-                                child: Icon(
-                                  Icons.lock_outline,
-                                  size: 18,
-                                  color: AppColors.onSurfaceVariant.withOpacity(0.5),
-                                ),
+                            Color statusColor = AppColors.onSurfaceVariant;
+                            if (record?.status == 'present') {
+                              statusColor = AppColors.statusGreen;
+                            } else if (record?.status == 'absent') {
+                              statusColor = AppColors.error;
+                            } else if (record?.status == 'on_leave') {
+                              statusColor = (record?.isPaidLeave ?? true)
+                                  ? AppColors.statusGreen
+                                  : Colors.orange;
+                            }
+
+                            return ListTile(
+                              leading: Text(DateFormat('yyyy-MM-dd (EEEE)', 'ar').format(date)),
+                              title: Row(
+                                children: [
+                                  Text(
+                                    record?.statusLabel ?? 'لم يسجل',
+                                    style: TextStyle(
+                                      color: statusColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (record?.status == 'on_leave') ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                                      ),
+                                      child: Text(
+                                        (record?.isPaidLeave ?? true) ? 'مدفوعة' : 'بخصم',
+                                        style: TextStyle(
+                                          color: statusColor,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
-                      );
-                    },
-                  ),
+                              subtitle: record?.notes != null ? Text(record!.notes!) : null,
+                              trailing: canEdit
+                                  ? IconButton(
+                                      icon: const Icon(Icons.edit, size: 18),
+                                      tooltip: 'تعديل الحضور',
+                                      onPressed: () => _editRecord(date, record),
+                                    )
+                                  : Tooltip(
+                                      message: !isEmployeeActive
+                                          ? 'لا يمكن تسجيل حضور لموظف غير نشط'
+                                          : (isOnLeave ? 'الموظف في إجازة معتمدة' : 'تاريخ غير قابل للتعديل'),
+                                      child: Icon(
+                                        Icons.lock_outline,
+                                        size: 18,
+                                        color: AppColors.onSurfaceVariant.withOpacity(0.5),
+                                      ),
+                                    ),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('إغلاق'),
+        ),
+      ],
+    );
+  }
+
+  Widget _legendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
         ),
       ],
     );

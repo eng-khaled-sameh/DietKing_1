@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   cupertino_icons: ^1.0.8
   # State management — feature-scoped Cubits
@@ -27,7 +29,7 @@ dependencies:
   path: ^1.9.0
   path_provider: ^2.1.5
   crypto: ^3.0.7
-  intl: ^0.20.3
+  intl: ^0.20.2
   # Excel read/write — استيراد الأصناف والجرد
   excel: ^4.0.3
   # File picker — فتح ملفات Excel
@@ -36,13 +38,12 @@ dependencies:
   window_manager: ^0.5.2
   uuid: ^4.6.0
   connectivity_plus: ^7.3.2
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  flutter_launcher_icons: ^0.14.4
-
 flutter_launcher_icons:
   windows:
     generate: true
@@ -54,3 +55,4 @@ flutter:
   assets:
     - assets/images/
     - assets/icon/
+    - assets/sounds/

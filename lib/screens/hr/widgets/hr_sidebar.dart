@@ -9,6 +9,7 @@ import '../cubit/hr_cubit.dart';
 import '../cubit/hr_state.dart';
 import '../models/hr_enums.dart';
 import '../../../../features/auth/presentation/screens/login_screen.dart'; // fallback
+import '../../../../core/widgets/notification_bell.dart';
 
 class HrSidebar extends StatelessWidget {
   const HrSidebar({super.key});
@@ -33,14 +34,23 @@ class HrSidebar extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(AppDimens.spaceSm),
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryContainer,
-                    borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                    color: AppColors.surfaceContainer,
+                    borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                   ),
-                  child: const Icon(
-                    Icons.badge,
-                    color: AppColors.onPrimaryContainer,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                    child: Image.asset(
+                      'assets/icon/app_icon.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.badge,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppDimens.spaceMd),
@@ -66,6 +76,7 @@ class HrSidebar extends StatelessWidget {
                     ],
                   ),
                 ),
+                const NotificationBell(),
               ],
             ),
           ),

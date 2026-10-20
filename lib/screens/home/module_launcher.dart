@@ -2,6 +2,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_desktop_app/screens/hr/hr_shell.dart';
+import 'package:my_desktop_app/features/accounting/presentation/accounting_shell.dart';
 import '../../core/app_modules.dart';
 import '../../cubits/catalog/catalog_cubit.dart';
 import '../../cubits/pos_settings/pos_settings_cubit.dart';
@@ -12,7 +13,6 @@ import '../../features/meal_sales/presentation/screens/meal_sales_screen.dart';
 import '../../models/user_profile.dart';
 import '../inventory/cubit/inventory_cubit.dart';
 import '../inventory/inventory_screen.dart';
-import 'placeholder_module_screen.dart';
 
 /// التحقق من الاتصال بالإنترنت
 Future<bool> _isOnline() async {
@@ -126,10 +126,10 @@ Future<void> startAndOpenModule(
 
 Widget _moduleScreen(AppModule module) {
   return switch (module) {
-    AppModule.cashier => const MealSalesScreen(),
+    AppModule.cashier   => const MealSalesScreen(),
     AppModule.inventory => const InventoryScreen(),
-    AppModule.accounts => PlaceholderModuleScreen(module: module),
-    AppModule.hr => const HrShell(),
+    AppModule.accounts  => const AccountingShell(),
+    AppModule.hr        => const HrShell(),
   };
 }
 
@@ -143,4 +143,3 @@ void prepareModule(BuildContext context, AppModule module) {
     context.read<PosSettingsCubit>().load();
   }
 }
-

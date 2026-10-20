@@ -14,6 +14,7 @@ class ComprehensiveReportEntry {
   final int presentDays;
   final int absentDays;
   final int leaveDays;
+  final int paidLeaveDays;
   final int leaveWithDeductionDays;
   final double dailyRate;
   final double absenceDeduction;
@@ -39,6 +40,7 @@ class ComprehensiveReportEntry {
     required this.presentDays,
     required this.absentDays,
     required this.leaveDays,
+    this.paidLeaveDays = 0,
     required this.leaveWithDeductionDays,
     required this.dailyRate,
     required this.absenceDeduction,
@@ -50,6 +52,9 @@ class ComprehensiveReportEntry {
   });
 
   factory ComprehensiveReportEntry.fromJson(Map<String, dynamic> j) {
+    final lDays = (j['leave_days'] as num?)?.toInt() ?? 0;
+    final lWithDed = (j['leave_with_deduction_days'] as num?)?.toInt() ?? 0;
+    final pLeave = (j['paid_leave_days'] as num?)?.toInt() ?? (lDays - lWithDed).clamp(0, 9999);
     return ComprehensiveReportEntry(
       employeeId: j['employee_id'] as String,
       code: j['code'] as String? ?? '',
@@ -70,9 +75,9 @@ class ComprehensiveReportEntry {
       isInRange: j['is_in_range'] as bool? ?? true,
       presentDays: (j['present_days'] as num?)?.toInt() ?? 0,
       absentDays: (j['absent_days'] as num?)?.toInt() ?? 0,
-      leaveDays: (j['leave_days'] as num?)?.toInt() ?? 0,
-      leaveWithDeductionDays:
-          (j['leave_with_deduction_days'] as num?)?.toInt() ?? 0,
+      leaveDays: lDays,
+      paidLeaveDays: pLeave,
+      leaveWithDeductionDays: lWithDed,
       dailyRate: (j['daily_rate'] as num?)?.toDouble() ?? 0.0,
       absenceDeduction: (j['absence_deduction'] as num?)?.toDouble() ?? 0.0,
       leaveDeduction: (j['leave_deduction'] as num?)?.toDouble() ?? 0.0,

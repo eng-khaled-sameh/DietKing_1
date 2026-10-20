@@ -69,10 +69,17 @@ class _PosInfoSection extends StatelessWidget {
             color: AppColors.surfaceContainer,
             borderRadius: BorderRadius.circular(AppDimens.radiusSm),
           ),
-          child: const Icon(
-            Icons.point_of_sale_rounded,
-            size: AppDimens.iconMd,
-            color: AppColors.primary,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+            child: Image.asset(
+              'assets/icon/app_icon.png',
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.point_of_sale_rounded,
+                size: AppDimens.iconMd,
+                color: AppColors.primary,
+              ),
+            ),
           ),
         ),
         const SizedBox(width: AppDimens.spaceSm),
@@ -81,14 +88,14 @@ class _PosInfoSection extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'نقطة البيع المصرحة',
+              'نظام شركة دايت كينج',
               style: GoogleFonts.ibmPlexSansArabic(
                 fontSize: AppDimens.fontXs,
                 color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
               ),
             ),
             Text(
-              'محطة كاشير دايت كينج',
+              'HR - Cashier - Accounts - Inventory',
               style: GoogleFonts.ibmPlexSansArabic(
                 fontSize: AppDimens.fontSm,
                 fontWeight: FontWeight.w700,

@@ -148,7 +148,7 @@ class _AdminLeaveRequestsSectionState extends State<AdminLeaveRequestsSection> {
                   TextFormField(
                     decoration: const InputDecoration(labelText: 'السبب'),
                     maxLines: 2,
-                    onChanged: (v) => reason = v,
+                    onChanged: (v) => setState(() => reason = v),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -163,7 +163,7 @@ class _AdminLeaveRequestsSectionState extends State<AdminLeaveRequestsSection> {
                   child: const Text('إلغاء'),
                 ),
                 ElevatedButton(
-                  onPressed: selectedEmpId == null || reason.isEmpty
+                  onPressed: selectedEmpId == null || reason.trim().isEmpty
                       ? null
                       : () async {
                           Navigator.of(context).pop();
@@ -179,7 +179,7 @@ class _AdminLeaveRequestsSectionState extends State<AdminLeaveRequestsSection> {
                                   .toIso8601String()
                                   .split('T')
                                   .first,
-                              'reason': reason,
+                              'reason': reason.trim(),
                             });
                             _loadData(); // Refresh list
                             ScaffoldMessenger.of(this.context).showSnackBar(

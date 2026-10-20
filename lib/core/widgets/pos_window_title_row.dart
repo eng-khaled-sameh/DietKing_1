@@ -34,7 +34,7 @@ class PosWindowTitleRow extends StatelessWidget {
                   ),
                   child: ClipOval(
                     child: Image.asset(
-                      'assets/images/logo.png',
+                      'assets/icon/app_icon.png',
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) => Container(
                         color: AppColors.primaryContainer.withValues(
@@ -55,7 +55,7 @@ class PosWindowTitleRow extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'دايت كنج POS',
+                      'دايت كينج POS',
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: AppDimens.fontSm,
                         fontWeight: FontWeight.w700,

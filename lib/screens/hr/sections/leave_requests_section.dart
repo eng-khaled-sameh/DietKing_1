@@ -256,14 +256,14 @@ class _LeaveRequestCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   RadioListTile<String>(
-                    title: const Text('إجازة بخصم (من الراتب)'),
-                    value: 'with_deduction',
+                    title: const Text('إجازة مدفوعة (بدون خصم من الراتب)'),
+                    value: 'without_deduction',
                     groupValue: decisionType,
                     onChanged: (v) => setState(() => decisionType = v!),
                   ),
                   RadioListTile<String>(
-                    title: const Text('إجازة بدون خصم (رصيد إجازات)'),
-                    value: 'without_deduction',
+                    title: const Text('إجازة بخصم (خصم يوم من الراتب)'),
+                    value: 'with_deduction',
                     groupValue: decisionType,
                     onChanged: (v) => setState(() => decisionType = v!),
                   ),
@@ -277,10 +277,12 @@ class _LeaveRequestCard extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
+                    final isPaid = decisionType == 'without_deduction';
                     context.read<HrLeaveRequestsCubit>().decideRequest(
                       id: req.id,
                       status: 'approved',
                       decisionType: decisionType,
+                      isPaid: isPaid,
                     );
                   },
                   child: const Text('تأكيد الموافقة'),

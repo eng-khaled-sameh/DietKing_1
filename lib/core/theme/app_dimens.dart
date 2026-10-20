@@ -21,8 +21,8 @@ abstract final class AppDimens {
   static const double statusStripHeight = 64.0;
   static const double inputHeight = 48.0;
   static const double buttonHeight = 48.0;
-  static const double logoSize = 180.0;
-  static const double logoGlowSize = 230.0;
+  static const double logoSize = 240.0;
+  static const double logoGlowSize = 300.0;
 
   // ── Layout Constraints ───────────────────────────────────────────────────────
   static const double loginCardMaxWidth = 450.0;

@@ -88,8 +88,8 @@ begin
 
   v_number := _next_doc_number(
     'expense',
-    to_char(v_expense_date, 'YYYY') || ':' || v_branch.code,
-    'EXP-{scope}-{n:4}'
+    coalesce(nullif(v_branch.code, ''), 'DK-001'),
+    'EXP-{scope}-{n:6}'
   );
 
   insert into public.expenses (

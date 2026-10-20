@@ -247,6 +247,7 @@ class _ReceiveSupplyOrderDialogState extends State<ReceiveSupplyOrderDialog> {
                 _th('الصنف', flex: 3),
                 _th('معتمد', flex: 2),
                 _th('مستلم فعلياً', flex: 2),
+                _th('الفرق', flex: 2),
                 _th('تكلفة الوحدة', flex: 2),
               ],
             ),
@@ -255,6 +256,8 @@ class _ReceiveSupplyOrderDialogState extends State<ReceiveSupplyOrderDialog> {
             final l = _lines[i];
             final approved = l.line.qtyApproved ?? l.line.qtyRequested;
             final item = itemsById[l.line.itemId];
+            final received = double.tryParse(l.receivedCtrl.text.trim()) ?? approved;
+            final diff = received - approved;
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: const BoxDecoration(
@@ -281,13 +284,14 @@ class _ReceiveSupplyOrderDialogState extends State<ReceiveSupplyOrderDialog> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      onChanged: (_) => setState(() {}),
                       style: GoogleFonts.ibmPlexSansArabic(
                         color: AppColors.onSurface,
                       ),
                       decoration: InputDecoration(
                         isDense: true,
                         hintText: '0',
-                        suffixText: item?.unitCode ?? 'وحدة غير معروفة',
+                        suffixText: item?.unitCode ?? '',
                         hintStyle: GoogleFonts.ibmPlexSansArabic(
                           color: AppColors.onSurfaceVariant,
                         ),
@@ -299,6 +303,21 @@ class _ReceiveSupplyOrderDialogState extends State<ReceiveSupplyOrderDialog> {
                         focusedBorder: const UnderlineInputBorder(
                           borderSide: BorderSide(color: AppColors.primary),
                         ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      diff == 0
+                          ? 'مطابق'
+                          : (diff > 0 ? '+${diff.toStringAsFixed(1)} (زيادة)' : '${diff.toStringAsFixed(1)} (عجز)'),
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: diff == 0
+                            ? AppColors.statusGreen
+                            : (diff < 0 ? AppColors.error : Colors.orange),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
                   ),

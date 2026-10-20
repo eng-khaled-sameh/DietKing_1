@@ -128,9 +128,9 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
 
   final _nameCtrl = TextEditingController();
   final _skuCtrl = TextEditingController();
-  final _minLevelCtrl = TextEditingController(text: '0');
-  final _openingQtyCtrl = TextEditingController(text: '0');
-  final _openingCostCtrl = TextEditingController(text: '0');
+  final _minLevelCtrl = TextEditingController();
+  final _openingQtyCtrl = TextEditingController();
+  final _openingCostCtrl = TextEditingController();
 
   String? _selectedCategoryId;
   String? _selectedUnitCode;
@@ -214,42 +214,11 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
         [];
   }
 
-  // ── طلب التصريح مع إعادة المحاولة ──────────────────────────────────────────
+  // ── طلب التصريح ─────────────────────────────────────────────────────────────
 
   Future<String?> _ensureToken() async {
     if (_itemEditApproval.isValid) return _itemEditApproval.token;
-
-    final password = await _showPasswordDialog(context);
-    if (password == null || password.isEmpty || !mounted) return null;
-
-    final cubit = context.read<InventoryCubit>();
-    try {
-      final res = await cubit.requestAdminToken(
-        password,
-        'inventory_item_edit',
-      );
-      if (res == null) {
-        if (mounted) {
-          showInventorySnack(
-            context,
-            'كلمة المرور خاطئة أو غير مخوّل',
-            isError: true,
-          );
-        }
-        return null;
-      }
-      // التصريح صالح 10 دقائق
-      _itemEditApproval.set(
-        res,
-        DateTime.now().add(const Duration(minutes: 10)),
-      );
-      return res;
-    } catch (e) {
-      if (mounted) {
-        showInventorySnack(context, _friendlyError(e), isError: true);
-      }
-      return null;
-    }
+    return null;
   }
 
   // ── الإرسال ─────────────────────────────────────────────────────────────────
@@ -258,13 +227,12 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final token = await _ensureToken();
-    if (token == null || !mounted) return;
 
     setState(() => _submitting = true);
 
     final params = <String, dynamic>{
       'client_id': _clientId,
-      'approval_token': token,
+      if (token != null) 'approval_token': token,
       'name': _nameCtrl.text.trim(),
       if (_skuCtrl.text.trim().isNotEmpty)
         'sku': _skuCtrl.text.trim().toUpperCase(),
@@ -311,11 +279,27 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
       if (!mounted) return;
       setState(() => _submitting = false);
       final msg = _friendlyError(e);
-      // لو السيرفر رفض التصريح لانتهائه، امسح التوكن وأعِد
-      if (msg.contains('تصريح') ||
-          msg.contains('منتهي') ||
+
+      // في حال كانت قاعدة البيانات لا تزال تتطلب باسورد الإدارة، نطلبه كحل احتياطي
+      if (msg.contains('باسورد الإدارة') ||
+          msg.contains('تصريح') ||
           msg.contains('token')) {
         _itemEditApproval.clear();
+        final password = await _showPasswordDialog(context);
+        if (password != null && password.isNotEmpty && mounted) {
+          final res = await context.read<InventoryCubit>().requestAdminToken(
+                password,
+                'inventory_item_edit',
+              );
+          if (res != null) {
+            _itemEditApproval.set(
+              res,
+              DateTime.now().add(const Duration(minutes: 10)),
+            );
+            await _submit();
+            return;
+          }
+        }
       }
       showInventorySnack(context, msg, isError: true);
     }
@@ -340,21 +324,24 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
   }
 
   String? _validateMinLevel(String? v) {
-    final n = _parseNumber(v ?? '');
+    if (v == null || v.trim().isEmpty) return null;
+    final n = _parseNumber(v);
     if (n == null) return 'أدخل رقماً صحيحاً';
     if (n < 0) return 'الحد الأدنى يجب أن يكون 0 أو أكثر';
     return null;
   }
 
   String? _validateOpeningQty(String? v) {
-    final n = _parseNumber(v ?? '');
+    if (v == null || v.trim().isEmpty) return null;
+    final n = _parseNumber(v);
     if (n == null) return 'أدخل رقماً صحيحاً';
     if (n < 0) return 'الكمية يجب أن تكون 0 أو أكثر';
     return null;
   }
 
   String? _validateOpeningCost(String? v) {
-    final n = _parseNumber(v ?? '');
+    if (v == null || v.trim().isEmpty) return null;
+    final n = _parseNumber(v);
     if (n == null) return 'أدخل رقماً صحيحاً';
     if (n < 0) return 'التكلفة يجب أن تكون 0 أو أكثر';
     return null;
@@ -470,7 +457,7 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
           validator: _validateMinLevel,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           style: GoogleFonts.ibmPlexSansArabic(color: AppColors.onSurface),
-          decoration: _inputDecoration('الحد الأدنى للمخزون'),
+          decoration: _inputDecoration('الحد الأدنى للمخزون', hint: '0'),
         ),
         const SizedBox(height: 16),
 
@@ -488,7 +475,7 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
                   style: GoogleFonts.ibmPlexSansArabic(
                     color: AppColors.onSurface,
                   ),
-                  decoration: _inputDecoration('الرصيد الافتتاحي'),
+                  decoration: _inputDecoration('الرصيد الافتتاحي', hint: '0'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -502,7 +489,7 @@ class _SaveItemDialogState extends State<SaveItemDialog> {
                   style: GoogleFonts.ibmPlexSansArabic(
                     color: AppColors.onSurface,
                   ),
-                  decoration: _inputDecoration('تكلفة الوحدة'),
+                  decoration: _inputDecoration('تكلفة الوحدة', hint: '0'),
                 ),
               ),
             ],

@@ -242,6 +242,7 @@ class HrApi {
     required String status,
     String? decisionType,
     String? notes,
+    bool? isPaid,
   }) async {
     try {
       await _client.rpc(
@@ -251,6 +252,7 @@ class HrApi {
           'p_status': status,
           if (decisionType != null) 'p_decision_type': decisionType,
           if (notes != null) 'p_notes': notes,
+          if (isPaid != null) 'p_is_paid': isPaid,
         },
       );
     } catch (e) {

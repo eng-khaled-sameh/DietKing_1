@@ -152,7 +152,7 @@ class _AdminDeductionsBonusesSectionState
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      onChanged: (v) => amountStr = v,
+                      onChanged: (v) => setState(() => amountStr = v),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -160,7 +160,7 @@ class _AdminDeductionsBonusesSectionState
                         labelText: 'السبب/الملاحظات',
                       ),
                       maxLines: 2,
-                      onChanged: (v) => notes = v,
+                      onChanged: (v) => setState(() => notes = v),
                     ),
                   ],
                 ),
@@ -173,11 +173,11 @@ class _AdminDeductionsBonusesSectionState
                 ElevatedButton(
                   onPressed:
                       selectedEmpId == null ||
-                          notes.isEmpty ||
-                          amountStr.isEmpty
+                          notes.trim().isEmpty ||
+                          (double.tryParse(amountStr.trim()) ?? 0) <= 0
                       ? null
                       : () async {
-                          final val = double.tryParse(amountStr);
+                          final val = double.tryParse(amountStr.trim());
                           if (val == null || val <= 0) return;
 
                           Navigator.of(context).pop();
@@ -189,7 +189,7 @@ class _AdminDeductionsBonusesSectionState
                               'amount_type': amountType,
                               'cash_amount': amountType == 'cash' ? val : null,
                               'days_amount': amountType == 'days' ? val : null,
-                              'notes': notes,
+                              'notes': notes.trim(),
                             });
                             _loadData();
                             ScaffoldMessenger.of(this.context).showSnackBar(

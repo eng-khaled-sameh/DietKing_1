@@ -44,16 +44,19 @@ class LoginLogoHeader extends StatelessWidget {
                   ),
                 ],
               ),
-              child: ClipOval(
+              child: Padding(
+                padding: const EdgeInsets.all(28.0),
                 child: Image.asset(
                   'assets/images/logo.png',
                   fit: BoxFit.contain,
-                  errorBuilder: (context, error, _) => Container(
-                    color: AppColors.surfaceContainerHigh,
-                    child: const Icon(
-                      Icons.restaurant_menu_rounded,
-                      size: 100,
-                      color: AppColors.primary,
+                  errorBuilder: (context, error, _) => ClipOval(
+                    child: Container(
+                      color: AppColors.surfaceContainerHigh,
+                      child: const Icon(
+                        Icons.restaurant_menu_rounded,
+                        size: 80,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
                 ),

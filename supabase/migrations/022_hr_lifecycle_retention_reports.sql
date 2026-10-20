@@ -194,8 +194,11 @@ begin
     raise exception 'الموظف في إجازة معتمدة في هذا التاريخ ولا يمكن تسجيل حضور أو غياب له';
   end if;
 
-  -- فترة السماح لغير مسؤولي HR: يوم اليوم أو الأمس فقط
-  if not public._has_role('hr') and p_context <> 'hr' then
+  -- فترة الاحتفاظ بالبيانات للتحقق من التاريخ
+  v_emp_cutoff := coalesce(v_emp.hire_date, v_emp.created_at::date);
+
+  -- فترة السماح: غير HR لا يسجل إلا اليوم أو أمس
+  if p_context <> 'hr' and not (public._has_role('hr') or public._has_role('owner')) then
     if p_record_date < current_date - 1 or p_record_date > current_date then
       raise exception 'لا يمكن تسجيل الحضور إلا ليوم أمس أو اليوم';
     end if;

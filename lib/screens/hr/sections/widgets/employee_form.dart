@@ -39,7 +39,6 @@ class _EmployeeFormState extends State<EmployeeForm> {
   EmployeeJobRole? _jobRole;
   String? _branchId;
   List<Map<String, dynamic>> _branches = [];
-  bool _isLoadingBranches = true;
 
   @override
   void initState() {
@@ -67,14 +66,11 @@ class _EmployeeFormState extends State<EmployeeForm> {
       if (mounted) {
         setState(() {
           _branches = branches;
-          _isLoadingBranches = false;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoadingBranches = false;
-        });
+        setState(() {});
       }
     }
   }

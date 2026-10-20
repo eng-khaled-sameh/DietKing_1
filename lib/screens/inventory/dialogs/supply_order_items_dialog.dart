@@ -210,8 +210,25 @@ class SupplyOrderItemsDialog extends StatelessWidget {
               children: [
                 _qtyRow('مطلوب:', requested),
                 _qtyRow('معتمد:', approved),
-                if (order.status == SupplyOrderStatus.received)
+                if (order.status == SupplyOrderStatus.received) ...[
                   _qtyRow('مستلم:', received),
+                  if (line.qtyReceived != null &&
+                      (line.qtyApproved ?? line.qtyRequested) != line.qtyReceived) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      (line.qtyReceived! > (line.qtyApproved ?? line.qtyRequested))
+                          ? 'فارق: +${_formatQty(line.qtyReceived! - (line.qtyApproved ?? line.qtyRequested))} (زيادة)'
+                          : 'فارق: ${_formatQty(line.qtyReceived! - (line.qtyApproved ?? line.qtyRequested))} (عجز)',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: (line.qtyReceived! > (line.qtyApproved ?? line.qtyRequested))
+                            ? Colors.orange
+                            : AppColors.error,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ],
               ],
             ),
           ),

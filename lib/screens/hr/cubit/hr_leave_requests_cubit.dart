@@ -48,6 +48,7 @@ class HrLeaveRequestsCubit extends Cubit<HrLeaveRequestsState> {
     required String status,
     String? decisionType,
     String? notes,
+    bool? isPaid,
   }) async {
     try {
       await _api.decideLeaveRequest(
@@ -55,6 +56,7 @@ class HrLeaveRequestsCubit extends Cubit<HrLeaveRequestsState> {
         status: status,
         decisionType: decisionType,
         notes: notes,
+        isPaid: isPaid,
       );
       fetchRequests();
     } catch (e) {

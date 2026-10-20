@@ -11,6 +11,8 @@ class LeaveRequest {
   final String reason;
   final String status; // pending | approved | rejected
   final String? decisionType; // with_deduction | without_deduction
+  final bool isPaid;
+  final String leaveType; // paid | unpaid
   final String? decisionNotes;
   final DateTime createdAt;
 
@@ -27,6 +29,8 @@ class LeaveRequest {
     required this.reason,
     required this.status,
     this.decisionType,
+    this.isPaid = true,
+    this.leaveType = 'paid',
     this.decisionNotes,
     required this.createdAt,
   });
@@ -40,26 +44,37 @@ class LeaveRequest {
     _ => status,
   };
 
-  String get decisionTypeLabel => switch (decisionType) {
-    'with_deduction' => 'بخصم',
-    'without_deduction' => 'بدون خصم',
-    _ => '-',
-  };
+  String get decisionTypeLabel {
+    if (decisionType == 'with_deduction' || !isPaid || leaveType == 'unpaid') {
+      return 'إجازة بخصم (من الراتب)';
+    }
+    if (decisionType == 'without_deduction' || isPaid || leaveType == 'paid') {
+      return 'إجازة مدفوعة (بدون خصم)';
+    }
+    return '-';
+  }
 
-  factory LeaveRequest.fromJson(Map<String, dynamic> j) => LeaveRequest(
-    id: j['id'] as String,
-    employeeId: j['employee_id'] as String,
-    employeeName: j['employee_name'] as String? ?? '',
-    employeeCode: j['employee_code'] as String? ?? '',
-    jobRole: j['job_role'] as String? ?? '',
-    branchName: j['branch_name'] as String?,
-    requestedFrom: j['requested_from'] as String? ?? '',
-    startDate: DateTime.parse(j['start_date'] as String),
-    endDate: DateTime.parse(j['end_date'] as String),
-    reason: j['reason'] as String,
-    status: j['status'] as String,
-    decisionType: j['decision_type'] as String?,
-    decisionNotes: j['decision_notes'] as String?,
-    createdAt: DateTime.parse(j['created_at'] as String),
-  );
+  factory LeaveRequest.fromJson(Map<String, dynamic> j) {
+    final decType = j['decision_type'] as String?;
+    final isPaidVal = (j['is_paid'] as bool?) ?? (decType == 'without_deduction');
+    final leaveTypeVal = (j['leave_type'] as String?) ?? (isPaidVal ? 'paid' : 'unpaid');
+    return LeaveRequest(
+      id: j['id'] as String,
+      employeeId: j['employee_id'] as String,
+      employeeName: j['employee_name'] as String? ?? '',
+      employeeCode: j['employee_code'] as String? ?? '',
+      jobRole: j['job_role'] as String? ?? '',
+      branchName: j['branch_name'] as String?,
+      requestedFrom: j['requested_from'] as String? ?? '',
+      startDate: DateTime.parse(j['start_date'] as String),
+      endDate: DateTime.parse(j['end_date'] as String),
+      reason: j['reason'] as String,
+      status: j['status'] as String,
+      decisionType: decType,
+      isPaid: isPaidVal,
+      leaveType: leaveTypeVal,
+      decisionNotes: j['decision_notes'] as String?,
+      createdAt: DateTime.parse(j['created_at'] as String),
+    );
+  }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -106,6 +107,13 @@ class DietKingApp extends StatelessWidget {
     return MaterialApp(
       title: 'دايت كنج POS — تسجيل دخول',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      locale: const Locale('ar'),
+      supportedLocales: const [Locale('ar'), Locale('en')],
       builder: (context, child) {
         return GlobalNotificationOverlay(
           child: child ?? const SizedBox.shrink(),

@@ -5,6 +5,7 @@ class AttendanceRecord {
   final String status; // 'present' | 'absent' | 'on_leave'
   final String? recordedFrom;
   final String? notes;
+  final bool isPaidLeave;
 
   const AttendanceRecord({
     required this.id,
@@ -13,21 +14,28 @@ class AttendanceRecord {
     required this.status,
     this.recordedFrom,
     this.notes,
+    this.isPaidLeave = true,
   });
 
-  factory AttendanceRecord.fromJson(Map<String, dynamic> j) => AttendanceRecord(
-    id: j['id'] as String,
-    employeeId: j['employee_id'] as String? ?? '',
-    recordDate: DateTime.parse(j['date'] as String),
-    status: j['status'] as String,
-    recordedFrom: j['recorded_from'] as String?,
-    notes: j['notes'] as String?,
-  );
+  factory AttendanceRecord.fromJson(Map<String, dynamic> j) {
+    final rawNotes = j['notes']?.toString() ?? '';
+    final isPaid = (j['is_paid_leave'] as bool?) ??
+        (!rawNotes.contains('خصم') && (j['leave_type'] != 'unpaid'));
+    return AttendanceRecord(
+      id: j['id'] as String,
+      employeeId: j['employee_id'] as String? ?? '',
+      recordDate: DateTime.parse(j['date'] as String),
+      status: j['status'] as String,
+      recordedFrom: j['recorded_from'] as String?,
+      notes: j['notes'] as String?,
+      isPaidLeave: isPaid,
+    );
+  }
 
   String get statusLabel => switch (status) {
     'present' => 'حاضر',
     'absent' => 'غائب',
-    'on_leave' => 'في إجازة',
+    'on_leave' => 'إجازة',
     _ => 'غير محدد',
   };
 }

@@ -467,9 +467,9 @@ class _SupplyOrderRow extends StatelessWidget {
             ),
           ),
           Text(
-            'مكتمل',
+            order.hasIssues ? 'مستلم بفروقات' : 'مكتمل',
             style: GoogleFonts.ibmPlexSansArabic(
-              color: AppColors.statusGreen,
+              color: order.hasIssues ? Colors.orange : AppColors.statusGreen,
               fontWeight: FontWeight.bold,
             ),
           ),

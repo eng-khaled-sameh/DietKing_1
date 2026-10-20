@@ -10,6 +10,7 @@ import '../cubit/inventory_state.dart';
 import 'package:my_desktop_app/cubits/auth/auth_cubit.dart';
 import 'package:my_desktop_app/cubits/session/session_cubit.dart';
 import 'package:my_desktop_app/features/auth/presentation/screens/login_screen.dart';
+import '../../../../core/widgets/notification_bell.dart';
 
 class InventorySidebar extends StatelessWidget {
   const InventorySidebar({super.key});
@@ -46,17 +47,11 @@ class InventorySidebar extends StatelessWidget {
                     _SidebarItem(
                       section: InventorySection.rawMaterials,
                       isActive: state.section == InventorySection.rawMaterials,
-                      badgeText: state.rawMaterialsCount > 0
-                          ? state.rawMaterialsCount.toString()
-                          : null,
                     ),
                     _SidebarItem(
                       section: InventorySection.supplyRequests,
                       isActive:
                           state.section == InventorySection.supplyRequests,
-                      badgeText: state.pendingSupplyCount > 0
-                          ? state.pendingSupplyCount.toString()
-                          : null,
                     ),
                     _SidebarItem(
                       section: InventorySection.stockAudit,
@@ -74,10 +69,6 @@ class InventorySidebar extends StatelessWidget {
                     _SidebarItem(
                       section: InventorySection.branchOrders,
                       isActive: state.section == InventorySection.branchOrders,
-                      badgeText: state.activeBranchOrdersCount > 0
-                          ? state.activeBranchOrdersCount.toString()
-                          : null,
-                      badgeColor: AppColors.secondaryContainer,
                     ),
                     _SidebarItem(
                       section: InventorySection.administration,
@@ -124,17 +115,26 @@ class InventorySidebar extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 12,
-            height: 12,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              color: AppColors.primaryContainer,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryContainer.withValues(alpha: 0.4),
-                  blurRadius: 8,
+              color: AppColors.surfaceContainer,
+              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 12,
+                  height: 12,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ],
+              ),
             ),
           ),
           const SizedBox(width: AppDimens.spaceMd),
@@ -160,6 +160,7 @@ class InventorySidebar extends StatelessWidget {
               ],
             ),
           ),
+          const NotificationBell(),
         ],
       ),
     );
@@ -171,15 +172,11 @@ class _SidebarItem extends StatefulWidget {
   final String? label;
   final IconData? icon;
   final bool isActive;
-  final String? badgeText;
-  final Color? badgeColor;
   final VoidCallback? onTap;
 
   const _SidebarItem({
     this.section,
     this.isActive = false,
-    this.badgeText,
-    this.badgeColor,
   }) : onTap = null,
        icon = null,
        label = null;
@@ -189,9 +186,7 @@ class _SidebarItem extends StatefulWidget {
     required this.icon,
     required this.onTap,
   }) : section = null,
-       isActive = false,
-       badgeText = null,
-       badgeColor = null;
+       isActive = false;
 
   @override
   State<_SidebarItem> createState() => _SidebarItemState();
@@ -261,27 +256,6 @@ class _SidebarItemState extends State<_SidebarItem> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (widget.badgeText != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color:
-                        widget.badgeColor ?? AppColors.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                  ),
-                  child: Text(
-                    widget.badgeText!,
-                    style: GoogleFonts.ibmPlexSansArabic(
-                      fontSize: AppDimens.fontXs,
-                      color: widget.isActive
-                          ? AppColors.onPrimaryContainer
-                          : AppColors.onSurface,
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
