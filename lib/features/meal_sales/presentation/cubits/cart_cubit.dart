@@ -103,8 +103,8 @@ class CartLine extends Equatable {
     quantity: quantity ?? this.quantity,
   );
 
-  /// مفتاح الهوية: نفس productId + نفس variantId = نفس الصنف
-  String get key => '${productId}_${variantId ?? "null"}';
+  /// مفتاح الهوية: نفس productId + نفس variantId + نفس name = نفس الصنف
+  String get key => '${productId}_${variantId ?? "null"}_$name';
 
   /// تحويل إلى OrderLine للتوافق مع Widget القائمة القديم
   OrderLine toOrderLine() => OrderLine(
@@ -133,7 +133,7 @@ class CartCubit extends Cubit<CartState> {
   CartCubit({double initialVatRate = 0.0})
     : super(CartState(vatValue: initialVatRate, isVatPercentage: true));
 
-  /// إضافة صنف: إن كان موجودًا بنفس المتغير تُزاد الكمية،
+  /// إضافة صنف: إن كان موجودًا بنفس المتغير والاسم تُزاد الكمية،
   /// وإلا يضاف سطر جديد بكمية 1.
   void addItem({
     required String productId,
@@ -143,7 +143,7 @@ class CartCubit extends Cubit<CartState> {
     required double unitPrice,
   }) {
     final lines = List<CartLine>.from(state.lines);
-    final key = '${productId}_${variantId ?? "null"}';
+    final key = '${productId}_${variantId ?? "null"}_$name';
     final idx = lines.indexWhere((l) => l.key == key);
 
     if (idx >= 0) {

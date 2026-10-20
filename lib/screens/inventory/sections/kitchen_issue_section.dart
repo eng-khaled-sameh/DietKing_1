@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import '../../../../core/theme/app_colors.dart';
 import '../cubit/inventory_cubit.dart';
 import '../../../../data/inventory/models/kitchen_models.dart';
@@ -10,6 +9,7 @@ import '../widgets/kitchen/kitchen_issues_table.dart';
 import '../widgets/inventory_snack.dart';
 import '../utils/csv_exporter.dart';
 import '../../../../core/utils/file_saved_dialog.dart';
+import '../dialogs/export_date_range_dialog.dart';
 
 /// قسم صرف الخامات للمطبخ
 class KitchenIssueSection extends StatelessWidget {
@@ -115,9 +115,31 @@ class KitchenIssueSection extends StatelessWidget {
   }
 
   Future<void> _exportCsv(BuildContext context) async {
+    final range = await showDialog<DateTimeRange>(
+      context: context,
+      builder: (_) => const ExportDateRangeDialog(title: 'صرف خامات للمطبخ'),
+    );
+    if (range == null || !context.mounted) return;
+
     try {
       final state = context.read<InventoryCubit>().state;
-      final rows = state.kitchenIssues
+      final filtered = state.kitchenIssues.where((i) {
+        final d = i.createdAt.toLocal();
+        return !d.isBefore(range.start) && !d.isAfter(range.end);
+      }).toList();
+
+      if (filtered.isEmpty) {
+        if (context.mounted) {
+          showInventorySnack(
+            context,
+            'لا توجد سجلات صرف في الفترة المحددة',
+            isError: false,
+          );
+        }
+        return;
+      }
+
+      final rows = filtered
           .map(
             (i) => [
               i.number,
@@ -125,6 +147,7 @@ class KitchenIssueSection extends StatelessWidget {
               '${i.lines.length} خامات',
               i.chefName,
               i.shift.arabicLabel,
+              i.notes ?? '',
               i.createdAt.toLocal().toString().substring(0, 16),
             ],
           )
@@ -134,10 +157,11 @@ class KitchenIssueSection extends StatelessWidget {
         headers: [
           'رقم الإذن',
           'خطة الإنتاج',
-          'الخامات',
+          'عدد الخامات',
           'الشيف',
           'الوردية',
-          'التاريخ',
+          'الملاحظات',
+          'التاريخ والوقت',
         ],
         rows: rows,
       );

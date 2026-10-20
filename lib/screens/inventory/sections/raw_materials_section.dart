@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../cubit/inventory_cubit.dart';
 import '../cubit/inventory_state.dart';
-import '../dialogs/import_dialog.dart';
 import '../dialogs/save_item_dialog.dart';
 import '../widgets/raw/raw_filters_bar.dart';
 import '../widgets/raw/raw_materials_table.dart';
@@ -93,41 +92,6 @@ class RawMaterialsSection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-
-                // استيراد من Excel (خيار إضافي)
-                Tooltip(
-                  message: 'استيراد الأصناف من ملف Excel',
-                  child: OutlinedButton.icon(
-                    onPressed: () => showDialog<void>(
-                      context: context,
-                      builder: (_) => BlocProvider.value(
-                        value: cubit,
-                        child: const ImportItemsDialog(),
-                      ),
-                    ),
-                    icon: const Icon(
-                      Icons.file_upload_outlined,
-                      color: AppColors.onSurface,
-                      size: 18,
-                    ),
-                    label: Text(
-                      'استيراد Excel',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        color: AppColors.onSurface,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(
-                        color: AppColors.surfaceContainerHigh,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
 
                 // زر الإضافة المباشرة (primary — الأولوية)
                 Tooltip(

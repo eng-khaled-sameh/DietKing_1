@@ -8,7 +8,6 @@ import '../../cubits/session/session_cubit.dart';
 import '../../data/notifications/models/app_notification.dart';
 import '../app_modules.dart';
 import '../theme/app_colors.dart';
-import 'global_notification_overlay.dart';
 
 /// ويدجت جرس الإشعارات القابل لإعادة الاستخدام في أي شريط علوي
 class NotificationBell extends StatefulWidget {
@@ -112,8 +111,6 @@ class _NotificationBellState extends State<NotificationBell> {
       branchId: branchId,
     );
   }
-
-
 
   void _openNotificationsMenu(BuildContext context) {
     final cubit = context.read<NotificationsCubit>();
@@ -222,18 +219,6 @@ class _NotificationBellState extends State<NotificationBell> {
           ),
           Row(
             children: [
-              IconButton(
-                tooltip: 'تجربة إشعار فوري (صوت + منبثق)',
-                icon: const Icon(
-                  Icons.volume_up_rounded,
-                  size: 18,
-                  color: AppColors.primary,
-                ),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  GlobalNotificationOverlay.triggerTestNotification(context);
-                },
-              ),
               TextButton(
                 onPressed: () => cubit.markAllAsRead(),
                 style: TextButton.styleFrom(

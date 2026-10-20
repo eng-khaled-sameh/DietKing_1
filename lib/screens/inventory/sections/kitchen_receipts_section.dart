@@ -10,6 +10,7 @@ import '../utils/csv_exporter.dart';
 import '../widgets/inventory_snack.dart';
 import '../widgets/catalog_item_details.dart';
 import '../../../../core/utils/file_saved_dialog.dart';
+import '../dialogs/export_date_range_dialog.dart';
 import '../widgets/receipts/kitchen_receipts_table.dart';
 
 /// قسم استلام إنتاج المطبخ
@@ -116,18 +117,41 @@ class KitchenReceiptsSection extends StatelessWidget {
   }
 
   Future<void> _exportCsv(BuildContext context) async {
+    final range = await showDialog<DateTimeRange>(
+      context: context,
+      builder: (_) => const ExportDateRangeDialog(title: 'استلام إنتاج المطبخ'),
+    );
+    if (range == null || !context.mounted) return;
+
     try {
       final state = context.read<InventoryCubit>().state;
+      final filtered = state.kitchenBatches.where((batch) {
+        final d = batch.producedAt.toLocal();
+        return !d.isBefore(range.start) && !d.isAfter(range.end);
+      }).toList();
+
+      if (filtered.isEmpty) {
+        if (context.mounted) {
+          showInventorySnack(
+            context,
+            'لا توجد دفعات إنتاج في الفترة المحددة',
+            isError: false,
+          );
+        }
+        return;
+      }
+
       final itemsById = state.catalogItemsById;
-      final rows = state.kitchenBatches.map((batch) {
+      final rows = filtered.map((batch) {
         final item = itemsById[batch.itemId];
+        final prodDate = batch.producedAt.toLocal();
         return [
           batch.number,
           item?.name ?? 'صنف غير معروف',
           item?.sku ?? '',
           item?.unitCode ?? '',
           formatCatalogQuantity(batch.quantity, item),
-          '${batch.producedAt.toLocal().year}-${batch.producedAt.toLocal().month.toString().padLeft(2, '0')}-${batch.producedAt.toLocal().day.toString().padLeft(2, '0')}',
+          '${prodDate.year}-${prodDate.month.toString().padLeft(2, '0')}-${prodDate.day.toString().padLeft(2, '0')}',
           batch.qualityNote ?? '',
         ];
       }).toList();

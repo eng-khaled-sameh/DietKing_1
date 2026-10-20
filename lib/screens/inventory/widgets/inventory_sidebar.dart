@@ -10,7 +10,6 @@ import '../cubit/inventory_state.dart';
 import 'package:my_desktop_app/cubits/auth/auth_cubit.dart';
 import 'package:my_desktop_app/cubits/session/session_cubit.dart';
 import 'package:my_desktop_app/features/auth/presentation/screens/login_screen.dart';
-import '../../../../core/widgets/notification_bell.dart';
 
 class InventorySidebar extends StatelessWidget {
   const InventorySidebar({super.key});
@@ -52,6 +51,8 @@ class InventorySidebar extends StatelessWidget {
                       section: InventorySection.supplyRequests,
                       isActive:
                           state.section == InventorySection.supplyRequests,
+                      badgeCount: state.approvedSupplyOrdersCount,
+                      badgeColor: AppColors.statusGreen,
                     ),
                     _SidebarItem(
                       section: InventorySection.stockAudit,
@@ -69,6 +70,8 @@ class InventorySidebar extends StatelessWidget {
                     _SidebarItem(
                       section: InventorySection.branchOrders,
                       isActive: state.section == InventorySection.branchOrders,
+                      badgeCount: state.submittedBranchOrdersCount,
+                      badgeColor: AppColors.primary,
                     ),
                     _SidebarItem(
                       section: InventorySection.administration,
@@ -160,7 +163,6 @@ class InventorySidebar extends StatelessWidget {
               ],
             ),
           ),
-          const NotificationBell(),
         ],
       ),
     );
@@ -172,11 +174,15 @@ class _SidebarItem extends StatefulWidget {
   final String? label;
   final IconData? icon;
   final bool isActive;
+  final int? badgeCount;
+  final Color? badgeColor;
   final VoidCallback? onTap;
 
   const _SidebarItem({
     this.section,
     this.isActive = false,
+    this.badgeCount,
+    this.badgeColor,
   }) : onTap = null,
        icon = null,
        label = null;
@@ -186,7 +192,9 @@ class _SidebarItem extends StatefulWidget {
     required this.icon,
     required this.onTap,
   }) : section = null,
-       isActive = false;
+       isActive = false,
+       badgeCount = null,
+       badgeColor = null;
 
   @override
   State<_SidebarItem> createState() => _SidebarItemState();
@@ -256,6 +264,48 @@ class _SidebarItemState extends State<_SidebarItem> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (widget.badgeCount != null) ...[
+                const SizedBox(width: AppDimens.spaceXs),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: widget.isActive
+                        ? AppColors.surfaceContainerLowest
+                        : (widget.badgeCount! > 0
+                            ? (widget.badgeColor ?? AppColors.primary)
+                                .withValues(alpha: 0.16)
+                            : AppColors.surfaceContainerHighest
+                                .withValues(alpha: 0.4)),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusFull),
+                    border: Border.all(
+                      color: widget.isActive
+                          ? Colors.transparent
+                          : (widget.badgeCount! > 0
+                              ? (widget.badgeColor ?? AppColors.primary)
+                                  .withValues(alpha: 0.4)
+                              : AppColors.outlineVariant
+                                  .withValues(alpha: 0.25)),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    '${widget.badgeCount}',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      fontSize: AppDimens.fontXs,
+                      fontWeight: FontWeight.w700,
+                      color: widget.isActive
+                          ? (widget.badgeColor ?? AppColors.primary)
+                          : (widget.badgeCount! > 0
+                              ? (widget.badgeColor ?? AppColors.primary)
+                              : AppColors.onSurfaceVariant
+                                  .withValues(alpha: 0.6)),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

@@ -53,6 +53,14 @@ class InventoryCubit extends Cubit<InventoryState> {
       } catch (_) {
         // المستخدم كاشير أو لا يملك صلاحية أرصدة المستودع — الكتالوج يعمل بنجاح
       }
+
+      // 3. جلب طلبات التوريد وطلبات الفروع لتحديث العدادات في القائمة الجانبية
+      try {
+        await loadSupplyOrders();
+      } catch (_) {}
+      try {
+        await loadBranchOrders();
+      } catch (_) {}
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: _mapError(e)));
     }

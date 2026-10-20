@@ -303,6 +303,9 @@ class InventoryState extends Equatable {
       .where((o) => o.status == SupplyOrderStatus.pendingReview)
       .length;
 
+  int get approvedSupplyOrdersCount =>
+      supplyOrders.where((o) => o.status == SupplyOrderStatus.approved).length;
+
   int get activeSupplyCount => supplyOrders
       .where(
         (o) =>
