@@ -1,14 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
-import '../cubit/employees_cubit.dart';
-import '../cubit/employees_state.dart';
-import 'widgets/employee_form.dart';
 import '../../../../data/hr/models/employee_model.dart';
 import '../models/hr_enums.dart';
 import '../../../../cubits/branches/branches_cubit.dart';
 import '../../../../data/hr/hr_api.dart';
+import '../cubit/employees_cubit.dart';
+import '../cubit/employees_state.dart';
+import 'widgets/employee_form.dart';
 
 class EmployeesSection extends StatefulWidget {
   const EmployeesSection({super.key});
@@ -26,15 +27,64 @@ class _EmployeesSectionState extends State<EmployeesSection> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => EmployeesCubit(),
-      child: const _EmployeesView(),
-    );
+    // الـ EmployeesCubit مُوفَّر من HrShell — لا نُنشئه هنا
+    return const _EmployeesView();
   }
 }
 
-class _EmployeesView extends StatelessWidget {
+class _EmployeesView extends StatefulWidget {
   const _EmployeesView();
+
+  @override
+  State<_EmployeesView> createState() => _EmployeesViewState();
+}
+
+class _EmployeesViewState extends State<_EmployeesView> {
+  late final TextEditingController _searchController;
+  final ScrollController _scrollController = ScrollController();
+  Timer? _debounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialSearch = context.read<EmployeesCubit>().state.search ?? '';
+    _searchController = TextEditingController(text: initialSearch);
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      final cubit = context.read<EmployeesCubit>();
+      if (!cubit.state.isLoading &&
+          !cubit.state.hasReachedMax &&
+          cubit.state.error == null) {
+        cubit.fetchEmployees();
+      }
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+      final trimmed = query.trim();
+      context.read<EmployeesCubit>().updateFilters(
+        search: trimmed.isEmpty ? null : trimmed,
+        clearSearch: trimmed.isEmpty,
+      );
+    });
+    setState(() {});
+  }
 
   void _showNewEmployeeForm(BuildContext context) {
     final cubit = context.read<EmployeesCubit>();
@@ -59,6 +109,33 @@ class _EmployeesView extends StatelessWidget {
     );
   }
 
+  void _showEditEmployeeForm(BuildContext context, EmployeeModel emp) {
+    final cubit = context.read<EmployeesCubit>();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => BlocProvider.value(
+        value: cubit,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: EmployeeForm(
+            employeeToEdit: emp,
+            onSuccess: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('تم تعديل بيانات الموظف والراتب بنجاح'),
+                  backgroundColor: AppColors.primary,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showEmployeeDetails(BuildContext context, EmployeeModel emp) {
     final cubit = context.read<EmployeesCubit>();
     showDialog(
@@ -68,7 +145,30 @@ class _EmployeesView extends StatelessWidget {
           children: [
             const Icon(Icons.person, color: AppColors.primary),
             const SizedBox(width: AppDimens.spaceMd),
-            Expanded(child: Text(emp.fullName)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(emp.fullName),
+                  Text(
+                    'كود: ${emp.code}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'تعديل البيانات والراتب',
+              icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _showEditEmployeeForm(context, emp);
+              },
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -124,9 +224,31 @@ class _EmployeesView extends StatelessWidget {
               _detailRow('كود الموظف', emp.code),
               _detailRow('المسمى الوظيفي', emp.jobRole.label),
               _detailRow('الفرع/الموقع', emp.locationName),
-              _detailRow('الراتب الأساسي', emp.basicSalary.toString()),
+              const Divider(height: 16),
+              _detailRow(
+                'الراتب الأساسي',
+                '${emp.basicSalary.toStringAsFixed(0)} ج.م',
+              ),
+              _detailRow(
+                'البدلات',
+                '${emp.allowances.toStringAsFixed(0)} ج.م',
+              ),
+              _detailRow(
+                'المواصلات',
+                '${emp.transportAllowance.toStringAsFixed(0)} ج.م',
+              ),
+              _detailRow(
+                'إجمالي الراتب الثابت',
+                '${emp.totalFixed.toStringAsFixed(0)} ج.م',
+              ),
+              const Divider(height: 16),
               if (emp.phone != null && emp.phone!.isNotEmpty)
                 _detailRow('رقم الهاتف', emp.phone!),
+              if (emp.birthDate != null)
+                _detailRow(
+                  'تاريخ الميلاد',
+                  emp.birthDate!.toIso8601String().split('T').first,
+                ),
               if (emp.hireDate != null)
                 _detailRow(
                   'تاريخ التعيين',
@@ -134,12 +256,26 @@ class _EmployeesView extends StatelessWidget {
                 ),
               if (emp.qualification != null && emp.qualification!.isNotEmpty)
                 _detailRow('المؤهل', emp.qualification!),
+              if (emp.jobRank != null && emp.jobRank!.isNotEmpty)
+                _detailRow('الرتبة', emp.jobRank!),
               if (emp.notes != null && emp.notes!.isNotEmpty)
                 _detailRow('ملاحظات', emp.notes!),
             ],
           ),
         ),
         actions: [
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _showEditEmployeeForm(context, emp);
+            },
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('تعديل البيانات والراتب'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.onPrimary,
+            ),
+          ),
           TextButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
@@ -589,7 +725,35 @@ class _EmployeesView extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceLg),
           child: Row(
             children: [
+              // بحث بالاسم أو الكود
               Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    labelText: 'بحث باسم الموظف',
+                    hintText: 'اكتب اسم الموظف أو الكود...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              _onSearchChanged('');
+                            },
+                          )
+                        : null,
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  onChanged: _onSearchChanged,
+                ),
+              ),
+              const SizedBox(width: AppDimens.spaceMd),
+
+              // تصفية بالوظيفة
+              Expanded(
+                flex: 2,
                 child: BlocBuilder<EmployeesCubit, EmployeesState>(
                   builder: (context, state) {
                     return DropdownButtonFormField<EmployeeJobRole?>(
@@ -616,7 +780,10 @@ class _EmployeesView extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppDimens.spaceMd),
+
+              // تصفية بالفرع
               Expanded(
+                flex: 2,
                 child: BlocBuilder<BranchesCubit, BranchesState>(
                   builder: (context, branchesState) {
                     return BlocBuilder<EmployeesCubit, EmployeesState>(
@@ -735,30 +902,26 @@ class _EmployeesView extends StatelessWidget {
                 return const Center(child: Text('لا توجد نتائج'));
               }
 
-              return GridView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceLg,
-                ),
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 400,
-                  mainAxisExtent: 140,
-                  crossAxisSpacing: AppDimens.spaceMd,
-                  mainAxisSpacing: AppDimens.spaceMd,
-                ),
-                itemCount:
-                    state.employees.length + (state.hasReachedMax ? 0 : 1),
-                itemBuilder: (context, index) {
-                  if (index >= state.employees.length) {
-                    context.read<EmployeesCubit>().fetchEmployees();
-                    return const Padding(
-                      padding: EdgeInsets.all(AppDimens.spaceMd),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-
-                  final emp = state.employees[index];
-                  final hasNotes = emp.notes != null && emp.notes!.trim().isNotEmpty;
-                  return Card(
+              return Column(
+                children: [
+                  Expanded(
+                    child: GridView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceLg,
+                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 400,
+                        mainAxisExtent: 140,
+                        crossAxisSpacing: AppDimens.spaceMd,
+                        mainAxisSpacing: AppDimens.spaceMd,
+                      ),
+                      itemCount: state.employees.length,
+                      itemBuilder: (context, index) {
+                        final emp = state.employees[index];
+                        final hasNotes = emp.notes != null && emp.notes!.trim().isNotEmpty;
+                        return Card(
                     clipBehavior: Clip.antiAlias,
                     elevation: hasNotes ? 3 : 1,
                     shape: RoundedRectangleBorder(
@@ -850,7 +1013,25 @@ class _EmployeesView extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                _buildStatusBadge(emp.status.name),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        size: 18,
+                                        color: AppColors.primary,
+                                      ),
+                                      tooltip: 'تعديل البيانات والراتب',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: () =>
+                                          _showEditEmployeeForm(context, emp),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildStatusBadge(emp.status.name),
+                                  ],
+                                ),
                               ],
                             ),
                             const Spacer(),
@@ -884,6 +1065,14 @@ class _EmployeesView extends StatelessWidget {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
+                                  Text(
+                                    '${emp.basicSalary.toStringAsFixed(0)} ج.م',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -893,8 +1082,23 @@ class _EmployeesView extends StatelessWidget {
                     ),
                   );
                 },
-              );
-            },
+              ),
+            ),
+            if (state.isLoading && state.employees.isNotEmpty) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
           ),
         ),
       ],
@@ -927,11 +1131,11 @@ class _EmployeesView extends StatelessWidget {
           padding: const EdgeInsets.all(AppDimens.spaceMd),
           decoration: BoxDecoration(
             color: isSelected
-                ? color.withOpacity(0.25)
-                : color.withOpacity(0.1),
+                ? color.withValues(alpha: 0.25)
+                : color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppDimens.radiusMd),
             border: Border.all(
-              color: isSelected ? color : color.withOpacity(0.3),
+              color: isSelected ? color : color.withValues(alpha: 0.3),
               width: isSelected ? 2 : 1,
             ),
           ),
@@ -982,7 +1186,7 @@ class _EmployeesView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(

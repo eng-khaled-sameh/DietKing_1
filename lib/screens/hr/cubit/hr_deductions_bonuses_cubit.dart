@@ -28,15 +28,18 @@ class HrDeductionsBonusesState {
 
 class HrDeductionsBonusesCubit extends Cubit<HrDeductionsBonusesState> {
   final HrApi _api = HrApi();
+  bool _loaded = false;
 
   HrDeductionsBonusesCubit() : super(const HrDeductionsBonusesState()) {
     fetchRequests();
   }
 
-  Future<void> fetchRequests() async {
+  Future<void> fetchRequests({bool force = false}) async {
+    if (_loaded && !force) return;
     emit(state.copyWith(isLoading: true, error: null));
     try {
       final data = await _api.listDeductionBonuses();
+      _loaded = true;
       emit(state.copyWith(isLoading: false, requests: data));
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: e.toString()));
@@ -56,7 +59,8 @@ class HrDeductionsBonusesCubit extends Cubit<HrDeductionsBonusesState> {
         finalCashAmount: finalCashAmount,
         notes: notes,
       );
-      fetchRequests();
+      _loaded = false;
+      fetchRequests(force: true);
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }

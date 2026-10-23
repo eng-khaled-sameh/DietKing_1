@@ -8,19 +8,30 @@ class EmployeesCubit extends Cubit<EmployeesState> {
   final HrApi _api = HrApi();
   static const int _limit = 50;
 
+  /// تتبع التحميل الأول في الجلسة — لا نعيد الجلب إلا عند Refresh أو تغيير فلتر
+  bool _loaded = false;
+
   EmployeesCubit() : super(const EmployeesState()) {
     fetchEmployees();
   }
 
+  int _requestId = 0;
+
   Future<void> fetchEmployees({bool refresh = false}) async {
-    if (state.isLoading) return;
+    if (state.isLoading && !refresh) return;
     if (!refresh && state.hasReachedMax) return;
+    // منع إعادة جلب الصفحة الأولى عند التنقل بين أقسام HR (الكاش)
+    // لكن نسمح بـ pagination (الصفحات التالية) دائماً
+    if (!refresh && _loaded && state.employees.isNotEmpty && state.offset == 0) return;
+
+    final currentRequestId = ++_requestId;
+    final currentOffset = refresh ? 0 : state.offset;
 
     emit(
       state.copyWith(
         isLoading: true,
         error: null,
-        offset: refresh ? 0 : state.offset,
+        offset: currentOffset,
         employees: refresh ? [] : state.employees,
         hasReachedMax: refresh ? false : state.hasReachedMax,
       ),
@@ -34,8 +45,11 @@ class EmployeesCubit extends Cubit<EmployeesState> {
         branchId: state.branchId,
         noBranch: state.noBranch,
         limit: _limit,
-        offset: state.offset,
+        offset: currentOffset,
       );
+
+      // إذا انطلق طلب أحدث أثناء انتظار هذا الرد، نتجاهل النتيجة القديمة
+      if (currentRequestId != _requestId) return;
 
       final items = (res['items'] as List)
           .map((e) => EmployeeModel.fromJson(Map<String, dynamic>.from(e)))
@@ -43,18 +57,29 @@ class EmployeesCubit extends Cubit<EmployeesState> {
       final counts = Map<String, int>.from(res['counts']);
       final total = res['total'] as int;
 
+      _loaded = true;
+      final newEmployees = refresh ? items : [...state.employees, ...items];
+      final bool reachedMax = items.isEmpty ||
+          items.length < _limit ||
+          (total > 0 && newEmployees.length >= total);
+
       emit(
         state.copyWith(
           isLoading: false,
-          employees: refresh ? items : [...state.employees, ...items],
-          offset: state.offset + items.length,
-          hasReachedMax: items.length < _limit,
+          employees: newEmployees,
+          offset: currentOffset + items.length,
+          hasReachedMax: reachedMax,
           totalCount: total,
           counts: counts,
         ),
       );
     } catch (e) {
-      emit(state.copyWith(isLoading: false, error: e.toString()));
+      if (currentRequestId != _requestId) return;
+      emit(state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+        hasReachedMax: true,
+      ));
     }
   }
 
@@ -76,6 +101,7 @@ class EmployeesCubit extends Cubit<EmployeesState> {
     bool clearStatus = false,
     bool clearBranch = false,
   }) {
+    _loaded = false; // إعادة ضبط الكاش عند تغيير الفلتر
     emit(
       state.copyWith(
         search: search,
@@ -83,6 +109,8 @@ class EmployeesCubit extends Cubit<EmployeesState> {
         status: status,
         branchId: branchId,
         noBranch: noBranch,
+        offset: 0,
+        hasReachedMax: false,
         clearSearch: clearSearch,
         clearJobRole: clearJobRole,
         clearStatus: clearStatus,
@@ -98,6 +126,14 @@ class EmployeesCubit extends Cubit<EmployeesState> {
     await _api.createEmployee(data);
     // Refresh the list after successful creation
     await fetchEmployees(refresh: true);
+  }
+
+  Future<void> updateEmployee(String id, Map<String, dynamic> data) async {
+    final updatedEmp = await _api.updateEmployee(id, data);
+    final updatedList = state.employees
+        .map((e) => e.id == id ? updatedEmp : e)
+        .toList();
+    emit(state.copyWith(employees: updatedList));
   }
 
   Future<void> updateEmployeeStatus({

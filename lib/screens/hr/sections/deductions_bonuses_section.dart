@@ -11,10 +11,8 @@ class DeductionsBonusesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => HrDeductionsBonusesCubit(),
-      child: const _DeductionsBonusesView(),
-    );
+    // الـ HrDeductionsBonusesCubit مُوفَّر من HrShell — لا نُنشئه هنا
+    return const _DeductionsBonusesView();
   }
 }
 

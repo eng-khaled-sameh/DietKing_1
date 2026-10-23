@@ -44,26 +44,23 @@ class _AccountingShellState extends State<AccountingShell> {
     _NavTab(label: 'الرواتب',    icon: Icons.people_outline,               activeIcon: Icons.people),
   ];
 
-  late final AccountingRepository _repo;
+  /// جميع الشاشات تُبنى مرة واحدة وتبقى حية في IndexedStack
+  late final List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
-    _repo = AccountingRepository();
-  }
-
-  Widget get _currentScreen {
-    return switch (_selectedIndex) {
-      0 => AccountingDashboardScreen(repo: _repo),
-      1 => SalesReportScreen(repo: _repo),
-      2 => ClosingsScreen(repo: _repo),
-      3 => ExpensesScreen(repo: _repo),
-      4 => PurchasesScreen(repo: _repo),
-      5 => InventoryOverviewScreen(repo: _repo),
-      6 => ComprehensiveReportsScreen(repo: _repo),
-      7 => SalariesScreen(repo: _repo),
-      _ => AccountingDashboardScreen(repo: _repo),
-    };
+    final repo = AccountingRepository();
+    _screens = [
+      AccountingDashboardScreen(repo: repo),
+      SalesReportScreen(repo: repo),
+      ClosingsScreen(repo: repo),
+      ExpensesScreen(repo: repo),
+      PurchasesScreen(repo: repo),
+      InventoryOverviewScreen(repo: repo),
+      ComprehensiveReportsScreen(repo: repo),
+      SalariesScreen(repo: repo),
+    ];
   }
 
   Future<void> _signOut() async {
@@ -107,7 +104,13 @@ class _AccountingShellState extends State<AccountingShell> {
           children: [
             _buildTopBar(),
             _buildNavBar(),
-            Expanded(child: _currentScreen),
+            // IndexedStack يبقي جميع الشاشات حية — لا إعادة جلب عند التنقل
+            Expanded(
+              child: IndexedStack(
+                index: _selectedIndex,
+                children: _screens,
+              ),
+            ),
             _buildFooter(),
           ],
         ),

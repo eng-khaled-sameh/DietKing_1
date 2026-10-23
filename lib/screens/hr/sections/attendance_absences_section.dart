@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
+import '../../../../cubits/branches/branches_cubit.dart';
 import '../../../data/hr/models/attendance_model.dart';
 import '../cubit/hr_attendance_cubit.dart';
+import '../models/hr_enums.dart';
 import 'package:intl/intl.dart';
 import '../../../data/hr/hr_api.dart';
 import '../../../data/hr/hr_date_utils.dart';
@@ -19,39 +21,129 @@ class AttendanceAbsencesSection extends StatefulWidget {
 
 class _AttendanceAbsencesSectionState
     extends State<AttendanceAbsencesSection> {
-  late final HrAttendanceCubit _cubit;
-
   @override
   void initState() {
     super.initState();
-    _cubit = HrAttendanceCubit();
-    // تأكد أن التاريخ دائماً يوم اليوم عند فتح الصفحة
-    _cubit.refreshToToday();
-  }
-
-  @override
-  void dispose() {
-    _cubit.close();
-    super.dispose();
+    // الـ cubit موجود في HrShell — فقط نتأكد أن التاريخ هو اليوم عند فتح القسم
+    context.read<HrAttendanceCubit>().refreshToToday();
+    context.read<BranchesCubit>().load();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
-      child: const _AttendanceView(),
-    );
+    return const _AttendanceView();
   }
 }
 
-class _AttendanceView extends StatelessWidget {
+class _AttendanceView extends StatefulWidget {
   const _AttendanceView();
+
+  @override
+  State<_AttendanceView> createState() => _AttendanceViewState();
+}
+
+class _AttendanceViewState extends State<_AttendanceView> {
+  final TextEditingController _searchController = TextEditingController();
+  EmployeeJobRole? _selectedJobRole;
+  String? _selectedBranchId;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         _buildHeader(context),
+
+        // Filters (Search by name + Job role filter + Branch filter)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceLg),
+          child: Row(
+            children: [
+              // بحث بالاسم أو الكود
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    labelText: 'بحث باسم الموظف',
+                    hintText: 'اكتب اسم الموظف أو الكود...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {});
+                            },
+                          )
+                        : null,
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              const SizedBox(width: AppDimens.spaceMd),
+
+              // تصفية بالوظيفة
+              Expanded(
+                flex: 2,
+                child: DropdownButtonFormField<EmployeeJobRole?>(
+                  decoration: const InputDecoration(
+                    labelText: 'تصفية بالوظيفة',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  value: _selectedJobRole,
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('الكل')),
+                    ...EmployeeJobRole.values.map(
+                      (r) => DropdownMenuItem(value: r, child: Text(r.label)),
+                    ),
+                  ],
+                  onChanged: (v) {
+                    setState(() => _selectedJobRole = v);
+                  },
+                ),
+              ),
+              const SizedBox(width: AppDimens.spaceMd),
+
+              // تصفية بالفرع
+              Expanded(
+                flex: 2,
+                child: BlocBuilder<BranchesCubit, BranchesState>(
+                  builder: (context, branchesState) {
+                    final branches = branchesState.branches;
+                    return DropdownButtonFormField<String?>(
+                      decoration: const InputDecoration(
+                        labelText: 'تصفية بالفرع',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      value: _selectedBranchId,
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('الكل')),
+                        ...branches.map(
+                          (b) => DropdownMenuItem(value: b.id, child: Text(b.name)),
+                        ),
+                      ],
+                      onChanged: (v) {
+                        setState(() => _selectedBranchId = v);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppDimens.spaceLg),
+
         Expanded(
           child: BlocBuilder<HrAttendanceCubit, HrAttendanceState>(
             builder: (context, state) {
@@ -70,17 +162,78 @@ class _AttendanceView extends StatelessWidget {
                 return const Center(child: Text('لا يوجد موظفين مسجلين'));
               }
 
+              // تطبيق التصفية والبحث
+              final query = _searchController.text.trim().toLowerCase();
+              final filtered = state.employees.where((emp) {
+                if (query.isNotEmpty) {
+                  final nameMatch = emp.fullName.toLowerCase().contains(query);
+                  final codeMatch = emp.code.toLowerCase().contains(query);
+                  if (!nameMatch && !codeMatch) return false;
+                }
+                if (_selectedJobRole != null) {
+                  final roleCode = switch (_selectedJobRole!) {
+                    EmployeeJobRole.kitchenWorker => 'kitchen_worker',
+                    EmployeeJobRole.branchManager => 'branch_manager',
+                    _ => _selectedJobRole!.name,
+                  };
+                  if (emp.jobRole != roleCode &&
+                      emp.jobRole != _selectedJobRole!.name &&
+                      emp.jobRole != _selectedJobRole!.label) {
+                    return false;
+                  }
+                }
+                if (_selectedBranchId != null) {
+                  if (emp.branchId != _selectedBranchId) return false;
+                }
+                return true;
+              }).toList();
+
+              if (filtered.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.search_off,
+                        size: 48,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'لا توجد نتائج مطابقة لمعايير البحث والتصفية',
+                        style: TextStyle(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _selectedJobRole = null;
+                            _selectedBranchId = null;
+                          });
+                        },
+                        icon: const Icon(Icons.clear_all),
+                        label: const Text('إعادة تعيين الفلاتر'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               return GridView.builder(
-                padding: const EdgeInsets.all(AppDimens.spaceLg),
+                padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceLg),
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 350,
-                  mainAxisExtent: 140,
+                  maxCrossAxisExtent: 360,
+                  mainAxisExtent: 165,
                   crossAxisSpacing: AppDimens.spaceMd,
                   mainAxisSpacing: AppDimens.spaceMd,
                 ),
-                itemCount: state.employees.length,
+                itemCount: filtered.length,
                 itemBuilder: (context, index) {
-                  final emp = state.employees[index];
+                  final emp = filtered[index];
                   return _EmployeeAttendanceCard(emp: emp);
                 },
               );
@@ -190,12 +343,18 @@ class _EmployeeAttendanceCard extends StatelessWidget {
         statusLabel = 'لم يسجل';
     }
 
+    final leaveStats = context.select<HrAttendanceCubit, EmployeeLeaveCount?>(
+      (c) => c.state.leaveStats[emp.id],
+    );
+    final paidLeaves = leaveStats?.paidDays ?? 0;
+    final unpaidLeaves = leaveStats?.unpaidDays ?? 0;
+
     return Card(
       clipBehavior: Clip.antiAlias,
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusLg),
-        side: BorderSide(color: AppColors.outline.withOpacity(0.1)),
+        side: BorderSide(color: AppColors.outline.withValues(alpha: 0.1)),
       ),
       color: AppColors.surfaceContainerLow,
       child: InkWell(
@@ -205,6 +364,7 @@ class _EmployeeAttendanceCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // الصف الأول: اسم الموظف + شارة حالة الحضور
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -213,58 +373,146 @@ class _EmployeeAttendanceCard extends StatelessWidget {
                       emp.fullName,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 15,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
+                      horizontal: 8,
+                      vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
+                      color: statusColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Text(
                       statusLabel,
                       style: TextStyle(
                         color: statusColor,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                emp.code,
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
+              const SizedBox(height: 3),
+
+              // الكود والوظيفة والفرع
               Row(
                 children: [
-                  const Icon(
-                    Icons.work_outline,
-                    size: 16,
-                    color: AppColors.onSurfaceVariant,
+                  Text(
+                    emp.code,
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       '${emp.jobRole} - ${emp.branchName ?? 'المركز الرئيسي'}',
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         color: AppColors.onSurfaceVariant,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+
+              const Spacer(),
+
+              // شارات الإجازات: المدفوعة وغير المدفوعة
+              Row(
+                children: [
+                  // إجازة مدفوعة
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.statusGreen.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                        border: Border.all(
+                          color: AppColors.statusGreen.withValues(alpha: 0.35),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.event_available_rounded,
+                            size: 13,
+                            color: AppColors.statusGreen,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'مدفوعة: $paidLeaves',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.statusGreen,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+
+                  // إجازة غير مدفوعة (بخصم)
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                        border: Border.all(
+                          color: Colors.amber.shade700.withValues(alpha: 0.35),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.event_busy_rounded,
+                            size: 13,
+                            color: Colors.amber.shade700,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'غير مدفوعة: $unpaidLeaves',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber.shade700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -434,6 +682,13 @@ class _MonthlyAttendanceDialogState extends State<_MonthlyAttendanceDialog> {
 
     final isEmployeeActive = widget.employee.status == 'active';
 
+    final presentCount = _records.where((r) => r.status == 'present').length;
+    final absentCount = _records.where((r) => r.status == 'absent').length;
+    final paidLeaveCount =
+        _records.where((r) => r.status == 'on_leave' && r.isPaidLeave).length;
+    final unpaidLeaveCount =
+        _records.where((r) => r.status == 'on_leave' && !r.isPaidLeave).length;
+
     return AlertDialog(
       title: Row(
         children: [
@@ -487,7 +742,7 @@ class _MonthlyAttendanceDialogState extends State<_MonthlyAttendanceDialog> {
         height: 440,
         child: Column(
           children: [
-            // ── مفتاح الألوان (Legend) ──
+            // ── مفتاح الألوان (Legend) مع أعداد الأيام ──
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               margin: const EdgeInsets.only(bottom: 8),
@@ -498,10 +753,10 @@ class _MonthlyAttendanceDialogState extends State<_MonthlyAttendanceDialog> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _legendItem('حاضر', AppColors.statusGreen),
-                  _legendItem('إجازة مدفوعة', AppColors.statusGreen),
-                  _legendItem('إجازة بخصم', Colors.orange),
-                  _legendItem('غائب', AppColors.error),
+                  _legendItem('حاضر ($presentCount)', AppColors.statusGreen),
+                  _legendItem('إجازة مدفوعة ($paidLeaveCount)', AppColors.statusGreen),
+                  _legendItem('إجازة بخصم ($unpaidLeaveCount)', Colors.orange),
+                  _legendItem('غائب ($absentCount)', AppColors.error),
                 ],
               ),
             ),
@@ -581,7 +836,7 @@ class _MonthlyAttendanceDialogState extends State<_MonthlyAttendanceDialog> {
                                       child: Icon(
                                         Icons.lock_outline,
                                         size: 18,
-                                        color: AppColors.onSurfaceVariant.withOpacity(0.5),
+                                        color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
                                       ),
                                     ),
                             );

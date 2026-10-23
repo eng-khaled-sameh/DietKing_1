@@ -308,7 +308,7 @@ class _MonthlyReportSectionState extends State<MonthlyReportSection> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
-                        'تم تصدير التقرير الشامل بنجاح!',
+                        'تم تصدير التقرير الشامل مرتّباً بالفروع بنجاح!',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
@@ -338,6 +338,98 @@ class _MonthlyReportSectionState extends State<MonthlyReportSection> {
       if (mounted) setState(() => _isExporting = false);
     }
   }
+
+  // ─── تصدير فرع واحد بالاختيار ───────────────────────────────
+  Future<void> _exportSingleBranch() async {
+    if (_comprehensiveEntries.isEmpty) return;
+
+    // جمع أسماء الفروع المتاحة
+    final branches = _comprehensiveEntries.map((e) => e.branchName).toSet().toList()
+      ..sort((a, b) {
+        if (a == 'المركز الرئيسي') return 1;
+        if (b == 'المركز الرئيسي') return -1;
+        return a.compareTo(b);
+      });
+
+    if (branches.isEmpty) return;
+
+    // عرض قائمة اختيار الفرع
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('اختر الفرع للتصدير'),
+        content: SizedBox(
+          width: 300,
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: branches.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (_, i) {
+              final branch = branches[i];
+              final count =
+                  _comprehensiveEntries.where((e) => e.branchName == branch).length;
+              return ListTile(
+                leading: const Icon(Icons.store_outlined, color: AppColors.primary),
+                title: Text(branch),
+                subtitle: Text('$count موظف'),
+                onTap: () => Navigator.pop(ctx, branch),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('إلغاء'),
+          ),
+        ],
+      ),
+    );
+
+    if (selected == null || !mounted) return;
+
+    setState(() => _isExporting = true);
+    try {
+      final savedPath = await HrExcelExportService.exportBranchReport(
+        entries: _comprehensiveEntries,
+        branchName: selected,
+        startDate: _startDate,
+        endDate: _endDate,
+      );
+      if (mounted && savedPath != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.statusGreen,
+            duration: const Duration(seconds: 5),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'تم تصدير بيانات فرع "$selected" بنجاح!\n$savedPath',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.error,
+            content: Text('فشل التصدير: $e'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
 
   // ════════════════════════════════════════════════════════════════
   // BUILD
@@ -451,38 +543,81 @@ class _MonthlyReportSectionState extends State<MonthlyReportSection> {
               ),
             ),
             const SizedBox(width: 10),
-            ElevatedButton.icon(
-              onPressed: _isExporting ? null : _exportComprehensiveExcel,
-              icon: _isExporting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
+
+            // قائمة تصدير Excel (شامل / بالفروع / فرع واحد)
+            PopupMenuButton<String>(
+              enabled: !_isExporting,
+              tooltip: 'خيارات تصدير Excel',
+              offset: const Offset(0, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+              ),
+              onSelected: (value) {
+                if (value == 'all') _exportComprehensiveExcel();
+                if (value == 'single') _exportSingleBranch();
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(
+                  value: 'all',
+                  child: Row(children: [
+                    Icon(Icons.table_view_rounded, color: Color(0xFF107C41)),
+                    SizedBox(width: 10),
+                    Text('ملف Excel شامل (مرتّب بالفروع)'),
+                  ]),
+                ),
+                const PopupMenuItem(
+                  value: 'single',
+                  child: Row(children: [
+                    Icon(Icons.store_outlined, color: AppColors.primary),
+                    SizedBox(width: 10),
+                    Text('تصدير بيانات فرع محدد...'),
+                  ]),
+                ),
+              ],
+              child: ElevatedButton.icon(
+                onPressed: null, // الزر نفسه لا يُضغط — PopupMenuButton يتحكم
+                icon: _isExporting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.table_view_rounded, color: Colors.white),
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _isExporting ? 'جارِ تجهيز الملف...' : 'تصدير Excel',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
-                    )
-                  : const Icon(Icons.table_view_rounded, color: Colors.white),
-              label: Text(
-                _isExporting ? 'جارِ تجهيز الملف...' : 'تصدير ملف Excel شامل',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                    ),
+                    if (!_isExporting) ...[
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
+                    ],
+                  ],
                 ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF107C41),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF107C41),
+                  disabledBackgroundColor: const Color(0xFF107C41),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                  ),
                 ),
               ),
             ),
           ],
         ),
+
       ],
     );
   }

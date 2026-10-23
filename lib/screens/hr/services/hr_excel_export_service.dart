@@ -73,28 +73,12 @@ class HrExcelExportService {
     required List<ComprehensiveReportEntry> entries,
     required DateTime startDate,
     required DateTime endDate,
-  }) async {
-    final excel = Excel.createExcel();
-    const sheetName = 'تقرير العاملين الشامل';
-    final sh = excel[sheetName];
-    excel.setDefaultSheet(sheetName);
-    if (excel.sheets.containsKey('Sheet1')) excel.delete('Sheet1');
-
-    sh.isRTL = true;
-    _applyCompColWidths(sh);
-
-    int row = 0;
-    row = _writeCompHeader(sh, row, startDate, endDate);
-    row = _writeCompTableHeaders(sh, row);
-    row = _writeCompData(sh, row, entries);
-    _writeCompTotals(sh, row, entries);
-
-    final bytes = excel.encode();
-    if (bytes == null) return null;
-    final fn =
-        'DietKing_HR_شامل_${_df.format(startDate)}_${_df.format(endDate)}.xlsx';
-    return _save(bytes, fn);
-  }
+  }) =>
+      exportComprehensiveReportGroupedByBranch(
+        entries: entries,
+        startDate: startDate,
+        endDate: endDate,
+      );
 
   // ════════════════════════════════════════════════════════════════
   // 2 — كشف موظف واحد مُعدّ للطباعة
@@ -154,6 +138,224 @@ class HrExcelExportService {
         'DietKing_كشوفات_العاملين_${_df.format(startDate)}_${_df.format(endDate)}.xlsx';
     return _save(bytes, fn);
   }
+
+  // ════════════════════════════════════════════════════════════════
+  // 4 — ملف شامل مرتّب بالفروع (شيت واحد، كل فرع في مجموعة منفصلة)
+  // ════════════════════════════════════════════════════════════════
+  static Future<String?> exportComprehensiveReportGroupedByBranch({
+    required List<ComprehensiveReportEntry> entries,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final excel = Excel.createExcel();
+    const sheetName = 'تقرير الموظفين — بالفروع';
+    final sh = excel[sheetName];
+    excel.setDefaultSheet(sheetName);
+    if (excel.sheets.containsKey('Sheet1')) excel.delete('Sheet1');
+
+    sh.isRTL = true;
+    _applyCompColWidths(sh);
+
+    int row = 0;
+    row = _writeCompHeader(sh, row, startDate, endDate);
+
+    // تجميع الموظفين بالفرع
+    final Map<String, List<ComprehensiveReportEntry>> grouped = {};
+    for (final e in entries) {
+      grouped.putIfAbsent(e.branchName, () => []).add(e);
+    }
+
+    // ترتيب الفروع أبجدياً مع وضع المركز الرئيسي في النهاية
+    final sortedBranches = grouped.keys.toList()
+      ..sort((a, b) {
+        if (a == 'المركز الرئيسي') return 1;
+        if (b == 'المركز الرئيسي') return -1;
+        return a.compareTo(b);
+      });
+
+    int globalIndex = 1;
+    for (final branchName in sortedBranches) {
+      final branchEntries = grouped[branchName]!;
+
+      // ترويسة الفرع
+      row = _writeBranchSectionHeader(sh, row, branchName, branchEntries.length);
+
+      // ترويسة أعمدة الجدول
+      row = _writeCompTableHeaders(sh, row);
+
+      // بيانات الفرع
+      for (int i = 0; i < branchEntries.length; i++) {
+        final e = branchEntries[i];
+        final isAlt = i.isOdd;
+        final bg = isAlt ? _cAltRow : '#FFFFFF';
+        _rowHeight(sh, row, 20);
+        final cells = [
+          '$globalIndex',
+          e.code,
+          e.fullName,
+          e.jobRoleLabel,
+          e.branchName,
+          e.statusLabel,
+          _money.format(e.basicSalary),
+          _money.format(e.dailyRate),
+          '${e.presentDays}',
+          '${e.absentDays}',
+          '${e.leaveDays}',
+          '${e.leaveWithDeductionDays}',
+          _money.format(e.absenceDeduction),
+          _money.format(e.leaveDeduction),
+          _money.format(e.manualDeductions),
+          _money.format(e.totalDeductions),
+          _money.format(e.totalAdditions),
+          _money.format(e.netSalary),
+        ];
+        for (int c = 0; c < cells.length; c++) {
+          String cellBg = bg;
+          String cellFg = '#212529';
+          if (c == 15) {
+            cellBg = e.totalDeductions > 0 ? _cDeductBg : bg;
+            cellFg = e.totalDeductions > 0 ? _cDeductFg : '#212529';
+          } else if (c == 17) {
+            cellBg = _cNetBg;
+            cellFg = _cNetFg;
+          } else if (c == 8 && e.presentDays > 0) {
+            cellBg = _cPresentBg;
+            cellFg = _cPresentFg;
+          } else if (c == 9 && e.absentDays > 0) {
+            cellBg = _cAbsentBg;
+            cellFg = _cAbsentFg;
+          }
+          _styleCell(
+            sh,
+            col: c,
+            row: row,
+            value: cells[c],
+            bold: c == 17,
+            fontSize: 10,
+            fgHex: cellFg,
+            bgHex: cellBg,
+            hAlign: c <= 1 || c >= 6 ? HorizontalAlign.Center : HorizontalAlign.Right,
+            border: true,
+          );
+        }
+        row++;
+        globalIndex++;
+      }
+
+      // صف إجمالي الفرع
+      _writeCompTotals(sh, row, branchEntries, title: 'إجمالي فرع $branchName');
+      row += 2; // إجمالي + سطر فاصل
+    }
+
+    // صف الإجمالي العام لكافة الفروع
+    if (sortedBranches.length > 1) {
+      _writeCompTotals(sh, row, entries, title: 'الإجمالي العام لكافة الفروع');
+    }
+
+    final bytes = excel.encode();
+    if (bytes == null) return null;
+    final fn =
+        'DietKing_HR_بالفروع_${_df.format(startDate)}_${_df.format(endDate)}.xlsx';
+    return _save(bytes, fn);
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // 5 — تصدير فرع واحد فقط
+  // ════════════════════════════════════════════════════════════════
+  static Future<String?> exportBranchReport({
+    required List<ComprehensiveReportEntry> entries,
+    required String branchName,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final branchEntries = entries.where((e) => e.branchName == branchName).toList();
+    if (branchEntries.isEmpty) return null;
+
+    final excel = Excel.createExcel();
+    final rawSheet = 'فرع_$branchName'.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    final sheetName = rawSheet.length > 28 ? rawSheet.substring(0, 28) : rawSheet;
+    final sh = excel[sheetName];
+    excel.setDefaultSheet(sheetName);
+    if (excel.sheets.containsKey('Sheet1')) excel.delete('Sheet1');
+
+    sh.isRTL = true;
+    _applyCompColWidths(sh);
+
+    int row = 0;
+    // ترويسة مخصصة للفرع
+    _setMergedCell(
+      sh,
+      col: 0,
+      row: row,
+      toCol: 17,
+      value: 'نظام Diet King POS — تقرير موظفي فرع: $branchName',
+      bold: true,
+      fontSize: 16,
+      fgHex: _cHeaderFg,
+      bgHex: _cHeaderBg,
+      hAlign: HorizontalAlign.Center,
+      vAlign: VerticalAlign.Center,
+      rowHeight: 32,
+    );
+    row++;
+    _setMergedCell(
+      sh,
+      col: 0,
+      row: row,
+      toCol: 17,
+      value:
+          'الفترة: ${_df.format(startDate)} إلى ${_df.format(endDate)}     |     '
+          'عدد الموظفين: ${branchEntries.length}     |     '
+          'تاريخ الاستخراج: ${_df.format(DateTime.now())}',
+      bold: true,
+      fontSize: 11,
+      fgHex: _cHeaderFg,
+      bgHex: _cSubHeaderBg,
+      hAlign: HorizontalAlign.Center,
+    );
+    row++;
+    _rowHeight(sh, row, 6);
+    row++;
+
+    row = _writeCompTableHeaders(sh, row);
+    row = _writeCompData(sh, row, branchEntries);
+    _writeCompTotals(sh, row, branchEntries);
+
+    final bytes = excel.encode();
+    if (bytes == null) return null;
+    final cleanBranch = branchName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    final fn =
+        'DietKing_فرع_${cleanBranch}_${_df.format(startDate)}_${_df.format(endDate)}.xlsx';
+    return _save(bytes, fn);
+  }
+
+  // ─── ترويسة الفرع في التقرير المجمّع ────────────────────────
+  static int _writeBranchSectionHeader(
+    Sheet sh,
+    int row,
+    String branchName,
+    int count,
+  ) {
+    _rowHeight(sh, row, 8);
+    row++;
+    _setMergedCell(
+      sh,
+      col: 0,
+      row: row,
+      toCol: 17,
+      value: '▶  فرع: $branchName  —  عدد الموظفين: $count',
+      bold: true,
+      fontSize: 13,
+      fgHex: _cHeaderFg,
+      bgHex: _cSubHeaderBg,
+      hAlign: HorizontalAlign.Right,
+      rowHeight: 26,
+    );
+    row++;
+    return row;
+  }
+
+
 
   // ════════════════════════════════════════════════════════════════
   // INTERNALS — التقرير الشامل
@@ -356,8 +558,9 @@ class HrExcelExportService {
   static void _writeCompTotals(
     Sheet sh,
     int row,
-    List<ComprehensiveReportEntry> entries,
-  ) {
+    List<ComprehensiveReportEntry> entries, {
+    String title = 'الإجمالي',
+  }) {
     // صف فارغ قبل الإجمالي
     _rowHeight(sh, row, 6);
     row++;
@@ -389,7 +592,7 @@ class HrExcelExportService {
     }
 
     final totals = [
-      'الإجمالي',
+      title,
       '${entries.length} موظف',
       '',
       '',

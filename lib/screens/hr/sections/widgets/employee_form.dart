@@ -8,11 +8,17 @@ import '../../../../../core/app_exception.dart';
 import '../../models/hr_enums.dart';
 import '../../cubit/employees_cubit.dart';
 import '../../../../data/hr/hr_api.dart';
+import '../../../../data/hr/models/employee_model.dart';
 
 class EmployeeForm extends StatefulWidget {
   final VoidCallback onSuccess;
+  final EmployeeModel? employeeToEdit;
 
-  const EmployeeForm({super.key, required this.onSuccess});
+  const EmployeeForm({
+    super.key,
+    required this.onSuccess,
+    this.employeeToEdit,
+  });
 
   @override
   State<EmployeeForm> createState() => _EmployeeFormState();
@@ -44,6 +50,28 @@ class _EmployeeFormState extends State<EmployeeForm> {
   void initState() {
     super.initState();
     _fetchBranches();
+    if (widget.employeeToEdit != null) {
+      final emp = widget.employeeToEdit!;
+      _nameController.text = emp.fullName;
+      _phoneController.text = emp.phone ?? '';
+      _qualificationController.text = emp.qualification ?? '';
+      _rankController.text = emp.jobRank ?? '';
+      _notesController.text = emp.notes ?? '';
+      _basicSalaryController.text = emp.basicSalary == emp.basicSalary.toInt()
+          ? emp.basicSalary.toInt().toString()
+          : emp.basicSalary.toString();
+      _allowancesController.text = emp.allowances == emp.allowances.toInt()
+          ? emp.allowances.toInt().toString()
+          : emp.allowances.toString();
+      _transportController.text =
+          emp.transportAllowance == emp.transportAllowance.toInt()
+              ? emp.transportAllowance.toInt().toString()
+              : emp.transportAllowance.toString();
+      _birthDate = emp.birthDate;
+      _hireDate = emp.hireDate;
+      _jobRole = emp.jobRole;
+      _branchId = emp.branchId;
+    }
   }
 
   @override
@@ -121,31 +149,64 @@ class _EmployeeFormState extends State<EmployeeForm> {
       final allow = double.tryParse(_allowancesController.text) ?? 0;
       final trans = double.tryParse(_transportController.text) ?? 0;
 
-      final data = {
-        'client_id': _clientId,
-        'full_name': _nameController.text,
-        'job_role': _jobRoleToString(_jobRole!),
-        'phone': _phoneController.text.isNotEmpty
-            ? _phoneController.text
-            : null,
-        'qualification': _qualificationController.text.isNotEmpty
-            ? _qualificationController.text
-            : null,
-        'job_rank': _rankController.text.isNotEmpty
-            ? _rankController.text
-            : null,
-        'notes': _notesController.text.isNotEmpty
-            ? _notesController.text
-            : null,
-        'basic_salary': basic,
-        'allowances': allow,
-        'transport_allowance': trans,
-        if (_birthDate != null) 'birth_date': _birthDate!.toIso8601String(),
-        if (_hireDate != null) 'hire_date': _hireDate!.toIso8601String(),
-        if (_branchId != null) 'branch_id': _branchId,
-      };
+      if (widget.employeeToEdit != null) {
+        final data = {
+          'full_name': _nameController.text.trim(),
+          'job_role': _jobRoleToString(_jobRole!),
+          'phone': _phoneController.text.trim().isNotEmpty
+              ? _phoneController.text.trim()
+              : null,
+          'qualification': _qualificationController.text.trim().isNotEmpty
+              ? _qualificationController.text.trim()
+              : null,
+          'job_rank': _rankController.text.trim().isNotEmpty
+              ? _rankController.text.trim()
+              : null,
+          'notes': _notesController.text.trim().isNotEmpty
+              ? _notesController.text.trim()
+              : null,
+          'basic_salary': basic,
+          'allowances': allow,
+          'transport_allowance': trans,
+          if (_birthDate != null)
+            'birth_date': _birthDate!.toIso8601String().split('T').first,
+          if (_hireDate != null)
+            'hire_date': _hireDate!.toIso8601String().split('T').first,
+          'branch_id': _branchId,
+        };
 
-      await context.read<EmployeesCubit>().createEmployee(data);
+        await context.read<EmployeesCubit>().updateEmployee(
+          widget.employeeToEdit!.id,
+          data,
+        );
+      } else {
+        final data = {
+          'client_id': _clientId,
+          'full_name': _nameController.text.trim(),
+          'job_role': _jobRoleToString(_jobRole!),
+          'phone': _phoneController.text.trim().isNotEmpty
+              ? _phoneController.text.trim()
+              : null,
+          'qualification': _qualificationController.text.trim().isNotEmpty
+              ? _qualificationController.text.trim()
+              : null,
+          'job_rank': _rankController.text.trim().isNotEmpty
+              ? _rankController.text.trim()
+              : null,
+          'notes': _notesController.text.trim().isNotEmpty
+              ? _notesController.text.trim()
+              : null,
+          'basic_salary': basic,
+          'allowances': allow,
+          'transport_allowance': trans,
+          if (_birthDate != null) 'birth_date': _birthDate!.toIso8601String(),
+          if (_hireDate != null) 'hire_date': _hireDate!.toIso8601String(),
+          if (_branchId != null) 'branch_id': _branchId,
+        };
+
+        await context.read<EmployeesCubit>().createEmployee(data);
+      }
+
       if (mounted) {
         widget.onSuccess();
       }
@@ -183,13 +244,52 @@ class _EmployeeFormState extends State<EmployeeForm> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'إضافة موظف جديد',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.onSurface,
-                  ),
+                Row(
+                  children: [
+                    Icon(
+                      widget.employeeToEdit != null
+                          ? Icons.edit_note_rounded
+                          : Icons.person_add_rounded,
+                      color: AppColors.primary,
+                      size: 26,
+                    ),
+                    const SizedBox(width: AppDimens.spaceSm),
+                    Text(
+                      widget.employeeToEdit != null
+                          ? 'تعديل بيانات الموظف والراتب'
+                          : 'إضافة موظف جديد',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.onSurface,
+                      ),
+                    ),
+                    if (widget.employeeToEdit != null) ...[
+                      const SizedBox(width: AppDimens.spaceSm),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.15),
+                          borderRadius:
+                              BorderRadius.circular(AppDimens.radiusSm),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          widget.employeeToEdit!.code,
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -239,7 +339,7 @@ class _EmployeeFormState extends State<EmployeeForm> {
                             onTap: () async {
                               final d = await showDatePicker(
                                 context: context,
-                                initialDate: DateTime(2000),
+                                initialDate: _birthDate ?? DateTime(2000),
                                 firstDate: DateTime(1950),
                                 lastDate: DateTime.now(),
                               );
@@ -253,7 +353,7 @@ class _EmployeeFormState extends State<EmployeeForm> {
                               ),
                               child: Text(
                                 _birthDate != null
-                                    ? "\${_birthDate!.year}-\${_birthDate!.month}-\${_birthDate!.day}"
+                                    ? "${_birthDate!.year}-${_birthDate!.month.toString().padLeft(2, '0')}-${_birthDate!.day.toString().padLeft(2, '0')}"
                                     : 'اختر التاريخ',
                               ),
                             ),
@@ -319,23 +419,49 @@ class _EmployeeFormState extends State<EmployeeForm> {
                     Row(
                       children: [
                         Expanded(
-                          child: CustomTextField(
-                            controller: _rankController,
-                            label: 'الرتبة',
+                          child: InkWell(
+                            onTap: () async {
+                              final d = await showDatePicker(
+                                context: context,
+                                initialDate: _hireDate ?? DateTime.now(),
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 365),
+                                ),
+                              );
+                              if (d != null) {
+                                setState(() => _hireDate = d);
+                              }
+                            },
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'تاريخ التعيين',
+                              ),
+                              child: Text(
+                                _hireDate != null
+                                    ? "${_hireDate!.year}-${_hireDate!.month.toString().padLeft(2, '0')}-${_hireDate!.day.toString().padLeft(2, '0')}"
+                                    : 'اختر التاريخ',
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: AppDimens.spaceMd),
                         Expanded(
                           child: CustomTextField(
-                            controller: _qualificationController,
-                            label: 'المؤهل',
+                            controller: _rankController,
+                            label: 'الرتبة',
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: AppDimens.spaceMd),
+                    CustomTextField(
+                      controller: _qualificationController,
+                      label: 'المؤهل',
+                    ),
                     const SizedBox(height: AppDimens.spaceLg),
                     const Text(
-                      'المستحقات الثابتة',
+                      'المستحقات الثابتة (الراتب والبدلات)',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -347,7 +473,7 @@ class _EmployeeFormState extends State<EmployeeForm> {
                         Expanded(
                           child: CustomTextField(
                             controller: _basicSalaryController,
-                            label: 'الأساسي',
+                            label: 'الراتب الأساسي',
                             keyboardType: TextInputType.number,
                           ),
                         ),
@@ -427,17 +553,34 @@ class _EmployeeFormState extends State<EmployeeForm> {
             const SizedBox(height: AppDimens.spaceLg),
             SizedBox(
               height: 48,
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
+                icon: _isLoading
+                    ? const SizedBox.shrink()
+                    : Icon(
+                        widget.employeeToEdit != null
+                            ? Icons.save_outlined
+                            : Icons.check,
+                      ),
                 onPressed: _isLoading ? null : _submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.onPrimary,
                 ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(
-                        color: AppColors.onPrimary,
+                label: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.onPrimary,
+                        ),
                       )
-                    : const Text('حفظ الموظف', style: TextStyle(fontSize: 16)),
+                    : Text(
+                        widget.employeeToEdit != null
+                            ? 'حفظ التعديلات'
+                            : 'حفظ الموظف',
+                        style: const TextStyle(fontSize: 16),
+                      ),
               ),
             ),
           ],

@@ -12,10 +12,8 @@ class LeaveRequestsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => HrLeaveRequestsCubit(),
-      child: const _LeaveRequestsView(),
-    );
+    // الـ HrLeaveRequestsCubit مُوفَّر من HrShell — لا نُنشئه هنا
+    return const _LeaveRequestsView();
   }
 }
 

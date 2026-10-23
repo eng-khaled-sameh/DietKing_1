@@ -58,6 +58,24 @@ class HrApi {
     }
   }
 
+  Future<EmployeeModel> updateEmployee(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _client.rpc(
+        'hr_update_employee',
+        params: {
+          'p_id': id,
+          'p': data,
+        },
+      );
+      return EmployeeModel.fromJson(Map<String, dynamic>.from(response));
+    } catch (e) {
+      throw AppException.mapError(e);
+    }
+  }
+
   Future<EmployeeModel> updateEmployeeStatus({
     required String id,
     required String status,
