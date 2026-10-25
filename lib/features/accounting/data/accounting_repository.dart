@@ -1,4 +1,6 @@
+import 'package:uuid/uuid.dart';
 import 'package:my_desktop_app/core/supabase_client.dart';
+import 'package:my_desktop_app/core/local_db.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // AccountingRepository — كل استدعاءات Supabase RPC لقسم الحسابات
@@ -14,12 +16,59 @@ class AccountingRepository {
     required DateTime to,
     String? branchId,
   }) async {
-    final result = await supabase.rpc('acc_get_sales_summary', params: {
-      'p_from': from.toUtc().toIso8601String(),
-      'p_to': to.toUtc().toIso8601String(),
-      'p_branch_id': ?branchId,
-    });
-    return (result as Map<String, dynamic>?) ?? {};
+    Map<String, dynamic> summary = {};
+    try {
+      final result = await supabase.rpc('acc_get_sales_summary', params: {
+        'p_from': from.toUtc().toIso8601String(),
+        'p_to': to.toUtc().toIso8601String(),
+        'p_branch_id': ?branchId,
+      });
+      if (result is Map) {
+        summary = Map<String, dynamic>.from(result);
+      }
+    } catch (_) {}
+
+    // التحقق المباشر من المصروفات المعتمدة (approved/posted) في جدول expense_invoices
+    // لضمان دقة إجمالي المصروفات في لوحة التحكم حتى لو كانت دالة SQL السابقة تحسب فقط 'posted'
+    final rpcExpenses = (summary['total_expenses'] as num?)?.toDouble() ?? 0.0;
+    if (rpcExpenses == 0.0) {
+      try {
+        final fromDate = from.toIso8601String().split('T').first;
+        final toDate   = to.toIso8601String().split('T').first;
+        var query = supabase
+            .from('expense_invoices')
+            .select('total, payment_method, status')
+            .gte('expense_date', fromDate)
+            .lte('expense_date', toDate)
+            .inFilter('status', ['approved', 'posted']);
+
+        if (branchId != null && branchId.isNotEmpty && branchId != 'HQ') {
+          query = query.eq('branch_id', branchId);
+        } else if (branchId == 'HQ') {
+          query = query.isFilter('branch_id', null);
+        }
+
+        final rows = await query;
+        double calcTotal = 0.0;
+        double calcCash = 0.0;
+        for (final row in (rows as List? ?? [])) {
+          final t = (row['total'] as num?)?.toDouble() ?? 0.0;
+          calcTotal += t;
+          if (row['payment_method'] == 'cash') {
+            calcCash += t;
+          }
+        }
+
+        if (calcTotal > 0 || summary.isEmpty) {
+          summary['total_expenses'] = calcTotal;
+          summary['cash_expenses'] = calcCash;
+          final totalSales = (summary['total_sales'] as num?)?.toDouble() ?? 0.0;
+          summary['net_revenue'] = totalSales - calcTotal;
+        }
+      } catch (_) {}
+    }
+
+    return summary;
   }
 
   /// تفاصيل الفواتير — keyset pagination
@@ -124,7 +173,7 @@ class AccountingRepository {
 
   // ── المصروفات ───────────────────────────────────────────────────────────────
 
-  /// كل المصروفات — keyset pagination
+  /// كل المصروفات — keyset pagination مع دعم الفرع الرئيسي HQ والاستعلام الاحتياطي
   Future<Map<String, dynamic>> getAllExpenses({
     required DateTime from,
     required DateTime to,
@@ -133,24 +182,299 @@ class AccountingRepository {
     String? cursorTs,
     String? cursorId,
   }) async {
-    final result = await supabase.rpc('acc_get_all_expenses', params: {
-      'p_from': from.toUtc().toIso8601String(),
-      'p_to': to.toUtc().toIso8601String(),
-      'p_branch_id': ?branchId,
-      'p_limit': limit,
-      'p_cursor_ts': ?cursorTs,
-      'p_cursor_id': ?cursorId,
-    });
-    return (result as Map<String, dynamic>?) ??
-        {'summary': {}, 'items': [], 'limit': limit};
+    final isHq  = branchId == 'HQ';
+    final isAll = branchId == null; // كل الفروع (بدون فلتر)
+
+    // 1. محاولة استدعاء دالة acc_get_all_expenses
+    try {
+      final result = await supabase.rpc('acc_get_all_expenses', params: {
+        'p_from'      : from.toUtc().toIso8601String(),
+        'p_to'        : to.toUtc().toIso8601String(),
+        'p_branch_id' : isHq || isAll ? null : branchId,
+        'p_limit'     : limit,
+        'p_cursor_ts' : cursorTs,
+        'p_cursor_id' : cursorId,
+        'p_hq_only'   : isHq,
+      });
+      final map = (result as Map<String, dynamic>?) ?? {};
+      final items = (map['items'] as List? ?? []);
+      if (items.isNotEmpty || !isHq) {
+        return map;
+      }
+    } catch (_) {
+      // محاولة استدعاء بدون p_hq_only إذا كانت النسخة القديمة
+      if (!isHq) {
+        try {
+          final result = await supabase.rpc('acc_get_all_expenses', params: {
+            'p_from'      : from.toUtc().toIso8601String(),
+            'p_to'        : to.toUtc().toIso8601String(),
+            'p_branch_id' : isAll ? null : branchId,
+            'p_limit'     : limit,
+            'p_cursor_ts' : cursorTs,
+            'p_cursor_id' : cursorId,
+          });
+          final map = (result as Map<String, dynamic>?) ?? {};
+          return map;
+        } catch (_) {}
+      }
+    }
+
+    // 2. Fallback مضمون ومباشر من جدول expense_invoices
+    try {
+      final fromDate = from.toIso8601String().split('T').first;
+      final toDate   = to.toIso8601String().split('T').first;
+      var query = supabase
+          .from('expense_invoices')
+          .select()
+          .gte('expense_date', fromDate)
+          .lte('expense_date', toDate);
+
+      if (isHq) {
+        // الفرع الرئيسي: سجلات بدون branch_id
+        query = query.isFilter('branch_id', null);
+      } else if (!isAll) {
+        query = query.eq('branch_id', branchId);
+      }
+
+      final res = await query.order('created_at', ascending: false).limit(limit);
+      final items = List<Map<String, dynamic>>.from(res as List? ?? []);
+
+      // بناء summary دقيق للمصروفات في حالة الـ fallback
+      double totApproved = 0.0;
+      int pendingCnt = 0;
+      int approvedCnt = 0;
+      int rejectedCnt = 0;
+      final byCat = <String, double>{};
+
+      for (final it in items) {
+        final st = (it['status'] as String? ?? 'pending').toLowerCase();
+        final tot = (it['total'] as num?)?.toDouble() ?? 0.0;
+        final cat = (it['category'] as String?)?.trim() ?? 'أخرى';
+        if (st == 'approved' || st == 'posted') {
+          totApproved += tot;
+          approvedCnt++;
+          byCat[cat] = (byCat[cat] ?? 0) + tot;
+        } else if (st == 'rejected') {
+          rejectedCnt++;
+        } else {
+          pendingCnt++;
+        }
+      }
+
+      return {
+        'summary': {
+          'total_amount': totApproved,
+          'count': items.length,
+          'pending_count': pendingCnt,
+          'approved_count': approvedCnt,
+          'rejected_count': rejectedCnt,
+          'by_category': byCat,
+        },
+        'items': items,
+        'limit': limit,
+      };
+    } catch (_) {
+      return {'summary': {}, 'items': [], 'limit': limit};
+    }
   }
 
-  /// إضافة مصروف جديد من المحاسب (مع تحديد الفرع أو بدونه كفرع رئيسي HQ)
+
+  /// إضافة مصروف جديد من المحاسب (مع تحديد الفرع أو كفرع رئيسي HQ)
   Future<Map<String, dynamic>> createExpense(Map<String, dynamic> data) async {
-    final result = await supabase.rpc('create_expense', params: {
-      'p': data,
-    });
-    return (result as Map<String, dynamic>?) ?? {};
+    final payload = Map<String, dynamic>.from(data);
+    final isHq = payload['branch_id'] == null ||
+        payload['branch_id'] == 'HQ' ||
+        payload['branch_id'] == '';
+
+    // توليد UUID صحيح دائماً لـ client_id
+    final clientId = (payload['client_id'] != null && payload['client_id'].toString().length > 10)
+        ? payload['client_id'].toString()
+        : const Uuid().v4();
+    payload['client_id'] = clientId;
+
+    // تحويل المبالغ إلى double مضموناً
+    final double amount = (payload['amount'] as num?)?.toDouble() ?? 0.0;
+    final double vat    = (payload['vat_amount'] as num?)?.toDouble() ?? 0.0;
+
+    if (amount <= 0) {
+      throw Exception('قيمة المصروف يجب أن تكون أكبر من الصفر');
+    }
+
+    if (isHq) {
+      payload['branch_id'] = null;
+      payload['status'] = 'approved';
+    } else {
+      payload['status'] = 'pending';
+    }
+
+    // تعيين القيم الرقمية الصحيحة
+    payload['amount']     = amount;
+    payload['vat_amount'] = vat;
+
+    // 1. محاولة عبر الـ RPC
+    try {
+      final result = await supabase.rpc('create_expense', params: {
+        'p': payload,
+      });
+      return (result as Map<String, dynamic>?) ?? {};
+    } catch (rpcError) {
+      // 2. Fallback مباشر لجدول expense_invoices
+      try {
+        final uid   = supabase.auth.currentUser?.id;
+        final email = supabase.auth.currentUser?.email ?? '';
+        final now   = DateTime.now();
+        final ts    = now.millisecondsSinceEpoch.toString();
+        final invoiceNum = isHq
+            ? 'EXP-HQ-${ts.substring(ts.length - 6)}'
+            : 'EXP-BR-${ts.substring(ts.length - 6)}';
+
+        final branchId   = isHq ? null : (payload['branch_id'] as String?);
+        final branchName = isHq
+            ? 'الفرع الرئيسي'
+            : (payload['branch_name'] as String? ?? 'فرع');
+        final branchCode = isHq ? 'HQ' : 'BR';
+
+        final insertData = <String, dynamic>{
+          'client_id'      : clientId,
+          'invoice_number' : invoiceNum,
+          'branch_id'      : branchId,
+          'branch_name'    : branchName,
+          'branch_code'    : branchCode,
+          'cashier_id'     : uid,
+          'cashier_name'   : email.split('@').first,
+          'category'       : (payload['category'] as String?)?.trim() ?? 'أخرى',
+          'payee'          : payload['payee'],
+          'description'    : payload['description'],
+          'amount'         : amount,
+          'vat_amount'     : vat,
+          'total'          : amount + vat,
+          'payment_method' : payload['payment_method'] ?? 'cash',
+          'expense_date'   : payload['expense_date'] ??
+              now.toIso8601String().split('T').first,
+          'notes'          : payload['notes'],
+          'status'         : isHq ? 'approved' : 'pending',
+        };
+
+        final inserted = await supabase
+            .from('expense_invoices')
+            .insert(insertData)
+            .select()
+            .maybeSingle();
+
+        return inserted ?? {'invoice_number': invoiceNum};
+      } catch (insertError) {
+        throw Exception(
+          'فشل حفظ المصروف: $insertError',
+        );
+      }
+    }
+  }
+
+  /// اعتماد أو رفض مصروف من المحاسب مع إشعار الفرع
+  Future<Map<String, dynamic>> decideExpense({
+    required String expenseId,
+    required String status, // 'approved' | 'rejected'
+    String? reason,
+    String? branchId,
+    String? invoiceNumber,
+    double? total,
+  }) async {
+    bool updated = false;
+    Object? lastError;
+
+    // 1. تجربة الـ RPC المخصص
+    try {
+      final result = await supabase.rpc('acc_decide_expense', params: {
+        'p_expense_id': expenseId,
+        'p_status': status,
+        'p_notes': reason,
+      });
+      // التحقق من أن RPC أعاد نتيجة ناجحة
+      if (result != null) {
+        updated = true;
+      }
+    } catch (e) {
+      lastError = e;
+      // 2. fallback: تحديث مباشر في جدول expense_invoices عبر id أو client_id
+      try {
+        final updatePayload = {
+          'status': status,
+          'decided_at': DateTime.now().toUtc().toIso8601String(),
+          'decided_by': supabase.auth.currentUser?.id,
+          if (reason != null && reason.isNotEmpty) 'decision_notes': reason,
+        };
+
+        // محاولة بالـ id أولاً
+        final res = await supabase
+            .from('expense_invoices')
+            .update(updatePayload)
+            .eq('id', expenseId)
+            .select('id')
+            .maybeSingle();
+
+        if (res != null) {
+          updated = true;
+        } else {
+          // محاولة بـ client_id كـ fallback ثانٍ
+          final res2 = await supabase
+              .from('expense_invoices')
+              .update(updatePayload)
+              .eq('client_id', expenseId)
+              .select('id')
+              .maybeSingle();
+          if (res2 != null) updated = true;
+        }
+      } catch (e2) {
+        lastError = e2;
+      }
+    }
+
+    if (!updated) {
+      throw Exception('فشل تحديث حالة المصروف: $lastError');
+    }
+
+    // 3. إرسال إشعار للكاشير في الفرع (اختياري، لا يوقف العملية)
+    if (branchId != null && branchId.isNotEmpty) {
+      try {
+        await supabase.from('notifications').insert({
+          'recipient_role': 'cashier',
+          'recipient_branch_id': branchId,
+          'type': status == 'approved' ? 'expense_approved' : 'expense_rejected',
+          'title': status == 'approved' ? 'تم اعتماد المصروف' : 'تم رفض المصروف',
+          'body': status == 'approved'
+              ? 'تم اعتماد فاتورة المصروف رقم ${invoiceNumber ?? ''} بقيمة ${total?.toStringAsFixed(2) ?? ''} ر.س من قسم الحسابات.'
+              : 'تم رفض فاتورة المصروف رقم ${invoiceNumber ?? ''} من قسم الحسابات${reason != null && reason.isNotEmpty ? " — السبب: $reason" : ""}.',
+          'ref_table': 'expense_invoices',
+          'ref_id': expenseId,
+        });
+      } catch (_) {}
+    }
+
+    return {'ok': updated, 'status': status};
+  }
+
+  /// حذف جميع المصروفات التجريبية
+  Future<int> clearAllTestExpenses() async {
+    // مسح السجلات المحلية في الجهاز
+    try {
+      await LocalRecordsRepository().clearExpenses();
+    } catch (_) {}
+
+    try {
+      final res = await supabase.rpc('acc_clear_test_expenses');
+      return (res['deleted_invoices'] as int?) ?? 0;
+    } catch (_) {
+      // fallback delete
+      try {
+        await supabase.from('expense_invoices').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        try {
+          await supabase.from('expenses').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        } catch (_) {}
+        return 1;
+      } catch (_) {
+        return 0;
+      }
+    }
   }
 
 
@@ -371,12 +695,72 @@ class AccountingRepository {
     DateTime? to,
     String? branchId,
   }) async {
-    final result =
-        await supabase.rpc('acc_get_comprehensive_financial_report', params: {
-      'p_from': ?from?.toUtc().toIso8601String(),
-      'p_to': ?to?.toUtc().toIso8601String(),
-      'p_branch_id': ?branchId,
-    });
-    return (result as Map<String, dynamic>?) ?? {};
+    Map<String, dynamic> report = {};
+    try {
+      final result =
+          await supabase.rpc('acc_get_comprehensive_financial_report', params: {
+        'p_from': ?from?.toUtc().toIso8601String(),
+        'p_to': ?to?.toUtc().toIso8601String(),
+        'p_branch_id': ?branchId,
+      });
+      if (result is Map) {
+        report = Map<String, dynamic>.from(result);
+      }
+    } catch (_) {}
+
+    // التحقق من المصروفات المعتمدة إذا كانت صفر
+    final expensesMap = (report['expenses'] as Map<String, dynamic>?) ?? {};
+    final expTotal = (expensesMap['total'] as num?)?.toDouble() ?? 0.0;
+    if (expTotal == 0.0 && from != null && to != null) {
+      try {
+        final fromDate = from.toIso8601String().split('T').first;
+        final toDate   = to.toIso8601String().split('T').first;
+        var query = supabase
+            .from('expense_invoices')
+            .select('category, total, status')
+            .gte('expense_date', fromDate)
+            .lte('expense_date', toDate)
+            .inFilter('status', ['approved', 'posted']);
+
+        if (branchId != null && branchId.isNotEmpty && branchId != 'HQ') {
+          query = query.eq('branch_id', branchId);
+        } else if (branchId == 'HQ') {
+          query = query.isFilter('branch_id', null);
+        }
+
+        final rows = await query;
+        double calcTotal = 0.0;
+        final catMap = <String, double>{};
+
+        for (final r in (rows as List? ?? [])) {
+          final t = (r['total'] as num?)?.toDouble() ?? 0.0;
+          final c = (r['category'] as String?)?.trim() ?? 'أخرى';
+          calcTotal += t;
+          catMap[c] = (catMap[c] ?? 0) + t;
+        }
+
+        if (calcTotal > 0) {
+          final byCatList = catMap.entries
+              .map((e) => {'category': e.key, 'total': e.value})
+              .toList()
+            ..sort((a, b) => (b['total'] as double).compareTo(a['total'] as double));
+
+          report['expenses'] = {
+            'count': (rows as List).length,
+            'total': calcTotal,
+            'by_category': byCatList,
+          };
+
+          // إعادة احتساب صافي الربح
+          final salesTotal = ((report['sales'] as Map?)?['total'] as num?)?.toDouble() ?? 0.0;
+          final surplus    = ((report['closings'] as Map?)?['surplus'] as num?)?.toDouble() ?? 0.0;
+          final purchases  = ((report['purchases'] as Map?)?['total'] as num?)?.toDouble() ?? 0.0;
+          final shortage   = ((report['closings'] as Map?)?['shortage'] as num?)?.toDouble() ?? 0.0;
+          report['net_profit'] = (salesTotal + surplus) - (calcTotal + purchases + shortage);
+        }
+      } catch (_) {}
+    }
+
+    return report;
   }
 }

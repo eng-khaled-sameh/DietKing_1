@@ -124,12 +124,15 @@ class SalesExcelExportService {
       final sub = (s['subtotal'] as num?)?.toDouble() ?? (t - v);
       final m = (s['payment_method'] as String? ?? '').toLowerCase();
 
+      final isCash = m.contains('cash') || m.contains('كاش') || m.contains('نقد');
+      final isCard = m.contains('card') || m.contains('visa') || m.contains('شبك') || m.contains('مدى') || m.contains('pos');
+
       sumTotal += t;
       sumVat += v;
       sumSubtotal += sub;
-      if (m == 'cash') {
+      if (isCash) {
         sumCash += t;
-      } else if (m == 'card') {
+      } else if (isCard) {
         sumCard += t;
       }
     }
@@ -194,11 +197,14 @@ class SalesExcelExportService {
       final branch = s['branch_name'] as String? ?? '—';
       final cashier = s['cashier_name'] as String? ?? '—';
       final method = s['payment_method'] as String? ?? '—';
-      final methodLabel = method == 'cash'
+      final mLower = method.toLowerCase();
+      final isCash = mLower.contains('cash') || mLower.contains('كاش') || mLower.contains('نقد');
+      final isCard = mLower.contains('card') || mLower.contains('visa') || mLower.contains('شبك') || mLower.contains('مدى') || mLower.contains('pos');
+      final methodLabel = isCash
           ? 'كاش'
-          : method == 'card'
+          : isCard
               ? 'شبكة'
-              : method;
+              : (method.isNotEmpty ? method : '—');
 
       final soldAtRaw = DateTime.tryParse(s['sold_at'] as String? ?? '');
       final soldAtStr = soldAtRaw != null
@@ -207,9 +213,13 @@ class SalesExcelExportService {
 
       final items = (s['items'] as List? ?? []);
       final itemsSummary = items.map((it) {
-        final name = it['product_name'] ?? '';
+        final name = (it['product_name'] ?? '').toString().trim();
+        final vLabel = (it['variant_label'] ?? '').toString().trim();
         final qty = it['qty'] ?? 1;
-        return '$name ($qty)';
+        final fullName = vLabel.isNotEmpty && !name.contains(vLabel)
+            ? '$name ($vLabel)'
+            : name;
+        return '$fullName ($qty)';
       }).join('، ');
 
       final total = (s['total'] as num?)?.toDouble() ?? 0;
