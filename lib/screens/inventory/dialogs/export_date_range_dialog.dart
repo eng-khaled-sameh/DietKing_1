@@ -11,11 +11,11 @@ class ExportDateRangeDialog extends StatefulWidget {
 
   const ExportDateRangeDialog({super.key, required this.title});
 
-  /// حساب تاريخ بداية أقدم سجل متاح وفق سياسة الاحتفاظ بالبيانات
+  /// حساب تاريخ بداية أقدم سجل متاح وفق سياسة الاحتفاظ بالبيانات (شهران فقط)
   static DateTime calculateRetentionCutoff() {
     final now = DateTime.now();
-    // يوم 5 في الشهر الجديد يتم حذف بيانات شهر من الشهرين السابقين
-    final monthsBack = now.day >= 5 ? 2 : 3;
+    // يوم 5 في الشهر الجديد يتم حذف بيانات الشهر الأقدم وحفظ شهرين فقط
+    final monthsBack = now.day >= 5 ? 1 : 2;
     return DateTime(now.year, now.month - monthsBack, 1);
   }
 

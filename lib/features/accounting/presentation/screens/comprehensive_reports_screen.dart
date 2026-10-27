@@ -74,14 +74,9 @@ class _ComprehensiveReportsScreenState
         start = DateTime(prevMonth.year, prevMonth.month, 1);
         end = DateTime(now.year, now.month, 0, 23, 59, 59); // آخر يوم في الشهر السابق
         break;
-      case 'prev_prev_month':
-        final prev2Month = DateTime(now.year, now.month - 2, 1);
-        start = DateTime(prev2Month.year, prev2Month.month, 1);
-        end = DateTime(now.year, now.month - 1, 0, 23, 59, 59);
-        break;
       case 'last_two_months':
-        final prev2Month = DateTime(now.year, now.month - 2, 1);
-        start = DateTime(prev2Month.year, prev2Month.month, 1);
+        final prevMonth2 = DateTime(now.year, now.month - 1, 1);
+        start = DateTime(prevMonth2.year, prevMonth2.month, 1);
         end = now;
         break;
       default:
@@ -419,12 +414,11 @@ class _ComprehensiveReportsScreenState
                 ]),
               ),
 
-            // Quick Period Chips
+            // Quick Period Chips (شهرين فقط: السابق والحالي)
             ...[
               ('current_month', 'الشهر الحالي'),
               ('prev_month', 'الشهر السابق'),
-              ('prev_prev_month', 'الشهر قبل السابق'),
-              ('last_two_months', 'آخر شهرين كاملين'),
+              ('last_two_months', 'الشهران (السابق والحالي)'),
             ].map((p) {
               final active = _quickPeriod == p.$1;
               return InkWell(
