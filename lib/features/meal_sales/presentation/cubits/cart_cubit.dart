@@ -83,6 +83,9 @@ class CartLine extends Equatable {
   final double unitPrice;
   final int quantity;
 
+  /// لو true: هذه الوجبة باقة — تُحسب بـ 0 في الفاتورة والسيستم
+  final bool isPackage;
+
   const CartLine({
     required this.productId,
     this.variantId,
@@ -90,27 +93,30 @@ class CartLine extends Equatable {
     required this.variantLabel,
     required this.unitPrice,
     this.quantity = 1,
+    this.isPackage = false,
   });
 
-  double get lineTotal => unitPrice * quantity;
+  /// لو باقة قيمة السطر = 0
+  double get lineTotal => isPackage ? 0.0 : unitPrice * quantity;
 
-  CartLine copyWith({int? quantity}) => CartLine(
+  CartLine copyWith({int? quantity, bool? isPackage}) => CartLine(
     productId: productId,
     variantId: variantId,
     name: name,
     variantLabel: variantLabel,
     unitPrice: unitPrice,
     quantity: quantity ?? this.quantity,
+    isPackage: isPackage ?? this.isPackage,
   );
 
-  /// مفتاح الهوية: نفس productId + نفس variantId + نفس name = نفس الصنف
-  String get key => '${productId}_${variantId ?? "null"}_$name';
+  /// مفتاح الهوية: نفس productId + نفس variantId + نفس name + isPackage = نفس الصنف
+  String get key => '${productId}_${variantId ?? "null"}_${name}_${isPackage ? "pkg" : ""}';
 
   /// تحويل إلى OrderLine للتوافق مع Widget القائمة القديم
   OrderLine toOrderLine() => OrderLine(
     name: name,
     variantLabel: variantLabel,
-    unitPrice: unitPrice.round(),
+    unitPrice: isPackage ? 0 : unitPrice.round(),
     quantity: quantity,
   );
 
@@ -122,6 +128,7 @@ class CartLine extends Equatable {
     variantLabel,
     unitPrice,
     quantity,
+    isPackage,
   ];
 }
 
@@ -135,15 +142,17 @@ class CartCubit extends Cubit<CartState> {
 
   /// إضافة صنف: إن كان موجودًا بنفس المتغير والاسم تُزاد الكمية،
   /// وإلا يضاف سطر جديد بكمية 1.
+  /// [isPackage]: لو true تُضاف كباقة بقيمة 0.
   void addItem({
     required String productId,
     String? variantId,
     required String name,
     required String variantLabel,
     required double unitPrice,
+    bool isPackage = false,
   }) {
     final lines = List<CartLine>.from(state.lines);
-    final key = '${productId}_${variantId ?? "null"}_$name';
+    final key = '${productId}_${variantId ?? "null"}_${name}_${isPackage ? "pkg" : ""}';
     final idx = lines.indexWhere((l) => l.key == key);
 
     if (idx >= 0) {
@@ -155,7 +164,8 @@ class CartCubit extends Cubit<CartState> {
           variantId: variantId,
           name: name,
           variantLabel: variantLabel,
-          unitPrice: unitPrice,
+          unitPrice: isPackage ? 0.0 : unitPrice,
+          isPackage: isPackage,
         ),
       );
     }

@@ -790,55 +790,58 @@ class _MonthlyAttendanceDialogState extends State<_MonthlyAttendanceDialog> {
                                   : Colors.orange;
                             }
 
-                            return ListTile(
-                              leading: Text(DateFormat('yyyy-MM-dd (EEEE)', 'ar').format(date)),
-                              title: Row(
-                                children: [
-                                  Text(
-                                    record?.statusLabel ?? 'لم يسجل',
-                                    style: TextStyle(
-                                      color: statusColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  if (record?.status == 'on_leave') ...[
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                      decoration: BoxDecoration(
-                                        color: statusColor.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                            return Material(
+                              color: Colors.transparent,
+                              child: ListTile(
+                                leading: Text(DateFormat('yyyy-MM-dd (EEEE)', 'ar').format(date)),
+                                title: Row(
+                                  children: [
+                                    Text(
+                                      record?.statusLabel ?? 'لم يسجل',
+                                      style: TextStyle(
+                                        color: statusColor,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                      child: Text(
-                                        (record?.isPaidLeave ?? true) ? 'مدفوعة' : 'بخصم',
-                                        style: TextStyle(
-                                          color: statusColor,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
+                                    ),
+                                    if (record?.status == 'on_leave') ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: statusColor.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                                        ),
+                                        child: Text(
+                                          (record?.isPaidLeave ?? true) ? 'مدفوعة' : 'بخصم',
+                                          style: TextStyle(
+                                            color: statusColor,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                    ],
                                   ],
-                                ],
-                              ),
-                              subtitle: record?.notes != null ? Text(record!.notes!) : null,
-                              trailing: canEdit
-                                  ? IconButton(
-                                      icon: const Icon(Icons.edit, size: 18),
-                                      tooltip: 'تعديل الحضور',
-                                      onPressed: () => _editRecord(date, record),
-                                    )
-                                  : Tooltip(
-                                      message: !isEmployeeActive
-                                          ? 'لا يمكن تسجيل حضور لموظف غير نشط'
-                                          : (isOnLeave ? 'الموظف في إجازة معتمدة' : 'تاريخ غير قابل للتعديل'),
-                                      child: Icon(
-                                        Icons.lock_outline,
-                                        size: 18,
-                                        color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+                                ),
+                                subtitle: record?.notes != null ? Text(record!.notes!) : null,
+                                trailing: canEdit
+                                    ? IconButton(
+                                        icon: const Icon(Icons.edit, size: 18),
+                                        tooltip: 'تعديل الحضور',
+                                        onPressed: () => _editRecord(date, record),
+                                      )
+                                    : Tooltip(
+                                        message: !isEmployeeActive
+                                            ? 'لا يمكن تسجيل حضور لموظف غير نشط'
+                                            : (isOnLeave ? 'الموظف في إجازة معتمدة' : 'تاريخ غير قابل للتعديل'),
+                                        child: Icon(
+                                          Icons.lock_outline,
+                                          size: 18,
+                                          color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+                                        ),
                                       ),
-                                    ),
+                              ),
                             );
                           },
                         ),

@@ -368,7 +368,9 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
   Widget _buildInitBody() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      child: Column(
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
@@ -410,6 +412,7 @@ class _ImportItemsDialogState extends State<ImportItemsDialog> {
           ),
           const SizedBox(height: 8),
         ],
+      ),
       ),
     );
   }

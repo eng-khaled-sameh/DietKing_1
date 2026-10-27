@@ -77,12 +77,16 @@ class SaleDraft extends Equatable {
 class SaleItemDraft extends Equatable {
   final String productId;
   final String? variantId;
+  final String? productName;
+  final String? variantLabel;
   final int qty;
   final double unitPrice;
 
   const SaleItemDraft({
     required this.productId,
     this.variantId,
+    this.productName,
+    this.variantLabel,
     required this.qty,
     required this.unitPrice,
   });
@@ -91,13 +95,15 @@ class SaleItemDraft extends Equatable {
     return {
       'product_id': productId,
       if (variantId != null) 'variant_id': variantId,
+      if (productName != null) 'product_name': productName,
+      if (variantLabel != null) 'variant_label': variantLabel,
       'qty': qty,
       'unit_price': double.parse(unitPrice.toStringAsFixed(2)),
     };
   }
 
   @override
-  List<Object?> get props => [productId, variantId, qty, unitPrice];
+  List<Object?> get props => [productId, variantId, productName, variantLabel, qty, unitPrice];
 }
 
 class SaleResult extends Equatable {

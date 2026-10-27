@@ -78,15 +78,52 @@ class OrderLineItem extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Text(
-                      '${line.unitPrice.toStringAsFixed(0)} ر.س / الوحدة',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: AppDimens.fontXs,
-                        color: AppColors.onSurfaceVariant.withValues(
-                          alpha: 0.8,
+                    // شارة باقة (لو الصنف باقة)
+                    if (line.isPackage)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD97706).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(
+                            AppDimens.radiusSm - 4,
+                          ),
+                          border: Border.all(
+                            color: const Color(0xFFD97706).withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.card_giftcard_rounded,
+                              size: 10,
+                              color: Color(0xFFD97706),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              'باقة',
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                fontSize: AppDimens.fontXs - 1,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFD97706),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Text(
+                        '${line.unitPrice.toStringAsFixed(0)} ر.س / الوحدة',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: AppDimens.fontXs,
+                          color: AppColors.onSurfaceVariant.withValues(
+                            alpha: 0.8,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -140,27 +177,49 @@ class OrderLineItem extends StatelessWidget {
           // ── إجمالي السطر ────────────────────────────────────────────────
           SizedBox(
             width: 58,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  lineTotal.toStringAsFixed(0),
-                  style: GoogleFonts.ibmPlexSansArabic(
-                    fontSize: AppDimens.fontSm + 1,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
+            child: line.isPackage
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '0',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: AppDimens.fontSm + 1,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFFD97706),
+                        ),
+                      ),
+                      Text(
+                        'ر.س',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: AppDimens.fontXs - 1,
+                          color: const Color(0xFFD97706).withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        lineTotal.toStringAsFixed(0),
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: AppDimens.fontSm + 1,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      Text(
+                        'ر.س',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: AppDimens.fontXs - 1,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                Text(
-                  'ر.س',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                    fontSize: AppDimens.fontXs - 1,
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
           ),
 
           const SizedBox(width: AppDimens.spaceXs),

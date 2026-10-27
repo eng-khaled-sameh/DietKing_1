@@ -6,7 +6,18 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/accounting_date_utils.dart';
 import '../../data/accounting_repository.dart';
+import '../../data/expenses_excel_export_service.dart';
 import '../widgets/accounting_shared_widgets.dart';
+
+// فئات / تصنيفات المصروفات (مطابقة للكاشير)
+const _kExpenseCategories = [
+  'مستلزمات تشغيل',
+  'نظافة',
+  'كهرباء ومياه',
+  'مواصلات',
+  'مرتجعات',
+  'أخرى',
+];
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ExpensesScreen — صفحة المصروفات
@@ -24,6 +35,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   List<Map<String, dynamic>> _branches = [];
   String? _selectedBranchId;
   String? _selectedCategory;
+  String _selectedStatus = 'all'; // 'all' | 'pending' | 'approved' | 'rejected'
   late DateTimeRange _range;
   bool _loading = false;
   String? _error;
@@ -42,6 +54,44 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         .where((c) => c.isNotEmpty)
         .toSet();
   }
+
+  String _resolveExpenseStatus(Map<String, dynamic> e) {
+    final s = e['status']?.toString().toLowerCase();
+    final isBranch = e['branch_id'] != null &&
+        e['branch_id'] != '' &&
+        e['branch_id'] != 'HQ' &&
+        e['branch_name'] != 'الفرع الرئيسي' &&
+        e['branch_code'] != 'HQ';
+
+    if (isBranch) {
+      if (s == 'approved') return 'approved';
+      if (s == 'rejected') return 'rejected';
+      return 'pending';
+    }
+
+    if (s == 'rejected') return 'rejected';
+    return 'approved';
+  }
+
+  List<Map<String, dynamic>> get _filteredExpenses {
+    return _expenses.where((e) {
+      if (_selectedCategory != null && e['category'] != _selectedCategory) {
+        return false;
+      }
+      final s = _resolveExpenseStatus(e);
+      if (_selectedStatus == 'pending' && s != 'pending') return false;
+      if (_selectedStatus == 'approved' && s != 'approved') return false;
+      if (_selectedStatus == 'rejected' && s != 'rejected') return false;
+      return true;
+    }).toList();
+  }
+
+  int get _pendingCount =>
+      _expenses.where((e) => _resolveExpenseStatus(e) == 'pending').length;
+  int get _approvedCount =>
+      _expenses.where((e) => _resolveExpenseStatus(e) == 'approved').length;
+  int get _rejectedCount =>
+      _expenses.where((e) => _resolveExpenseStatus(e) == 'rejected').length;
 
   @override
   void initState() {
@@ -129,6 +179,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     }
   }
 
+
   // ── Computed KPIs ─────────────────────────────────────────────────────────────
   double get _totalVat => _expenses.fold(
     0.0,
@@ -155,11 +206,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading)
+    if (_loading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primaryContainer),
       );
-    if (_error != null) return AccErrorWidget(message: _error!, onRetry: _load);
+    }
+    if (_error != null) {
+      return AccErrorWidget(message: _error!, onRetry: _load);
+    }
 
     return Container(
       color: const Color(0xFF0B0E14),
@@ -243,6 +297,13 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       ),
       const Spacer(),
       AccActionButton(
+        icon: Icons.table_view_rounded,
+        label: 'تصدير Excel',
+        onTap: _exportExcel,
+        color: const Color(0xFF107C41),
+      ),
+      const SizedBox(width: 8),
+      AccActionButton(
         icon: Icons.add_circle_outline_rounded,
         label: 'إضافة مصروف',
         onTap: _showAddExpenseDialog,
@@ -258,6 +319,61 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     ],
   );
 
+  Future<void> _exportExcel() async {
+    final from = DateTime(_range.start.year, _range.start.month, _range.start.day);
+    final to = DateTime(_range.end.year, _range.end.month, _range.end.day, 23, 59, 59);
+
+    String? branchName;
+    if (_selectedBranchId != null) {
+      if (_selectedBranchId == 'HQ') {
+        branchName = 'الفرع الرئيسي (الإدارة العامة)';
+      } else {
+        final b = _branches.firstWhere(
+          (b) => b['id'] == _selectedBranchId,
+          orElse: () => {'name': null},
+        );
+        branchName = b['name'] as String?;
+      }
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('جاري إعداد شيت Excel للمصروفات...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    try {
+      final path = await ExpensesExcelExportService.exportExpensesReport(
+        expenses: _filteredExpenses,
+        startDate: from,
+        endDate: to,
+        branchName: branchName,
+        categoryFilter: _selectedCategory,
+      );
+
+      if (!mounted) return;
+
+      if (path != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF107C41),
+            content: Text('تم تصدير شيت Excel بنجاح:\n$path'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red.shade800,
+          content: Text('فشل تصدير Excel: $e'),
+        ),
+      );
+    }
+  }
+
   Widget _buildFilters() => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
@@ -265,109 +381,208 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       borderRadius: BorderRadius.circular(12),
       border: Border.all(color: const Color(0xFF1E2430)),
     ),
-    child: Row(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Branch
-        SizedBox(
-          width: 200,
-          child: DropdownButtonFormField<String?>(
-            initialValue: _selectedBranchId,
-            dropdownColor: const Color(0xFF1A1E26),
-            style: GoogleFonts.ibmPlexSansArabic(
-              color: Colors.white,
-              fontSize: 13,
-            ),
-            decoration: const InputDecoration(
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              filled: true,
-              fillColor: Color(0xFF1A1E26),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('كل الفروع')),
-              ..._branches.map(
-                (b) => DropdownMenuItem(
-                  value: b['id'] as String,
-                  child: Text(b['name'] as String? ?? ''),
+        Row(
+          children: [
+            // Branch
+            SizedBox(
+              width: 220,
+              child: DropdownButtonFormField<String?>(
+                initialValue: _selectedBranchId,
+                dropdownColor: const Color(0xFF1A1E26),
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: Colors.white,
+                  fontSize: 13,
                 ),
-              ),
-            ],
-            onChanged: (v) {
-              setState(() => _selectedBranchId = v);
-              _load();
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        // Category
-        SizedBox(
-          width: 200,
-          child: DropdownButtonFormField<String?>(
-            initialValue: _selectedCategory,
-            dropdownColor: const Color(0xFF1A1E26),
-            style: GoogleFonts.ibmPlexSansArabic(
-              color: Colors.white,
-              fontSize: 13,
-            ),
-            decoration: const InputDecoration(
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              filled: true,
-              fillColor: Color(0xFF1A1E26),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('كل الفئات')),
-              ..._categories.map(
-                (c) => DropdownMenuItem(value: c, child: Text(c)),
-              ),
-            ],
-            onChanged: (v) {
-              setState(() => _selectedCategory = v);
-              _load();
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        // Date range
-        InkWell(
-          onTap: _pickRange,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1E26),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.calendar_month_outlined,
-                  size: 16,
-                  color: Color(0xFF8A92A3),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${DateFormat('dd/MM').format(_range.start)} — ${DateFormat('dd/MM/yyyy').format(_range.end)}',
-                  style: GoogleFonts.spaceGrotesk(
-                    fontSize: 12,
-                    color: Colors.white,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  filled: true,
+                  fillColor: Color(0xFF1A1E26),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                    borderSide: BorderSide.none,
                   ),
                 ),
-              ],
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('كل الفروع')),
+                  const DropdownMenuItem(
+                    value: 'HQ',
+                    child: Text('🏢 الفرع الرئيسي (الإدارة العامة)'),
+                  ),
+                  ..._branches.map(
+                    (b) => DropdownMenuItem(
+                      value: b['id'] as String,
+                      child: Text(b['name'] as String? ?? ''),
+                    ),
+                  ),
+                ],
+                onChanged: (v) {
+                  setState(() => _selectedBranchId = v);
+                  _load();
+                },
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            // Category
+            SizedBox(
+              width: 180,
+              child: DropdownButtonFormField<String?>(
+                initialValue: _selectedCategory,
+                dropdownColor: const Color(0xFF1A1E26),
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: Colors.white,
+                  fontSize: 13,
+                ),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  filled: true,
+                  fillColor: Color(0xFF1A1E26),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('كل الفئات')),
+                  ..._categories.map(
+                    (c) => DropdownMenuItem(value: c, child: Text(c)),
+                  ),
+                ],
+                onChanged: (v) {
+                  setState(() => _selectedCategory = v);
+                  _load();
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Date range
+            InkWell(
+              onTap: _pickRange,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1E26),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_month_outlined,
+                      size: 16,
+                      color: Color(0xFF8A92A3),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${DateFormat('dd/MM').format(_range.start)} — ${DateFormat('dd/MM/yyyy').format(_range.end)}',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        // تبويبات فلترة الحالة: الكل / قيد المراجعة / المعتمدة / المرفوضة
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _statusFilterChip(
+              label: 'كل المصروفات',
+              count: _expenses.length,
+              statusKey: 'all',
+              activeColor: AppColors.primaryContainer,
+            ),
+            _statusFilterChip(
+              label: 'قيد المراجعة',
+              count: _pendingCount,
+              statusKey: 'pending',
+              activeColor: const Color(0xFFFFAA00),
+            ),
+            _statusFilterChip(
+              label: 'تم الاعتماد',
+              count: _approvedCount,
+              statusKey: 'approved',
+              activeColor: AppColors.tertiary,
+            ),
+            _statusFilterChip(
+              label: 'مرفوضة',
+              count: _rejectedCount,
+              statusKey: 'rejected',
+              activeColor: const Color(0xFFFF6B6B),
+            ),
+          ],
         ),
       ],
     ),
   );
+
+  Widget _statusFilterChip({
+    required String label,
+    required int count,
+    required String statusKey,
+    required Color activeColor,
+  }) {
+    final isSelected = _selectedStatus == statusKey;
+    return InkWell(
+      onTap: () => setState(() => _selectedStatus = statusKey),
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? activeColor.withValues(alpha: 0.15)
+              : const Color(0xFF1A1E26),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFF262C3A),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.ibmPlexSansArabic(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? activeColor : const Color(0xFF8A92A3),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? activeColor.withValues(alpha: 0.25)
+                    : const Color(0xFF262C3A),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : const Color(0xFF8A92A3),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildCategoryBreakdown() => AccSectionCard(
     title: 'توزيع المصروفات بالفئة',
@@ -425,30 +640,46 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   );
 
   Widget _buildExpensesList() {
-    if (_expenses.isEmpty) {
+    final list = _filteredExpenses;
+    if (list.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(48),
-          child: Text(
-            'لا توجد مصروفات في هذه الفترة',
-            style: GoogleFonts.ibmPlexSansArabic(
-              fontSize: 14,
-              color: const Color(0xFF8A92A3),
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _selectedStatus == 'pending'
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.receipt_long_outlined,
+                size: 44,
+                color: const Color(0xFF8A92A3).withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _selectedStatus == 'pending'
+                    ? 'لا توجد مصروفات بانتظار المراجعة والاعتماد'
+                    : 'لا توجد مصروفات مطابقة للبحث في هذه الفترة',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontSize: 14,
+                  color: const Color(0xFF8A92A3),
+                ),
+              ),
+            ],
           ),
         ),
       );
     }
     return AccSectionCard(
-      title: 'المصروفات (${_expenses.length})',
+      title: 'المصروفات (${list.length})',
       child: ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: _expenses.length,
+        itemCount: list.length,
         separatorBuilder: (_, _) =>
             const Divider(color: Color(0xFF1E2430), height: 1),
         itemBuilder: (_, i) => _ExpenseTile(
-          expense: _expenses[i],
+          expense: list[i],
           repo: widget.repo,
           onRefresh: _load,
           money: _money,
@@ -458,13 +689,13 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   }
 
   void _showAddExpenseDialog() {
-    final categoryCtrl = TextEditingController();
+    String? selectedCategory = _kExpenseCategories.first;
     final payeeCtrl = TextEditingController();
     final descriptionCtrl = TextEditingController();
     final amountCtrl = TextEditingController();
     final vatCtrl = TextEditingController(text: '0');
     final notesCtrl = TextEditingController();
-    String? selectedBranchId;
+    String? selectedBranchId = 'HQ';
     String paymentMethod = 'cash';
     var expenseDate = DateTime.now();
 
@@ -476,31 +707,42 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           child: Dialog(
             backgroundColor: const Color(0xFF141720),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               side: const BorderSide(color: Color(0xFF262C3A)),
             ),
             child: Container(
-              width: 520,
-              padding: const EdgeInsets.all(24),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              width: 540,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // رأس الديالوج
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 12, 16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1A1E26),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xFF262C3A)),
+                      ),
+                    ),
+                    child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryContainer.withValues(
-                              alpha: 0.15,
-                            ),
+                            color: AppColors.primaryContainer.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(
-                            Icons.add_circle_outline_rounded,
+                            Icons.receipt_long_rounded,
                             color: AppColors.primaryContainer,
-                            size: 24,
+                            size: 22,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -517,7 +759,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                 ),
                               ),
                               Text(
-                                'يُحفظ في سجل فواتير المصروفات',
+                                'يمكن تسجيل مصروف للفرع الرئيسي أو أحد الفروع',
                                 style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: 12,
                                   color: const Color(0xFF8A92A3),
@@ -527,152 +769,282 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(
-                            Icons.close_rounded,
-                            color: Color(0xFF8A92A3),
-                          ),
+                          icon: const Icon(Icons.close_rounded, color: Color(0xFF8A92A3)),
                           onPressed: () => Navigator.of(ctx).pop(),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    // الفرع: فواتير المصروفات القديمة مرتبطة دائماً بفرع.
-                    Text(
-                      'الفرع *',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: 11,
-                        color: const Color(0xFF8A92A3),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String?>(
-                      dropdownColor: const Color(0xFF1A1E26),
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        color: Colors.white,
-                        fontSize: 13,
-                      ),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        filled: true,
-                        fillColor: Color(0xFF1A1E26),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      initialValue: selectedBranchId,
-                      items: [
-                        ..._branches.map(
-                          (b) => DropdownMenuItem(
-                            value: b['id'] as String,
-                            child: Text(b['name'] as String? ?? ''),
+                  ),
+                  // محتوى قابل للتمرير
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // الفرع
+                          _DlgLabel('الفرع *'),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<String?>(
+                            dropdownColor: const Color(0xFF1A1E26),
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                            decoration: _dlgInputDecoration(),
+                            initialValue: selectedBranchId,
+                            items: [
+                              const DropdownMenuItem(
+                                value: 'HQ',
+                                child: Text('🏢 الفرع الرئيسي (الإدارة العامة)'),
+                              ),
+                              ..._branches.map(
+                                (b) => DropdownMenuItem(
+                                  value: b['id'] as String,
+                                  child: Text(b['name'] as String? ?? ''),
+                                ),
+                              ),
+                            ],
+                            onChanged: (v) => setDlg(() => selectedBranchId = v),
                           ),
-                        ),
-                      ],
-                      onChanged: (v) => setDlg(() => selectedBranchId = v),
-                    ),
-                    const SizedBox(height: 12),
-                    AccDlgField(
-                      'الفئة / التصنيف *',
-                      hint: 'مثال: إيجار، رواتب، صيانة',
-                      ctrl: categoryCtrl,
-                    ),
-                    const SizedBox(height: 10),
-                    AccDlgField(
-                      'الجهة المدفوع لها (اختياري)',
-                      hint: 'مثال: شركة المياه، مؤجر العقار',
-                      ctrl: payeeCtrl,
-                    ),
-                    const SizedBox(height: 10),
-                    AccDlgField(
-                      'الوصف (اختياري)',
-                      hint: 'وصف المصروف',
-                      ctrl: descriptionCtrl,
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AccDlgField(
-                            'المبلغ (ر.س) *',
-                            hint: '0.00',
-                            ctrl: amountCtrl,
-                            isNumber: true,
+                          const SizedBox(height: 16),
+
+                          // الفئة / التصنيف
+                          _DlgLabel('الفئة / التصنيف *'),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _kExpenseCategories.map((cat) {
+                              final isSelected = selectedCategory == cat;
+                              return InkWell(
+                                onTap: () => setDlg(() => selectedCategory = cat),
+                                borderRadius: BorderRadius.circular(20),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 160),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 7,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppColors.primaryContainer.withValues(alpha: 0.18)
+                                        : const Color(0xFF1A1E26),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.primaryContainer
+                                          : const Color(0xFF2E3545),
+                                      width: isSelected ? 1.5 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isSelected) ...[
+                                        const Icon(
+                                          Icons.check_circle_rounded,
+                                          size: 13,
+                                          color: AppColors.primaryContainer,
+                                        ),
+                                        const SizedBox(width: 5),
+                                      ],
+                                      Text(
+                                        cat,
+                                        style: GoogleFonts.ibmPlexSansArabic(
+                                          fontSize: 12,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w700
+                                              : FontWeight.w500,
+                                          color: isSelected
+                                              ? AppColors.primaryContainer
+                                              : const Color(0xFFC0C7D5),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: AccDlgField(
-                            'ضريبة القيمة المضافة (ر.س)',
-                            hint: '0.00',
-                            ctrl: vatCtrl,
-                            isNumber: true,
+                          const SizedBox(height: 16),
+
+                          // الجهة المدفوع لها
+                          AccDlgField(
+                            'الجهة المدفوع لها (اختياري)',
+                            hint: 'مثال: شركة المياه، مؤجر العقار',
+                            ctrl: payeeCtrl,
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    // طريقة الدفع
-                    Text(
-                      'طريقة الدفع',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: 11,
-                        color: const Color(0xFF8A92A3),
+                          const SizedBox(height: 10),
+                          AccDlgField(
+                            'الوصف (اختياري)',
+                            hint: 'وصف المصروف',
+                            ctrl: descriptionCtrl,
+                          ),
+                          const SizedBox(height: 10),
+
+                          // المبلغ و الضريبة
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _DlgLabel('المبلغ *'),
+                                    const SizedBox(height: 6),
+                                    TextFormField(
+                                      controller: amountCtrl,
+                                      keyboardType: TextInputType.number,
+                                      style: GoogleFonts.spaceGrotesk(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                      ),
+                                      decoration: _dlgInputDecoration(
+                                        hint: '0.00',
+                                        prefix: Text(
+                                          'ر.س  ',
+                                          style: GoogleFonts.spaceGrotesk(
+                                            color: const Color(0xFF8A92A3),
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _DlgLabel('ضريبة القيمة المضافة'),
+                                    const SizedBox(height: 6),
+                                    TextFormField(
+                                      controller: vatCtrl,
+                                      keyboardType: TextInputType.number,
+                                      style: GoogleFonts.spaceGrotesk(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                      ),
+                                      decoration: _dlgInputDecoration(
+                                        hint: '0.00',
+                                        prefix: Text(
+                                          'ر.س  ',
+                                          style: GoogleFonts.spaceGrotesk(
+                                            color: const Color(0xFF8A92A3),
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // طريقة الدفع
+                          _DlgLabel('طريقة الدفع'),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              _PayMethodChip(
+                                label: 'نقدي (Cash)',
+                                icon: Icons.payments_rounded,
+                                selected: paymentMethod == 'cash',
+                                onTap: () => setDlg(() => paymentMethod = 'cash'),
+                              ),
+                              const SizedBox(width: 8),
+                              _PayMethodChip(
+                                label: 'آخر',
+                                icon: Icons.credit_card_rounded,
+                                selected: paymentMethod == 'other',
+                                onTap: () => setDlg(() => paymentMethod = 'other'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+
+                          // تاريخ المصروف
+                          _DlgLabel('تاريخ المصروف'),
+                          const SizedBox(height: 6),
+                          InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: ctx,
+                                initialDate: expenseDate,
+                                firstDate: DateTime(2024),
+                                lastDate: DateTime.now(),
+                                locale: const Locale('ar'),
+                              );
+                              if (picked != null) setDlg(() => expenseDate = picked);
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1A1E26),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFF2E3545)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today_rounded,
+                                    size: 16,
+                                    color: AppColors.primaryContainer,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    DateFormat('EEEE, dd MMMM yyyy', 'ar').format(expenseDate),
+                                    style: GoogleFonts.ibmPlexSansArabic(
+                                      fontSize: 13,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  const Icon(
+                                    Icons.arrow_drop_down_rounded,
+                                    color: Color(0xFF8A92A3),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          // ملاحظات
+                          AccDlgField(
+                            'ملاحظات (اختياري)',
+                            hint: 'أي تفاصيل إضافية',
+                            ctrl: notesCtrl,
+                            maxLines: 2,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    SegmentedButton<String>(
-                      style: SegmentedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1A1E26),
-                        selectedBackgroundColor: AppColors.primaryContainer
-                            .withValues(alpha: 0.2),
-                        foregroundColor: const Color(0xFF8A92A3),
-                        selectedForegroundColor: AppColors.primaryContainer,
+                  ),
+                  // ذيل الديالوج مع أزرار الحفظ
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1A1E26),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(20),
+                        bottomRight: Radius.circular(20),
                       ),
-                      selected: {paymentMethod},
-                      onSelectionChanged: (v) =>
-                          setDlg(() => paymentMethod = v.first),
-                      segments: const [
-                        ButtonSegment(
-                          value: 'cash',
-                          label: Text('كاش'),
-                          icon: Icon(Icons.payments_outlined),
-                        ),
-                        ButtonSegment(
-                          value: 'other',
-                          label: Text('آخر'),
-                          icon: Icon(Icons.credit_card_outlined),
-                        ),
-                      ],
+                      border: Border(
+                        top: BorderSide(color: Color(0xFF262C3A)),
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                    TextButton.icon(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: ctx,
-                          initialDate: expenseDate,
-                          firstDate: DateTime(2024),
-                          lastDate: DateTime.now(),
-                          locale: const Locale('ar'),
-                        );
-                        if (picked != null) setDlg(() => expenseDate = picked);
-                      },
-                      icon: const Icon(Icons.calendar_today_outlined, size: 16),
-                      label: Text(DateFormat('yyyy-MM-dd').format(expenseDate)),
-                    ),
-                    const SizedBox(height: 10),
-                    AccDlgField(
-                      'ملاحظات (اختياري)',
-                      hint: 'أي تفاصيل إضافية',
-                      ctrl: notesCtrl,
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TextButton(
@@ -683,28 +1055,39 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
                             backgroundColor: AppColors.primaryContainer,
-                            foregroundColor: const Color(0xFF1A1200),
+                            foregroundColor: const Color(0xFF0D0D0D),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
+                              horizontal: 24,
+                              vertical: 13,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          icon: const Icon(Icons.save_outlined, size: 18),
-                          label: const Text('حفظ المصروف'),
+                          icon: const Icon(Icons.save_rounded, size: 18),
+                          label: Text(
+                            'حفظ المصروف',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
                           onPressed: () async {
-                            final cat = categoryCtrl.text.trim();
+                            final cat = selectedCategory ?? '';
                             final amt = double.tryParse(amountCtrl.text);
                             if (selectedBranchId == null ||
                                 cat.isEmpty ||
                                 amt == null ||
                                 amt <= 0) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
+                                  backgroundColor: const Color(0xFF8B2500),
                                   content: Text(
-                                    'يرجى اختيار الفرع وإدخال الفئة والمبلغ بشكل صحيح',
+                                    'يرجى اختيار الفرع والفئة وإدخال المبلغ بشكل صحيح',
+                                    style: GoogleFonts.ibmPlexSansArabic(color: Colors.white),
                                   ),
                                 ),
                               );
@@ -713,34 +1096,38 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             final vat = double.tryParse(vatCtrl.text) ?? 0;
                             Navigator.pop(ctx);
                             try {
+                              final isHq = selectedBranchId == 'HQ';
                               await widget.repo.createExpense({
                                 'client_id': const Uuid().v4(),
-                                'session_id': const Uuid().v4(),
-                                'branch_id': selectedBranchId!,
+                                'session_id': isHq ? null : const Uuid().v4(),
+                                'branch_id': isHq ? null : selectedBranchId,
+                                'branch_name': isHq ? 'الفرع الرئيسي' : null,
                                 'category': cat,
                                 'payee': payeeCtrl.text.trim().isEmpty
                                     ? null
                                     : payeeCtrl.text.trim(),
-                                'description':
-                                    descriptionCtrl.text.trim().isEmpty
+                                'description': descriptionCtrl.text.trim().isEmpty
                                     ? null
                                     : descriptionCtrl.text.trim(),
                                 'amount': amt,
                                 'vat_amount': vat,
                                 'payment_method': paymentMethod,
-                                'expense_date': DateFormat(
-                                  'yyyy-MM-dd',
-                                ).format(expenseDate),
+                                'expense_date': DateFormat('yyyy-MM-dd').format(expenseDate),
                                 'notes': notesCtrl.text.trim().isEmpty
                                     ? null
                                     : notesCtrl.text.trim(),
+                                'status': isHq ? 'approved' : 'pending',
                               });
                               await _load();
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    backgroundColor: Color(0xFF1B365D),
-                                    content: Text('تم إضافة المصروف بنجاح'),
+                                  SnackBar(
+                                    backgroundColor: const Color(0xFF1B365D),
+                                    content: Text(
+                                      isHq
+                                          ? 'تم تسجيل مصروف الفرع الرئيسي واعتماده بنجاح'
+                                          : 'تم إضافة المصروف بنجاح وسيخضع لمراجعة المحاسب',
+                                    ),
                                   ),
                                 );
                               }
@@ -758,8 +1145,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -792,55 +1179,99 @@ class _ExpenseTileState extends State<_ExpenseTile> {
   Map<String, dynamic> get e => widget.expense;
 
   Future<void> _decide(String status) async {
+    String? reason;
     if (status == 'rejected') {
       final ctrl = TextEditingController();
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1E26),
-          title: Text(
-            'سبب الرفض',
-            style: GoogleFonts.ibmPlexSansArabic(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+        builder: (ctx) => Directionality(
+          textDirection: ui.TextDirection.rtl,
+          child: AlertDialog(
+            backgroundColor: const Color(0xFF141720),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFF262C3A)),
             ),
-          ),
-          content: AccDlgField(
-            'ملاحظات الرفض (اختياري)',
-            hint: 'سبب رفض المصروف',
-            ctrl: ctrl,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text(
-                'تراجع',
-                style: TextStyle(color: Color(0xFF8A92A3)),
+            title: Row(
+              children: [
+                const Icon(Icons.cancel_outlined, color: Color(0xFFFF6B6B)),
+                const SizedBox(width: 8),
+                Text(
+                  'سبب رفض المصروف',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            content: AccDlgField(
+              'ملاحظات الرفض',
+              hint: 'اكتب سبب رفض الفاتورة ليظهر للكاشير في الفرع',
+              ctrl: ctrl,
+              maxLines: 3,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text(
+                  'تراجع',
+                  style: TextStyle(color: Color(0xFF8A92A3)),
+                ),
               ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF6B6B),
-                foregroundColor: Colors.white,
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF6B6B),
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('تأكيد الرفض'),
               ),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('رفض المصروف'),
-            ),
-          ],
+            ],
+          ),
         ),
       );
       if (confirmed != true || !mounted) return;
+      reason = ctrl.text.trim();
     }
 
     setState(() => _busy = true);
     try {
-      widget.onRefresh();
+      final id = (e['id'] ?? e['client_id']).toString();
+      final branchId = e['branch_id'] as String?;
+      final invNum = e['invoice_number'] as String? ?? e['number'] as String?;
+      final total = (e['total'] as num?)?.toDouble();
+
+      await widget.repo.decideExpense(
+        expenseId: id,
+        status: status,
+        reason: reason,
+        branchId: branchId,
+        invoiceNumber: invNum,
+        total: total,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: status == 'approved'
+                ? const Color(0xFF1B365D)
+                : const Color(0xFF8B2500),
+            content: Text(
+              status == 'approved'
+                  ? 'تم اعتماد فاتورة المصروف وإشعار الفرع بنجاح'
+                  : 'تم رفض فاتورة المصروف وإشعار الفرع بالسبب',
+            ),
+          ),
+        );
+        widget.onRefresh();
+      }
     } catch (err) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطأ: $err'),
+            content: Text('خطأ أثناء المعالجة: $err'),
             backgroundColor: const Color(0xFFFF6B6B),
           ),
         );
@@ -855,7 +1286,24 @@ class _ExpenseTileState extends State<_ExpenseTile> {
     final total = (e['total'] as num?)?.toDouble() ?? 0;
     final method = e['payment_method'] as String? ?? '';
     final date = DateTime.tryParse(e['expense_date'] as String? ?? '');
-    final status = e['status'] as String? ?? 'approved';
+    final rawStatus = e['status']?.toString().toLowerCase();
+    final isBranch = e['branch_id'] != null &&
+        e['branch_id'] != '' &&
+        e['branch_id'] != 'HQ' &&
+        e['branch_name'] != 'الفرع الرئيسي' &&
+        e['branch_code'] != 'HQ';
+    final String status;
+    if (isBranch) {
+      if (rawStatus == 'approved') {
+        status = 'approved';
+      } else if (rawStatus == 'rejected') {
+        status = 'rejected';
+      } else {
+        status = 'pending';
+      }
+    } else {
+      status = (rawStatus == 'rejected') ? 'rejected' : 'approved';
+    }
     final isPending = status == 'pending';
     final isRejected = status == 'rejected';
     final branchName = e['branch_name'] as String?;
@@ -1002,6 +1450,40 @@ class _ExpenseTileState extends State<_ExpenseTile> {
               ],
             ),
           ],
+          if (isRejected &&
+              (e['decision_notes'] != null &&
+                  e['decision_notes'].toString().isNotEmpty)) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: const Color(0xFFFF6B6B).withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 14,
+                    color: Color(0xFFFF6B6B),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'سبب الرفض: ${e['decision_notes']}',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontSize: 11,
+                        color: const Color(0xFFFF6B6B),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (isPending && !_busy) ...[
             const SizedBox(height: 10),
             Row(
@@ -1075,7 +1557,8 @@ class _StatusBadge extends StatelessWidget {
         color = const Color(0xFFFFAA00);
         break;
       case 'approved':
-        label = 'مقبولة';
+      case 'posted':
+        label = 'تم الاعتماد';
         color = AppColors.tertiary;
         break;
       case 'rejected':
@@ -1103,4 +1586,108 @@ class _StatusBadge extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Dialog helpers ─────────────────────────────────────────────────────────────
+
+/// تسمية حقل داخل ديالوج الإضافة
+class _DlgLabel extends StatelessWidget {
+  final String text;
+  const _DlgLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: GoogleFonts.ibmPlexSansArabic(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: const Color(0xFF8A92A3),
+        letterSpacing: 0.3,
+      ),
+    );
+  }
+}
+
+/// زر اختيار طريقة الدفع
+class _PayMethodChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+  const _PayMethodChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.primaryContainer.withValues(alpha: 0.15)
+              : const Color(0xFF1A1E26),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? AppColors.primaryContainer : const Color(0xFF2E3545),
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: selected ? AppColors.primaryContainer : const Color(0xFF8A92A3),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.ibmPlexSansArabic(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? AppColors.primaryContainer : const Color(0xFFC0C7D5),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// decoration موحد لحقول الإدخال في ديالوج الإضافة
+InputDecoration _dlgInputDecoration({String? hint, Widget? prefix}) {
+  return InputDecoration(
+    isDense: true,
+    hintText: hint,
+    hintStyle: GoogleFonts.spaceGrotesk(
+      color: const Color(0xFF4A5265),
+      fontSize: 13,
+    ),
+    prefix: prefix,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    filled: true,
+    fillColor: const Color(0xFF1A1E26),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xFF2E3545)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xFF2E3545)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: AppColors.primaryContainer, width: 1.5),
+    ),
+  );
 }

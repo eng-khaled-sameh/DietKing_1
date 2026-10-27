@@ -28,6 +28,78 @@ class AccountingRepository {
       }
     } catch (_) {}
 
+    // التحقق المباشر من المبيعات إذا كانت دالة الـ RPC ترجع 0 أو فشلت
+    final rpcSales = (summary['total_sales'] as num?)?.toDouble() ?? 0.0;
+    if (rpcSales == 0.0) {
+      try {
+        final fromIso = from.toUtc().toIso8601String();
+        final toIso   = to.toUtc().toIso8601String();
+        var query = supabase
+            .from('sales')
+            .select('id, branch_id, branch_name, payment_method, subtotal, discount_amount, vat_amount, total, status, sold_at')
+            .gte('sold_at', fromIso)
+            .lte('sold_at', toIso);
+
+        if (branchId != null && branchId.isNotEmpty && branchId != 'HQ') {
+          query = query.eq('branch_id', branchId);
+        }
+
+        final rows = await query;
+        double sumTotal = 0.0;
+        double sumGross = 0.0;
+        double sumDiscount = 0.0;
+        double sumVat = 0.0;
+        double sumCash = 0.0;
+        double sumCard = 0.0;
+        final branchMap = <String, Map<String, dynamic>>{};
+
+        for (final row in (rows as List? ?? [])) {
+          final st = (row['status'] as String?)?.toLowerCase();
+          if (st == 'cancelled' || st == 'refunded') continue;
+          final t = (row['total'] as num?)?.toDouble() ?? 0.0;
+          final sub = (row['subtotal'] as num?)?.toDouble() ?? 0.0;
+          final disc = (row['discount_amount'] as num?)?.toDouble() ?? 0.0;
+          final v = (row['vat_amount'] as num?)?.toDouble() ?? 0.0;
+          final m = (row['payment_method'] as String? ?? '').toLowerCase();
+
+          final isCash = m.contains('cash') || m.contains('كاش') || m.contains('نقد');
+          final isCard = m.contains('card') || m.contains('visa') || m.contains('شبك') || m.contains('مدى') || m.contains('pos');
+
+          sumTotal += t;
+          sumGross += sub;
+          sumDiscount += disc;
+          sumVat += v;
+          if (isCash) sumCash += t;
+          if (isCard) sumCard += t;
+
+          final bId = (row['branch_id'] as String?) ?? 'unknown';
+          final bName = (row['branch_name'] as String?) ?? 'فرع';
+          final currentB = branchMap[bId] ?? {
+            'branch_id': bId,
+            'branch_name': bName,
+            'total_sales': 0.0,
+            'invoices_count': 0,
+          };
+          currentB['total_sales'] = (currentB['total_sales'] as double) + t;
+          currentB['invoices_count'] = (currentB['invoices_count'] as int) + 1;
+          branchMap[bId] = currentB;
+        }
+
+        if (rows.isNotEmpty || sumTotal > 0) {
+          summary['total_sales'] = sumTotal;
+          summary['gross_sales'] = sumGross;
+          summary['total_discount'] = sumDiscount;
+          summary['total_vat'] = sumVat;
+          summary['cash_sales'] = sumCash;
+          summary['card_sales'] = sumCard;
+          summary['invoices_count'] = rows.length;
+          summary['by_branch'] = branchMap.values.toList();
+          final curExp = (summary['total_expenses'] as num?)?.toDouble() ?? 0.0;
+          summary['net_revenue'] = sumTotal - curExp;
+        }
+      } catch (_) {}
+    }
+
     // التحقق المباشر من المصروفات المعتمدة (approved/posted) في جدول expense_invoices
     // لضمان دقة إجمالي المصروفات في لوحة التحكم حتى لو كانت دالة SQL السابقة تحسب فقط 'posted'
     final rpcExpenses = (summary['total_expenses'] as num?)?.toDouble() ?? 0.0;
@@ -89,6 +161,35 @@ class AccountingRepository {
       'p_cursor_id': ?cursorId,
     });
     return (result as Map<String, dynamic>?) ?? {'items': [], 'limit': limit};
+  }
+
+  /// تقرير مبيعات الباقات — مجمّع: اسم الوجبة، وزنها، عدد الوجبات، اسم الفرع
+  Future<List<Map<String, dynamic>>> getPackageSales({
+    required DateTime from,
+    required DateTime to,
+    String? branchId,
+  }) async {
+    final result = await supabase.rpc('acc_get_package_sales', params: {
+      'p_from': from.toUtc().toIso8601String(),
+      'p_to': to.toUtc().toIso8601String(),
+      'p_branch_id': ?branchId,
+    });
+    return List<Map<String, dynamic>>.from(result as List? ?? []);
+  }
+
+  /// تقرير الوجبات (المنيو) — الكميات المسحوبة من كل فرع والرصيد المالي لكل وجبة
+  /// الباقات تُحسب كعدد وجبات عادي لكن في السعر النهائي قيمتها 0
+  Future<List<Map<String, dynamic>>> getMealsReport({
+    required DateTime from,
+    required DateTime to,
+    String? branchId,
+  }) async {
+    final result = await supabase.rpc('acc_get_meals_report', params: {
+      'p_from': from.toUtc().toIso8601String(),
+      'p_to': to.toUtc().toIso8601String(),
+      'p_branch_id': ?branchId,
+    });
+    return List<Map<String, dynamic>>.from(result as List? ?? []);
   }
 
   // ── الإقفالات ───────────────────────────────────────────────────────────────
@@ -708,7 +809,65 @@ class AccountingRepository {
       }
     } catch (_) {}
 
-    // التحقق من المصروفات المعتمدة إذا كانت صفر
+    final fromIso = from?.toUtc().toIso8601String();
+    final toIso = to?.toUtc().toIso8601String();
+
+    // 1. التحقق المباشر من المبيعات (إذا كانت صفر أو مفقودة)
+    final salesMap = (report['sales'] as Map<String, dynamic>?) ?? {};
+    final salesTot = (salesMap['total'] as num?)?.toDouble() ?? 0.0;
+    if (salesTot == 0.0 && fromIso != null && toIso != null) {
+      try {
+        var query = supabase
+            .from('sales')
+            .select('id, branch_id, branch_name, payment_method, subtotal, discount_amount, vat_amount, total, status, sold_at')
+            .gte('sold_at', fromIso)
+            .lte('sold_at', toIso);
+
+        if (branchId != null && branchId.isNotEmpty && branchId != 'HQ') {
+          query = query.eq('branch_id', branchId);
+        }
+
+        final rows = await query;
+        double sumTotal = 0.0;
+        double sumSubtotal = 0.0;
+        double sumVat = 0.0;
+        double sumCash = 0.0;
+        double sumCard = 0.0;
+        int invCount = 0;
+
+        for (final row in (rows as List? ?? [])) {
+          final st = (row['status'] as String?)?.toLowerCase();
+          if (st == 'cancelled' || st == 'refunded') continue;
+          final t = (row['total'] as num?)?.toDouble() ?? 0.0;
+          final sub = (row['subtotal'] as num?)?.toDouble() ?? 0.0;
+          final v = (row['vat_amount'] as num?)?.toDouble() ?? 0.0;
+          final m = (row['payment_method'] as String? ?? '').toLowerCase();
+
+          final isCash = m.contains('cash') || m.contains('كاش') || m.contains('نقد');
+          final isCard = m.contains('card') || m.contains('visa') || m.contains('شبك') || m.contains('مدى') || m.contains('pos');
+
+          sumTotal += t;
+          sumSubtotal += sub;
+          sumVat += v;
+          if (isCash) sumCash += t;
+          if (isCard) sumCard += t;
+          invCount++;
+        }
+
+        if (invCount > 0 || sumTotal > 0) {
+          report['sales'] = {
+            'count': invCount,
+            'subtotal': sumSubtotal,
+            'vat_amount': sumVat,
+            'total': sumTotal,
+            'cash': sumCash,
+            'card': sumCard,
+          };
+        }
+      } catch (_) {}
+    }
+
+    // 2. التحقق المباشر من المصروفات المعتمدة (إذا كانت صفر)
     final expensesMap = (report['expenses'] as Map<String, dynamic>?) ?? {};
     final expTotal = (expensesMap['total'] as num?)?.toDouble() ?? 0.0;
     if (expTotal == 0.0 && from != null && to != null) {
@@ -750,17 +909,509 @@ class AccountingRepository {
             'total': calcTotal,
             'by_category': byCatList,
           };
-
-          // إعادة احتساب صافي الربح
-          final salesTotal = ((report['sales'] as Map?)?['total'] as num?)?.toDouble() ?? 0.0;
-          final surplus    = ((report['closings'] as Map?)?['surplus'] as num?)?.toDouble() ?? 0.0;
-          final purchases  = ((report['purchases'] as Map?)?['total'] as num?)?.toDouble() ?? 0.0;
-          final shortage   = ((report['closings'] as Map?)?['shortage'] as num?)?.toDouble() ?? 0.0;
-          report['net_profit'] = (salesTotal + surplus) - (calcTotal + purchases + shortage);
         }
       } catch (_) {}
     }
 
+    // 3. التحقق المباشر من مشتريات التوريد للمخزون (Supply Orders)
+    final purMap = (report['purchases'] as Map<String, dynamic>?) ?? {};
+    final purTotal = (purMap['total'] as num?)?.toDouble() ?? 0.0;
+    if (purTotal == 0.0 && from != null && to != null) {
+      try {
+        final ordersData = await getSupplyOrders(limit: 200);
+        final items = List<Map<String, dynamic>>.from(ordersData['items'] as List? ?? []);
+        double sumPur = 0.0;
+        int purCount = 0;
+
+        for (final o in items) {
+          final dtStr = o['created_at'] as String? ?? o['expected_date'] as String?;
+          final dt = DateTime.tryParse(dtStr ?? '');
+          if (dt != null && (dt.isBefore(from) || dt.isAfter(to))) {
+            continue;
+          }
+          final st = (o['status'] as String?)?.toLowerCase();
+          if (st == 'rejected' || st == 'cancelled') continue;
+
+          final lines = o['lines'] as List? ?? [];
+          double oTotal = 0.0;
+          for (final l in lines) {
+            if (l is Map) {
+              final q = (l['qty_approved'] ?? l['qty_received'] ?? l['qty_requested'] as num?)?.toDouble() ?? 0.0;
+              final cost = (l['unit_cost'] as num?)?.toDouble() ?? 0.0;
+              oTotal += (q * cost);
+            }
+          }
+          sumPur += oTotal;
+          purCount++;
+        }
+
+        if (sumPur == 0.0 && fromIso != null && toIso != null) {
+          final rows = await supabase
+              .from('supply_orders')
+              .select('id, number, status, created_at, supply_order_lines(qty_approved, qty_received, qty_requested, unit_cost)')
+              .gte('created_at', fromIso)
+              .lte('created_at', toIso);
+
+          for (final r in (rows as List? ?? [])) {
+            final st = (r['status'] as String?)?.toLowerCase();
+            if (st == 'rejected' || st == 'cancelled') continue;
+            final lines = r['supply_order_lines'] as List? ?? [];
+            for (final l in lines) {
+              if (l is Map) {
+                final q = (l['qty_approved'] ?? l['qty_received'] ?? l['qty_requested'] as num?)?.toDouble() ?? 0.0;
+                final cost = (l['unit_cost'] as num?)?.toDouble() ?? 0.0;
+                sumPur += (q * cost);
+              }
+            }
+            purCount++;
+          }
+        }
+
+        if (purCount > 0 || sumPur > 0) {
+          report['purchases'] = {
+            'count': purCount,
+            'total': sumPur,
+          };
+        }
+      } catch (_) {}
+    }
+
+    // 4. التحقق المباشر من طلبيات الفرع من المخزون كفلوس
+    final boMap = (report['branch_warehouse_orders'] as Map<String, dynamic>?) ?? {};
+    final boTotal = (boMap['total'] as num?)?.toDouble() ?? 0.0;
+    if (boTotal == 0.0 && from != null && to != null) {
+      try {
+        final boRes = await getBranchWarehouseOrders(from: from, to: to, branchId: branchId);
+        final bTotal = (boRes['total_cost'] ?? boRes['total'] as num?)?.toDouble() ?? 0.0;
+        final bOrders = boRes['orders'] as List? ?? [];
+        if (bTotal > 0 || bOrders.isNotEmpty) {
+          report['branch_warehouse_orders'] = {
+            'count': bOrders.length,
+            'total': bTotal,
+          };
+        }
+      } catch (_) {}
+    }
+
+    // 5. التحقق المباشر من إقفالات الكاشير (فائض وعجز الصندوق)
+    final clMap = (report['closings'] as Map<String, dynamic>?) ?? {};
+    final clCount = (clMap['count'] as num?)?.toInt() ?? 0;
+    if (clCount == 0 && fromIso != null && toIso != null) {
+      try {
+        var cq = supabase
+            .from('shift_closings')
+            .select('id, branch_id, opening_cash, counted_cash, actual_cash, system_cash, difference, closed_at')
+            .gte('closed_at', fromIso)
+            .lte('closed_at', toIso);
+        if (branchId != null && branchId.isNotEmpty && branchId != 'HQ') {
+          cq = cq.eq('branch_id', branchId);
+        }
+        final clRows = await cq;
+        double surplus = 0.0;
+        double shortage = 0.0;
+        for (final row in (clRows as List? ?? [])) {
+          final diff = (row['difference'] as num?)?.toDouble() ??
+              (((row['actual_cash'] ?? row['counted_cash'] as num?)?.toDouble() ?? 0.0) -
+                  ((row['system_cash'] as num?)?.toDouble() ?? 0.0));
+          if (diff > 0) surplus += diff;
+          if (diff < 0) shortage += diff.abs();
+        }
+        report['closings'] = {
+          'count': (clRows as List).length,
+          'surplus': surplus,
+          'shortage': shortage,
+        };
+      } catch (_) {}
+    }
+
+    // 6. إعادة احتساب صافي الربح
+    final sTotal = ((report['sales'] as Map?)?['total'] as num?)?.toDouble() ?? 0.0;
+    final eTotal = ((report['expenses'] as Map?)?['total'] as num?)?.toDouble() ?? 0.0;
+    final pTotal = ((report['purchases'] as Map?)?['total'] as num?)?.toDouble() ?? 0.0;
+    final bOrdersTotal = ((report['branch_warehouse_orders'] as Map?)?['total'] as num?)?.toDouble() ?? 0.0;
+    final surplusTotal = ((report['closings'] as Map?)?['surplus'] as num?)?.toDouble() ?? 0.0;
+    final isComp = branchId == null || branchId.isEmpty || branchId == 'HQ';
+    final suppliesCost = isComp ? pTotal : bOrdersTotal;
+
+    report['net_profit'] = (sTotal + surplusTotal) - (eTotal + suppliesCost);
+
     return report;
+  }
+
+  // ── جرد المخزون ومراجعة وتدقيق الجرودات وتطبيق الخصومات ──────────────────────────
+
+  /// جلب عمليات الجرد مع تفاصيل المراجعة والخصم والعجز
+  Future<List<Map<String, dynamic>>> getStocktakeAudits({
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    try {
+      final res = await supabase.rpc('acc_get_stocktake_audits', params: {
+        'p_from': ?from?.toIso8601String(),
+        'p_to': ?to?.toIso8601String(),
+      });
+      if (res is List && res.isNotEmpty) {
+        return List<Map<String, dynamic>>.from(res);
+      }
+    } catch (_) {}
+
+    // استعلام مباشر احتياطي
+    try {
+      var query = supabase.from('stocktakes').select('''
+        id, number, created_at, notes, total_items, total_adjust, total_damage, warehouse_id, applied_by
+      ''');
+      if (from != null) query = query.gte('created_at', from.toIso8601String());
+      if (to != null) query = query.lte('created_at', to.toIso8601String());
+
+      final rows = await query.order('created_at', ascending: false).limit(100);
+      final List<Map<String, dynamic>> results = [];
+
+      // جلب المراجعات المسجلة إن وجدت
+      Map<String, Map<String, dynamic>> reviewsMap = {};
+      try {
+        final reviews = await supabase.from('stocktake_reviews').select('*');
+        for (final r in (reviews as List)) {
+          final m = Map<String, dynamic>.from(r as Map);
+          if (m['stocktake_id'] != null) {
+            reviewsMap[m['stocktake_id'].toString()] = m;
+          }
+        }
+      } catch (_) {}
+
+      for (final raw in (rows as List)) {
+        final row = Map<String, dynamic>.from(raw as Map);
+        final stId = row['id'].toString();
+        final rev = reviewsMap[stId];
+
+        // حساب تقريبي لقيمة العجز إن لم تكن مسجلة
+        double shortageVal = (rev?['shortage_value'] as num?)?.toDouble() ?? 0.0;
+        double damageVal = (rev?['damage_value'] as num?)?.toDouble() ?? 0.0;
+
+        if (shortageVal == 0 && damageVal == 0) {
+          try {
+            final lines = await supabase
+                .from('stocktake_lines')
+                .select('adjust_qty, damaged_qty, unit_cost')
+                .eq('stocktake_id', stId);
+            for (final l in (lines as List)) {
+              final adj = (l['adjust_qty'] as num?)?.toDouble() ?? 0.0;
+              final dmg = (l['damaged_qty'] as num?)?.toDouble() ?? 0.0;
+              final cost = (l['unit_cost'] as num?)?.toDouble() ?? 0.0;
+              if (adj < 0) shortageVal += adj.abs() * cost;
+              if (dmg > 0) damageVal += dmg * cost;
+            }
+          } catch (_) {}
+        }
+
+        results.add({
+          'id': stId,
+          'number': row['number'] ?? 'STK-${stId.substring(0, 6)}',
+          'created_at': row['created_at'],
+          'notes': row['notes'],
+          'total_items': (row['total_items'] as num?)?.toInt() ?? 0,
+          'total_adjust': (row['total_adjust'] as num?)?.toDouble() ?? 0.0,
+          'total_damage': (row['total_damage'] as num?)?.toDouble() ?? 0.0,
+          'warehouse_id': row['warehouse_id'],
+          'applied_by': row['applied_by'],
+          'shortage_value': shortageVal,
+          'damage_value': damageVal,
+          'review_status': rev?['status'] ?? 'pending_review',
+          'reviewed_at': rev?['reviewed_at'],
+          'reviewer_name': rev?['reviewer_name'],
+          'review_notes': rev?['review_notes'],
+          'deduction_amount': (rev?['deduction_amount'] as num?)?.toDouble() ?? 0.0,
+          'deduction_employee_id': rev?['deduction_employee_id'],
+          'deduction_employee_name': rev?['deduction_employee_name'],
+          'deduction_employee_role': rev?['deduction_employee_role'],
+          'deduction_request_id': rev?['deduction_request_id'],
+        });
+      }
+      return results;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// تفاصيل سطور الجرد لمطابقة الأصناف
+  Future<List<Map<String, dynamic>>> getStocktakeLines(String stocktakeId) async {
+    // 1. استخدام الدالة المخصصة التي تتجاوز RLS وتجلب تفاصيل الأصناف بشكل صحيح
+    try {
+      final res = await supabase.rpc(
+        'acc_get_stocktake_lines',
+        params: {'p_stocktake_id': stocktakeId},
+      );
+      if (res is List) {
+        return List<Map<String, dynamic>>.from(res);
+      }
+      // الدالة ترجع jsonb - قد يعود كـ String أو List
+      if (res is String) {
+        // محاولة parse إن جاء كـ JSON string
+        return [];
+      }
+    } catch (_) {}
+
+    // 2. استعلام مباشر احتياطي
+    try {
+      final res = await supabase
+          .from('stocktake_lines')
+          .select('id, system_qty, counted_qty, damaged_qty, adjust_qty, unit_cost, note, item_id')
+          .eq('stocktake_id', stocktakeId);
+
+      final lines = res as List;
+      if (lines.isEmpty) return [];
+
+      // جلب تفاصيل الأصناف بشكل منفصل
+      final itemIds = lines.map((l) => l['item_id'].toString()).toSet().toList();
+      Map<String, Map<String, dynamic>> itemsMap = {};
+      try {
+        final items = await supabase
+            .from('inventory_items')
+            .select('id, sku, name, unit_code')
+            .inFilter('id', itemIds);
+        for (final it in (items as List)) {
+          final m = Map<String, dynamic>.from(it as Map);
+          itemsMap[m['id'].toString()] = m;
+        }
+      } catch (_) {}
+
+      return lines.map((raw) {
+        final map = Map<String, dynamic>.from(raw as Map);
+        final item = itemsMap[map['item_id']?.toString() ?? ''] ?? {};
+        final adj = (map['adjust_qty'] as num?)?.toDouble() ?? 0.0;
+        final dmg = (map['damaged_qty'] as num?)?.toDouble() ?? 0.0;
+        final cost = (map['unit_cost'] as num?)?.toDouble() ?? 0.0;
+
+        return {
+          'id': map['id'],
+          'sku': item['sku'] ?? '',
+          'name': item['name'] ?? 'صنف غير محدد',
+          'unit_code': item['unit_code'] ?? '',
+          'system_qty': (map['system_qty'] as num?)?.toDouble() ?? 0.0,
+          'counted_qty': (map['counted_qty'] as num?)?.toDouble() ?? 0.0,
+          'damaged_qty': dmg,
+          'adjust_qty': adj,
+          'unit_cost': cost,
+          'shortage_value': adj < 0 ? (adj.abs() * cost) : 0.0,
+          'damage_value': dmg * cost,
+          'note': map['note'],
+        };
+      }).toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// جلب عمال المطبخ والمخزون فقط لتطبيق الخصم عليهم مع بدائل متعددة
+  Future<List<Map<String, dynamic>>> getKitchenAndWarehouseEmployees({bool allActiveIfNone = true}) async {
+    // 1. استدعاء الدالة المخصصة acc_get_kitchen_and_warehouse_employees
+    try {
+      final res = await supabase.rpc('acc_get_kitchen_and_warehouse_employees');
+      // الدالة ترجع jsonb - يمكن أن يُفسَّر كـ List أو Map أو String
+      List<dynamic> rawList = [];
+      if (res is List) {
+        rawList = res;
+      } else if (res is Map && res.containsKey('data')) {
+        rawList = res['data'] as List? ?? [];
+      }
+      if (rawList.isNotEmpty) {
+        return rawList.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+    } catch (_) {}
+
+    // 2. استعلام مباشر على جدول الموظفين (يعمل لأن الـ policy تسمح لجميع المستخدمين المصادقين بعد migration 036)
+    try {
+      final res = await supabase
+          .from('employees')
+          .select('id, code, full_name, job_role, basic_salary, status, branch_id')
+          .eq('status', 'active')
+          .inFilter('job_role', ['kitchen_worker', 'chef', 'storekeeper', 'worker'])
+          .order('full_name');
+
+      final list = List<Map<String, dynamic>>.from(res as List? ?? []);
+      if (list.isNotEmpty) return list;
+
+      // إذا لم يكن هناك عمال بهذه المسميات وطُلب جلب جميع النشطين
+      if (allActiveIfNone) {
+        final anyActive = await supabase
+            .from('employees')
+            .select('id, code, full_name, job_role, basic_salary, status, branch_id')
+            .eq('status', 'active')
+            .order('full_name');
+        return List<Map<String, dynamic>>.from(anyActive as List? ?? []);
+      }
+    } catch (_) {}
+
+    return [];
+  }
+
+  /// اعتماد الجرد بدون خصم
+  Future<Map<String, dynamic>> approveStocktakeWithoutDeduction({
+    required String stocktakeId,
+    String? notes,
+    String? reviewerName,
+  }) async {
+    try {
+      final r = await supabase.rpc('acc_approve_stocktake_without_deduction', params: {
+        'p_stocktake_id': stocktakeId,
+        'p_notes': ?notes,
+        'p_reviewer_name': ?reviewerName,
+      });
+      return Map<String, dynamic>.from(r as Map? ?? {});
+    } catch (_) {
+      // Direct upsert
+      try {
+        final uid = supabase.auth.currentUser?.id;
+        await supabase.from('stocktake_reviews').upsert({
+          'stocktake_id': stocktakeId,
+          'status': 'approved',
+          'reviewed_by': uid,
+          'reviewed_at': DateTime.now().toUtc().toIso8601String(),
+          'reviewer_name': reviewerName ?? 'المحاسب',
+          'review_notes': notes,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        }, onConflict: 'stocktake_id');
+        return {'success': true, 'status': 'approved'};
+      } catch (e) {
+        return {'success': false, 'error': e.toString()};
+      }
+    }
+  }
+
+  /// اعتماد الجرد وتطبيق خصم على عامل مطبخ أو مخزون وإرساله لـ HR
+  Future<Map<String, dynamic>> submitStocktakeDeduction({
+    required String stocktakeId,
+    required String employeeId,
+    required double amount,
+    required String notes,
+    String? reviewerName,
+  }) async {
+    try {
+      final r = await supabase.rpc('acc_submit_stocktake_deduction', params: {
+        'p_stocktake_id': stocktakeId,
+        'p_employee_id': employeeId,
+        'p_amount': amount,
+        'p_notes': notes,
+        'p_reviewer_name': ?reviewerName,
+      });
+      return Map<String, dynamic>.from(r as Map? ?? {});
+    } catch (_) {
+      // Direct insertion into deduction_bonus_requests & stocktake_reviews
+      try {
+        final uid = supabase.auth.currentUser?.id;
+        // 1. Get employee info
+        final empRes = await supabase.from('employees').select('full_name, job_role').eq('id', employeeId).single();
+        final empName = empRes['full_name'] as String? ?? '';
+        final empRole = empRes['job_role'] as String? ?? '';
+
+        // 2. Insert into deduction_bonus_requests
+        final req = await supabase.from('deduction_bonus_requests').insert({
+          'employee_id': employeeId,
+          'requested_from': 'inventory',
+          'type': 'deduction',
+          'amount_type': 'cash',
+          'cash_amount': amount,
+          'notes': notes,
+          'status': 'pending',
+          'created_by': uid,
+        }).select('id').single();
+
+        final reqId = req['id'];
+
+        // 3. Upsert stocktake_reviews
+        await supabase.from('stocktake_reviews').upsert({
+          'stocktake_id': stocktakeId,
+          'status': 'approved_with_deduction',
+          'reviewed_by': uid,
+          'reviewed_at': DateTime.now().toUtc().toIso8601String(),
+          'reviewer_name': reviewerName ?? 'المحاسب',
+          'review_notes': notes,
+          'deduction_request_id': reqId,
+          'deduction_employee_id': employeeId,
+          'deduction_employee_name': empName,
+          'deduction_employee_role': empRole,
+          'deduction_amount': amount,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        }, onConflict: 'stocktake_id');
+
+        return {
+          'success': true,
+          'status': 'approved_with_deduction',
+          'deduction_request_id': reqId,
+        };
+      } catch (e) {
+        return {'success': false, 'error': e.toString()};
+      }
+    }
+  }
+
+  /// إنشاء وتسجيل عملية جرد جديدة
+  Future<Map<String, dynamic>> createStocktakeAudit({
+    required List<Map<String, dynamic>> lines,
+    String? notes,
+  }) async {
+    try {
+      final uid = supabase.auth.currentUser?.id;
+      final whRes = await supabase.from('warehouses').select('id').limit(1).maybeSingle();
+      final whId = whRes?['id'];
+      final numStr = 'STK-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+
+      double totalAdj = 0;
+      double totalDmg = 0;
+
+      for (final l in lines) {
+        final counted = (l['counted_qty'] as num?)?.toDouble() ?? 0.0;
+        final system = (l['system_qty'] as num?)?.toDouble() ?? 0.0;
+        final dmg = (l['damaged_qty'] as num?)?.toDouble() ?? 0.0;
+        final adj = counted - (system - dmg);
+        totalAdj += adj;
+        totalDmg += dmg;
+      }
+
+      final stInsert = await supabase.from('stocktakes').insert({
+        'number': numStr,
+        'client_id': supabase.auth.currentUser?.id ?? DateTime.now().toIso8601String(),
+        'warehouse_id': whId,
+        'notes': notes,
+        'total_items': lines.length,
+        'total_adjust': totalAdj,
+        'total_damage': totalDmg,
+        'applied_by': uid,
+      }).select('id, number').single();
+
+      final stId = stInsert['id'] as String;
+
+      final List<Map<String, dynamic>> linesToInsert = [];
+      for (final l in lines) {
+        final counted = (l['counted_qty'] as num?)?.toDouble() ?? 0.0;
+        final system = (l['system_qty'] as num?)?.toDouble() ?? 0.0;
+        final dmg = (l['damaged_qty'] as num?)?.toDouble() ?? 0.0;
+        final cost = (l['unit_cost'] as num?)?.toDouble() ?? 0.0;
+        linesToInsert.add({
+          'stocktake_id': stId,
+          'item_id': l['item_id'],
+          'system_qty': system,
+          'counted_qty': counted,
+          'damaged_qty': dmg,
+          'adjust_qty': counted - (system - dmg),
+          'unit_cost': cost,
+          'note': l['note'],
+        });
+      }
+
+      if (linesToInsert.isNotEmpty) {
+        await supabase.from('stocktake_lines').insert(linesToInsert);
+      }
+
+      try {
+        await supabase.from('stocktake_reviews').insert({
+          'stocktake_id': stId,
+          'status': 'pending_review',
+        });
+      } catch (_) {}
+
+      return {'success': true, 'id': stId, 'number': numStr};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
   }
 }

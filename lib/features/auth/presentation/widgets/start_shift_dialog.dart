@@ -184,12 +184,15 @@ class _StartShiftDialogState extends State<StartShiftDialog> {
                                       : 'تعذر تحميل بيانات الفرع، تواصل مع الإدارة',
                                 );
                               }
-                              return ListTile(
-                                key: const ValueKey('assignedBranch'),
-                                contentPadding: EdgeInsets.zero,
-                                leading: const Icon(Icons.business_outlined),
-                                title: Text(branch.name),
-                                subtitle: Text(branch.code),
+                              return Material(
+                                color: Colors.transparent,
+                                child: ListTile(
+                                  key: const ValueKey('assignedBranch'),
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.business_outlined),
+                                  title: Text(branch.name),
+                                  subtitle: Text(branch.code),
+                                ),
                               );
                             }
                             return DropdownButtonFormField<LoginBranch>(
@@ -235,11 +238,14 @@ class _StartShiftDialogState extends State<StartShiftDialog> {
                           },
                         ),
                       ] else
-                        const ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(Icons.business_outlined),
-                          title: Text('إدارة'),
-                          subtitle: Text('إداري'),
+                        const Material(
+                          color: Colors.transparent,
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(Icons.business_outlined),
+                            title: Text('إدارة'),
+                            subtitle: Text('إداري'),
+                          ),
                         ),
                     ],
                   ),
@@ -278,10 +284,13 @@ class _BlockedBranchMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.error_outline),
-      title: Text(message),
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.error_outline),
+        title: Text(message),
+      ),
     );
   }
 }

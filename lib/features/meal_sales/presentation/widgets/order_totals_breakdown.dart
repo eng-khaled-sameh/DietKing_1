@@ -577,41 +577,47 @@ class _ValueDialogState extends State<_ValueDialog> {
             Row(
               children: [
                 Expanded(
-                  child: RadioListTile<bool>(
-                    title: Text(
-                      'نسبة (%)',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: AppDimens.fontSm,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: RadioListTile<bool>(
+                      title: Text(
+                        'نسبة (%)',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: AppDimens.fontSm,
+                        ),
                       ),
+                      value: true,
+                      groupValue: _isPercentage,
+                      activeColor: AppColors.primary,
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: (val) => setState(() {
+                        _isPercentage = val!;
+                        _validationError = null;
+                      }),
                     ),
-                    value: true,
-                    groupValue: _isPercentage,
-                    activeColor: AppColors.primary,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (val) => setState(() {
-                      _isPercentage = val!;
-                      _validationError = null;
-                    }),
                   ),
                 ),
                 Expanded(
-                  child: RadioListTile<bool>(
-                    title: Text(
-                      'مبلغ (ر.س)',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: AppDimens.fontSm,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: RadioListTile<bool>(
+                      title: Text(
+                        'مبلغ (ر.س)',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: AppDimens.fontSm,
+                        ),
                       ),
+                      value: false,
+                      groupValue: _isPercentage,
+                      activeColor: AppColors.primary,
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: widget.isVatDialog
+                          ? null // الضريبة: نسبة فقط (لا يمكن تغييرها لمبلغ ثابت في هذا الحوار)
+                          : (val) => setState(() {
+                              _isPercentage = val!;
+                              _validationError = null;
+                            }),
                     ),
-                    value: false,
-                    groupValue: _isPercentage,
-                    activeColor: AppColors.primary,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: widget.isVatDialog
-                        ? null // الضريبة: نسبة فقط (لا يمكن تغييرها لمبلغ ثابت في هذا الحوار)
-                        : (val) => setState(() {
-                            _isPercentage = val!;
-                            _validationError = null;
-                          }),
                   ),
                 ),
               ],

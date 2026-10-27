@@ -14,6 +14,7 @@ import '../../../../cubits/catalog/catalog_state.dart';
 import '../../../../cubits/pos_settings/pos_settings_cubit.dart';
 import '../../../../cubits/session/session_cubit.dart';
 import '../cubits/cart_cubit.dart';
+import '../widgets/addon_package_dialog.dart';
 import '../widgets/invoice_preview_dialog.dart';
 import '../widgets/meal_sales_app_bar.dart';
 import '../widgets/meal_type_selection_dialog.dart';
@@ -162,8 +163,10 @@ class _MealSalesScreenState extends State<MealSalesScreen> {
                 ? '${line.name} (${line.variantLabel})'
                 : line.name,
             quantity: line.quantity,
-            unitPrice: line.unitPrice,
+            unitPrice: line.isPackage ? 0.0 : line.unitPrice,
             totalPrice: line.lineTotal,
+            variantLabel: line.variantLabel,
+            isPackage: line.isPackage,
           ),
         )
         .toList();
@@ -396,15 +399,34 @@ class _CatalogColumn extends StatelessWidget {
                   icon: _addonIcon(product.tag),
                   onTap: () async {
                     String finalName = product.name;
+                    bool isPackage = false;
                     if (finalName.contains('متكامل') ||
                         finalName.contains('متكامله') ||
                         finalName.contains('متكاملة')) {
-                      final selectedType = await showDialog<String>(
+                      final result = await showDialog<MealTypeResult>(
                         context: context,
                         builder: (_) => const MealTypeSelectionDialog(),
                       );
-                      if (selectedType == null) return;
-                      finalName = '${product.name} ($selectedType)';
+                      if (result == null) return;
+                      if (result.isPackage) {
+                        finalName = '${product.name} (${result.mealType}) - باقة';
+                        isPackage = true;
+                      } else {
+                        finalName = '${product.name} (${result.mealType})';
+                      }
+                    } else {
+                      // نافذة تحديد ما إذا كانت الإضافة عادية أم مشمولة بباقة
+                      final isPkg = await showDialog<bool>(
+                        context: context,
+                        builder: (_) => AddonPackageDialog(
+                          productName: product.name,
+                          subLabel: product.description ?? product.tag ?? '',
+                          price: price,
+                          icon: _addonIcon(product.tag),
+                        ),
+                      );
+                      if (isPkg == null) return; // المستخدم ألغى الاختيار
+                      isPackage = isPkg;
                     }
                     if (!context.mounted) return;
                     context.read<CartCubit>().addItem(
@@ -413,6 +435,7 @@ class _CatalogColumn extends StatelessWidget {
                       name: finalName,
                       variantLabel: 'إضافة',
                       unitPrice: price,
+                      isPackage: isPackage,
                     );
                   },
                 );

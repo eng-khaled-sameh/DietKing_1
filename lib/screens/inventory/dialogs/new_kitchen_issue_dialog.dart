@@ -571,29 +571,32 @@ class _ItemSearchDialogState extends State<_ItemSearchDialog> {
                   itemCount: filtered.length,
                   itemBuilder: (ctx, i) {
                     final item = filtered[i];
-                    return ListTile(
-                      dense: true,
-                      title: Text(
-                        item.name,
-                        style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurface,
+                    return Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        dense: true,
+                        title: Text(
+                          item.name,
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: AppColors.onSurface,
+                          ),
                         ),
-                      ),
-                      subtitle: Text(
-                        item.sku,
-                        style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurfaceVariant,
-                          fontSize: 11,
+                        subtitle: Text(
+                          item.sku,
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: AppColors.onSurfaceVariant,
+                            fontSize: 11,
+                          ),
                         ),
-                      ),
-                      trailing: Text(
-                        item.unitCode,
-                        style: GoogleFonts.ibmPlexSansArabic(
-                          color: AppColors.onSurfaceVariant,
-                          fontSize: 12,
+                        trailing: Text(
+                          item.unitCode,
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: AppColors.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
                         ),
+                        onTap: () => Navigator.of(ctx).pop(item),
                       ),
-                      onTap: () => Navigator.of(ctx).pop(item),
                     );
                   },
                 ),

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/accounting_repository.dart';
+import '../../data/inventory_products_excel_service.dart';
 import '../widgets/accounting_shared_widgets.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -91,6 +92,227 @@ class _InventoryOverviewScreenState extends State<InventoryOverviewScreen> {
     } catch (_) {
     } finally {
       if (mounted) setState(() => _loadingProducts = false);
+    }
+  }
+
+  Future<void> _exportInventoryExcel() async {
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لا توجد أصناف لتصديرها')),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('جاري إعداد شيت Excel لأرصدة ومخزون المستودع...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+    try {
+      final savedPath = await InventoryProductsExcelService.exportInventoryStockReport(
+        items: _filteredItems.isNotEmpty ? _filteredItems : _items,
+      );
+      if (savedPath != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.tertiary,
+            content: Text('تم تصدير شيت المخزون بنجاح إلى:\n$savedPath'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade800,
+            content: Text('فشل تصدير Excel للمخزون: $e'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportProductsExcel() async {
+    if (_products.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لا توجد منتجات لتصديرها')),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('جاري إعداد شيت Excel للمنتجات التامة وقائمة الوجبات والأسعار...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+    try {
+      final savedPath = await InventoryProductsExcelService.exportFinishedProductsAndMealsReport(
+        products: _filteredProducts.isNotEmpty ? _filteredProducts : _products,
+      );
+      if (savedPath != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.tertiary,
+            content: Text('تم تصدير شيت المنتجات والوجبات بنجاح إلى:\n$savedPath'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade800,
+            content: Text('فشل تصدير Excel للمنتجات: $e'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showExportDialog() async {
+    final choice = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF141824),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF222938)),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1B365D).withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.table_view_rounded, color: Color(0xFF60A0FF), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'تصدير شيتات Excel',
+              style: GoogleFonts.ibmPlexSansArabic(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'اختر نوع التقرير الذي ترغب في تصديره بصيغة Excel:',
+              style: GoogleFonts.ibmPlexSansArabic(fontSize: 13, color: const Color(0xFF8A92A3)),
+            ),
+            const SizedBox(height: 16),
+            InkWell(
+              onTap: () => Navigator.pop(ctx, 0),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A2234),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF2E4064)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.inventory_2_outlined, color: Color(0xFF60A0FF), size: 26),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'تصدير شيت المخزون الرئيسي',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'أرصدة الخامات، الحد الأدنى، متوسط التكلفة، وقيمة المخزون الكلية',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: 11,
+                              color: const Color(0xFF8A92A3),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF60A0FF)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () => Navigator.pop(ctx, 1),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF12221A),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF1F4A33)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.restaurant_menu_rounded, color: AppColors.tertiary, size: 26),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'تصدير شيت المنتجات التامة والوجبات',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'قائمة الوجبات وأسعار البيع، التكلفة بدون مكسب، وتفاصيل الأوزان والخيارات',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: 11,
+                              color: const Color(0xFF8A92A3),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.tertiary),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: Text(
+              'إلغاء',
+              style: GoogleFonts.ibmPlexSansArabic(color: const Color(0xFF8A92A3)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (choice == 0) {
+      _exportInventoryExcel();
+    } else if (choice == 1) {
+      _exportProductsExcel();
     }
   }
 
@@ -186,6 +408,13 @@ class _InventoryOverviewScreenState extends State<InventoryOverviewScreen> {
                   fontSize: 13, color: const Color(0xFF8A92A3))),
         ]),
         const Spacer(),
+        AccActionButton(
+          icon: Icons.table_view_rounded,
+          label: 'تصدير شيت Excel',
+          onTap: _showExportDialog,
+          color: AppColors.tertiary,
+        ),
+        const SizedBox(width: 8),
         AccActionButton(
           icon: Icons.refresh_rounded,
           label: 'تحديث البيانات',
@@ -350,6 +579,13 @@ class _InventoryOverviewScreenState extends State<InventoryOverviewScreen> {
               onChanged: (v) => setState(() => _categoryFilter = v),
             ),
           const Spacer(),
+          AccActionButton(
+            icon: Icons.download_rounded,
+            label: 'تصدير شيت المخزون',
+            onTap: _exportInventoryExcel,
+            color: const Color(0xFF60A0FF),
+          ),
+          const SizedBox(width: 12),
           // Status Chips
           ...[
             (null, 'الكل'),
@@ -619,7 +855,7 @@ class _InventoryOverviewScreenState extends State<InventoryOverviewScreen> {
                         avgCost: newCost,
                       );
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           const SnackBar(
                               content: Text('تم تحديث متوسط التكلفة بنجاح'),
                               backgroundColor: AppColors.tertiary),
@@ -628,7 +864,7 @@ class _InventoryOverviewScreenState extends State<InventoryOverviewScreen> {
                       _loadItems();
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           SnackBar(
                               content: Text('خطأ: $e'),
                               backgroundColor: const Color(0xFFFF6B6B)),
@@ -737,6 +973,13 @@ class _InventoryOverviewScreenState extends State<InventoryOverviewScreen> {
               onChanged: (v) => setState(() => _productCategoryFilter = v),
             ),
           const Spacer(),
+          AccActionButton(
+            icon: Icons.download_rounded,
+            label: 'تصدير شيت الوجبات والأسعار',
+            onTap: _exportProductsExcel,
+            color: AppColors.tertiary,
+          ),
+          const SizedBox(width: 12),
           Text('اضغط على أيقونة التعديل لضبط سعر البيع وتكلفة الوجبة التقديرية بدون مكسب',
               style: GoogleFonts.ibmPlexSansArabic(
                   fontSize: 11, color: const Color(0xFF8A92A3))),
@@ -1049,7 +1292,7 @@ class _InventoryOverviewScreenState extends State<InventoryOverviewScreen> {
                             hasVariants ? updatedVariants : null,
                       );
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           const SnackBar(
                               content:
                                   Text('تم تحديث أسعار المنتج والتكلفة بنجاح'),
@@ -1059,7 +1302,7 @@ class _InventoryOverviewScreenState extends State<InventoryOverviewScreen> {
                       _loadProducts();
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           SnackBar(
                               content: Text('خطأ: $e'),
                               backgroundColor: const Color(0xFFFF6B6B)),

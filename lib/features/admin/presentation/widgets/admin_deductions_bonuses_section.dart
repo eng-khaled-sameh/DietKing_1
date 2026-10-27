@@ -100,25 +100,31 @@ class _AdminDeductionsBonusesSectionState
                     Row(
                       children: [
                         Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text(
-                              'خصم',
-                              style: TextStyle(color: AppColors.error),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: RadioListTile<String>(
+                              title: const Text(
+                                'خصم',
+                                style: TextStyle(color: AppColors.error),
+                              ),
+                              value: 'deduction',
+                              groupValue: type,
+                              onChanged: (v) => setState(() => type = v!),
                             ),
-                            value: 'deduction',
-                            groupValue: type,
-                            onChanged: (v) => setState(() => type = v!),
                           ),
                         ),
                         Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text(
-                              'مكافأة/إضافة',
-                              style: TextStyle(color: AppColors.statusGreen),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: RadioListTile<String>(
+                              title: const Text(
+                                'مكافأة/إضافة',
+                                style: TextStyle(color: AppColors.statusGreen),
+                              ),
+                              value: 'bonus',
+                              groupValue: type,
+                              onChanged: (v) => setState(() => type = v!),
                             ),
-                            value: 'bonus',
-                            groupValue: type,
-                            onChanged: (v) => setState(() => type = v!),
                           ),
                         ),
                       ],
@@ -126,19 +132,25 @@ class _AdminDeductionsBonusesSectionState
                     Row(
                       children: [
                         Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text('قيمة نقدية'),
-                            value: 'cash',
-                            groupValue: amountType,
-                            onChanged: (v) => setState(() => amountType = v!),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: RadioListTile<String>(
+                              title: const Text('قيمة نقدية'),
+                              value: 'cash',
+                              groupValue: amountType,
+                              onChanged: (v) => setState(() => amountType = v!),
+                            ),
                           ),
                         ),
                         Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text('بالأيام'),
-                            value: 'days',
-                            groupValue: amountType,
-                            onChanged: (v) => setState(() => amountType = v!),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: RadioListTile<String>(
+                              title: const Text('بالأيام'),
+                              value: 'days',
+                              groupValue: amountType,
+                              onChanged: (v) => setState(() => amountType = v!),
+                            ),
                           ),
                         ),
                       ],
@@ -264,25 +276,28 @@ class _AdminDeductionsBonusesSectionState
                   return Card(
                     margin: const EdgeInsets.only(bottom: AppDimens.spaceMd),
                     color: AppColors.surfaceContainerLow,
-                    child: ListTile(
-                      leading: Icon(
-                        isDeduction ? Icons.arrow_downward : Icons.arrow_upward,
-                        color: isDeduction
-                            ? AppColors.error
-                            : AppColors.statusGreen,
-                      ),
-                      title: Text(req['employee_name'] ?? 'غير محدد'),
-                      subtitle: Text('السبب: ${req['notes']}'),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            amount,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          _buildStatusBadge(req['status']),
-                        ],
+                    child: Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        leading: Icon(
+                          isDeduction ? Icons.arrow_downward : Icons.arrow_upward,
+                          color: isDeduction
+                              ? AppColors.error
+                              : AppColors.statusGreen,
+                        ),
+                        title: Text(req['employee_name'] ?? 'غير محدد'),
+                        subtitle: Text('السبب: ${req['notes']}'),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              amount,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            _buildStatusBadge(req['status']),
+                          ],
+                        ),
                       ),
                     ),
                   );

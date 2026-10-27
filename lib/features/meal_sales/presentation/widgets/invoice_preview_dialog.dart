@@ -95,8 +95,13 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
               (l) => {
                 'product_id': l.productId,
                 if (l.variantId != null) 'variant_id': l.variantId,
+                'product_name': l.name,
+                'variant_label': l.variantLabel,
                 'qty': l.quantity,
-                'unit_price': double.parse(l.unitPrice.toStringAsFixed(2)),
+                'unit_price': l.isPackage
+                    ? 0.0
+                    : double.parse(l.unitPrice.toStringAsFixed(2)),
+                'is_package': l.isPackage,
               },
             )
             .toList(),
@@ -123,7 +128,7 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                     ? '${l.name} (${l.variantLabel})'
                     : l.name,
                 'quantity': l.quantity,
-                'unit_price': l.unitPrice,
+                'unit_price': l.isPackage ? 0.0 : l.unitPrice,
                 'total_price': l.lineTotal,
               },
             )
@@ -430,12 +435,43 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                               children: [
                                 Expanded(
                                   flex: 4,
-                                  child: Text(
-                                    item.name,
-                                    style: GoogleFonts.ibmPlexSansArabic(
-                                      fontSize: AppDimens.fontSm,
-                                      color: AppColors.onSurface,
-                                    ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          item.name,
+                                          style: GoogleFonts.ibmPlexSansArabic(
+                                            fontSize: AppDimens.fontSm,
+                                            color: AppColors.onSurface,
+                                          ),
+                                        ),
+                                      ),
+                                      if (item.isPackage) ...[
+                                        const SizedBox(width: 5),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 5,
+                                            vertical: 1,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF33200A),
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(
+                                              color: const Color(0xFFD97706).withValues(alpha: 0.5),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'باقة',
+                                            style: GoogleFonts.ibmPlexSansArabic(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFFD97706),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
                                 Expanded(

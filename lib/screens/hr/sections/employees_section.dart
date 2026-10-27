@@ -346,32 +346,36 @@ class _EmployeesViewState extends State<_EmployeesView> {
                     ),
                     const SizedBox(height: AppDimens.spaceMd),
                     if (selectedStatus == EmployeeStatus.suspended)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('تاريخ انتهاء الإيقاف'),
-                        subtitle: Text(
-                          suspensionEnd != null
-                              ? suspensionEnd!
-                                    .toIso8601String()
-                                    .split('T')
-                                    .first
-                              : 'اختر التاريخ',
+                      Material(
+                        color: Colors.transparent,
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('تاريخ انتهاء الإيقاف'),
+                          subtitle: Text(
+                            suspensionEnd != null
+                                ? suspensionEnd!
+                                      .toIso8601String()
+                                      .split('T')
+                                      .first
+                                : 'اختر التاريخ',
+                          ),
+                          trailing: const Icon(Icons.calendar_today),
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now().add(
+                                const Duration(days: 1),
+                              ),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 3650),
+                              ),
+                            );
+                            if (date != null) {
+                              setState(() => suspensionEnd = date);
+                            }
+                          },
                         ),
-                        trailing: const Icon(Icons.calendar_today),
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now().add(
-                              const Duration(days: 1),
-                            ),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(
-                              const Duration(days: 3650),
-                            ),
-                          );
-                          if (date != null)
-                            setState(() => suspensionEnd = date);
-                        },
                       ),
                     const SizedBox(height: AppDimens.spaceMd),
                     TextField(
@@ -458,33 +462,39 @@ class _EmployeesViewState extends State<_EmployeesView> {
                   Row(
                     children: [
                       Expanded(
-                        child: ListTile(
-                          title: const Text('من', style: TextStyle(fontSize: 12)),
-                          subtitle: Text(startDate.toIso8601String().split('T').first),
-                          onTap: () async {
-                            final d = await showDatePicker(
-                              context: context,
-                              initialDate: startDate,
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime(2100),
-                            );
-                            if (d != null) setState(() => startDate = d);
-                          },
+                        child: Material(
+                          color: Colors.transparent,
+                          child: ListTile(
+                            title: const Text('من', style: TextStyle(fontSize: 12)),
+                            subtitle: Text(startDate.toIso8601String().split('T').first),
+                            onTap: () async {
+                              final d = await showDatePicker(
+                                context: context,
+                                initialDate: startDate,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2100),
+                              );
+                              if (d != null) setState(() => startDate = d);
+                            },
+                          ),
                         ),
                       ),
                       Expanded(
-                        child: ListTile(
-                          title: const Text('إلى', style: TextStyle(fontSize: 12)),
-                          subtitle: Text(endDate.toIso8601String().split('T').first),
-                          onTap: () async {
-                            final d = await showDatePicker(
-                              context: context,
-                              initialDate: endDate,
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime(2100),
-                            );
-                            if (d != null) setState(() => endDate = d);
-                          },
+                        child: Material(
+                          color: Colors.transparent,
+                          child: ListTile(
+                            title: const Text('إلى', style: TextStyle(fontSize: 12)),
+                            subtitle: Text(endDate.toIso8601String().split('T').first),
+                            onTap: () async {
+                              final d = await showDatePicker(
+                                context: context,
+                                initialDate: endDate,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2100),
+                              );
+                              if (d != null) setState(() => endDate = d);
+                            },
+                          ),
                         ),
                       ),
                     ],

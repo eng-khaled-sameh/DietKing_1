@@ -262,15 +262,23 @@ class _MatrixCellState extends State<_MatrixCell>
     _controller.forward().then((_) => _controller.reverse());
 
     String finalName = widget.productName;
+    bool isPackage = false;
+
     if (finalName.contains('متكامل') ||
         finalName.contains('متكامله') ||
         finalName.contains('متكاملة')) {
-      final selectedType = await showDialog<String>(
+      final result = await showDialog<MealTypeResult>(
         context: context,
         builder: (_) => const MealTypeSelectionDialog(),
       );
-      if (selectedType == null) return; // User cancelled
-      finalName = '${widget.productName} ($selectedType)';
+      if (result == null) return; // المستخدم ألغى
+
+      if (result.isPackage) {
+        finalName = '${widget.productName} (${result.mealType}) - باقة';
+        isPackage = true;
+      } else {
+        finalName = '${widget.productName} (${result.mealType})';
+      }
     }
 
     if (!context.mounted) return;
@@ -280,6 +288,7 @@ class _MatrixCellState extends State<_MatrixCell>
       name: finalName,
       variantLabel: widget.weightLabel,
       unitPrice: widget.price,
+      isPackage: isPackage,
     );
   }
 

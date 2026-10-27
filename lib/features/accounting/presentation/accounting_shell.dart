@@ -15,7 +15,7 @@ import 'screens/expenses_screen.dart';
 import 'screens/purchases_screen.dart';
 import 'screens/inventory_overview_screen.dart';
 import 'screens/comprehensive_reports_screen.dart';
-import 'screens/salaries_screen.dart';
+import 'screens/stock_audit_screen.dart';
 import '../../../../core/widgets/notification_bell.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -37,11 +37,11 @@ class _AccountingShellState extends State<AccountingShell> {
     _NavTab(label: 'الرئيسية',   icon: Icons.dashboard_outlined,          activeIcon: Icons.dashboard),
     _NavTab(label: 'المبيعات',   icon: Icons.bar_chart_outlined,           activeIcon: Icons.bar_chart),
     _NavTab(label: 'الإقفالات',  icon: Icons.lock_clock_outlined,          activeIcon: Icons.lock_clock),
+    _NavTab(label: 'جرد المخزون', icon: Icons.fact_check_outlined,        activeIcon: Icons.fact_check),
     _NavTab(label: 'المصروفات',  icon: Icons.account_balance_wallet_outlined, activeIcon: Icons.account_balance_wallet),
     _NavTab(label: 'المشتريات',  icon: Icons.shopping_cart_outlined,       activeIcon: Icons.shopping_cart),
     _NavTab(label: 'المخزون',    icon: Icons.inventory_2_outlined,         activeIcon: Icons.inventory_2),
     _NavTab(label: 'التقارير الشاملة', icon: Icons.analytics_outlined,     activeIcon: Icons.analytics),
-    _NavTab(label: 'الرواتب',    icon: Icons.people_outline,               activeIcon: Icons.people),
   ];
 
   /// جميع الشاشات تُبنى مرة واحدة وتبقى حية في IndexedStack
@@ -55,11 +55,11 @@ class _AccountingShellState extends State<AccountingShell> {
       AccountingDashboardScreen(repo: repo),
       SalesReportScreen(repo: repo),
       ClosingsScreen(repo: repo),
+      StockAuditScreen(repo: repo),
       ExpensesScreen(repo: repo),
       PurchasesScreen(repo: repo),
       InventoryOverviewScreen(repo: repo),
       ComprehensiveReportsScreen(repo: repo),
-      SalariesScreen(repo: repo),
     ];
   }
 

@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -134,7 +133,9 @@ Future<Uint8List> buildInvoicePdf(InvoiceData data) async {
                     pw.Expanded(
                       flex: 4,
                       child: pw.Text(
-                        item.name,
+                        item.isPackage && !item.name.contains('باقة')
+                            ? '${item.name} (باقة)'
+                            : item.name,
                         style: pw.TextStyle(font: font, fontSize: 9),
                       ),
                     ),

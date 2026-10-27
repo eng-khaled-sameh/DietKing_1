@@ -350,6 +350,45 @@ class LocalRecordsRepository {
     return rows.map(LocalRecord.fromMap).toList();
   }
 
+  /// البحث عن سجل بيع محلي لمطابقة بيانات الريسيت المطبوعة (عرض الأصناف الدقيقة والجرامات)
+  Future<LocalRecord?> findSaleRecord({
+    String? invoiceNumber,
+    String? localNumber,
+    String? clientId,
+  }) async {
+    try {
+      final database = await LocalDb.db;
+      List<Map<String, dynamic>> rows = [];
+      if (invoiceNumber != null && invoiceNumber.isNotEmpty) {
+        rows = await database.query(
+          'local_records',
+          where: 'kind = ? AND (server_number = ? OR local_number = ?)',
+          whereArgs: ['sale', invoiceNumber, invoiceNumber],
+          limit: 1,
+        );
+      }
+      if (rows.isEmpty && localNumber != null && localNumber.isNotEmpty) {
+        rows = await database.query(
+          'local_records',
+          where: 'kind = ? AND local_number = ?',
+          whereArgs: ['sale', localNumber],
+          limit: 1,
+        );
+      }
+      if (rows.isEmpty && clientId != null && clientId.isNotEmpty) {
+        rows = await database.query(
+          'local_records',
+          where: 'kind = ? AND client_id = ?',
+          whereArgs: ['sale', clientId],
+          limit: 1,
+        );
+      }
+      return rows.isEmpty ? null : LocalRecord.fromMap(rows.first);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// سجلات الفرع من النوع المطلوب، لاستخدامها كنسخة محلية احتياطية للسجل.
   Future<List<LocalRecord>> getByBranch(String branchId, String kind) async {
     final database = await LocalDb.db;
@@ -360,6 +399,24 @@ class LocalRecordsRepository {
       orderBy: 'created_at DESC',
     );
     return rows.map(LocalRecord.fromMap).toList();
+  }
+
+  /// حذف سجلات المصروفات المحلية عند تنظيف المصروفات التجريبية
+  Future<int> clearExpenses({String? branchId}) async {
+    final database = await LocalDb.db;
+    if (branchId != null) {
+      return database.delete(
+        'local_records',
+        where: 'kind = ? AND branch_id = ?',
+        whereArgs: ['expense', branchId],
+      );
+    } else {
+      return database.delete(
+        'local_records',
+        where: 'kind = ?',
+        whereArgs: ['expense'],
+      );
+    }
   }
 
   Future<LocalRecord?> getByClientId(String clientId) async {

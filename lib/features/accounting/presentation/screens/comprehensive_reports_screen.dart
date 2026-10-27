@@ -36,6 +36,7 @@ class _ComprehensiveReportsScreenState
   String? _error;
   Map<String, dynamic> _reportData = {};
   List<Map<String, dynamic>> _warehouseOrders = [];
+  Map<String, dynamic> _salesSummary = {};
 
   static final _money =
       NumberFormat.currency(locale: 'ar', symbol: 'ر.س ', decimalDigits: 2);
@@ -118,6 +119,11 @@ class _ComprehensiveReportsScreenState
           to: _range.end,
           branchId: _selectedBranchId,
         ),
+        widget.repo.getSalesSummary(
+          from: _range.start,
+          to: _range.end,
+          branchId: _selectedBranchId,
+        ),
       ]);
 
       if (mounted) {
@@ -125,6 +131,7 @@ class _ComprehensiveReportsScreenState
           _reportData = results[0];
           _warehouseOrders = List<Map<String, dynamic>>.from(
               results[1]['orders'] as List? ?? []);
+          _salesSummary = results[2];
         });
       }
     } catch (e) {
@@ -140,7 +147,9 @@ class _ComprehensiveReportsScreenState
 
   double get _salesTotal {
     final s = _reportData['sales'] as Map<String, dynamic>?;
-    return (s?['total'] as num?)?.toDouble() ?? 0.0;
+    final repSales = (s?['total'] as num?)?.toDouble() ?? 0.0;
+    if (repSales > 0) return repSales;
+    return (_salesSummary['total_sales'] as num?)?.toDouble() ?? 0.0;
   }
 
   double get _expensesTotal {
@@ -156,7 +165,13 @@ class _ComprehensiveReportsScreenState
       return (p?['total'] as num?)?.toDouble() ?? 0.0;
     } else {
       final bo = _reportData['branch_warehouse_orders'] as Map<String, dynamic>?;
-      return (bo?['total'] as num?)?.toDouble() ?? 0.0;
+      final boTotal = (bo?['total'] as num?)?.toDouble() ?? 0.0;
+      if (boTotal > 0) return boTotal;
+      double calcBo = 0.0;
+      for (final o in _warehouseOrders) {
+        calcBo += (o['total_cost'] as num?)?.toDouble() ?? 0.0;
+      }
+      return calcBo;
     }
   }
 
@@ -183,6 +198,8 @@ class _ComprehensiveReportsScreenState
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _buildHeader(),
           const SizedBox(height: 20),
+          _buildScopeSelector(),
+          const SizedBox(height: 16),
           _buildFilterBar(),
           const SizedBox(height: 20),
           _buildSalariesCard(),
@@ -200,6 +217,10 @@ class _ComprehensiveReportsScreenState
             const SizedBox(height: 24),
             _buildPnlTable(),
             const SizedBox(height: 24),
+            if (_isCompany) ...[
+              _buildBranchSalesBreakdownTable(),
+              const SizedBox(height: 24),
+            ],
             _buildSalesAndExpensesGrid(),
             const SizedBox(height: 24),
             _buildWarehouseOrdersSection(),
@@ -237,6 +258,90 @@ class _ComprehensiveReportsScreenState
         ),
       ]);
 
+  // ── SCOPE SELECTOR ──────────────────────────────────────────────────────────
+  Widget _buildScopeSelector() => Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFF141720),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF1E2430)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildScopeButton(
+              title: 'التقرير الشامل للشركة كاملة',
+              icon: Icons.corporate_fare_rounded,
+              isSelected: _isCompany,
+              onTap: () {
+                if (!_isCompany) {
+                  setState(() {
+                    _selectedBranchId = null;
+                    _selectedBranchName = 'الشركة كاملة (جميع الفروع والمستودع)';
+                  });
+                  _load();
+                }
+              },
+            ),
+            _buildScopeButton(
+              title: 'تقرير فرع محدد',
+              icon: Icons.store_rounded,
+              isSelected: !_isCompany,
+              onTap: () {
+                if (_isCompany) {
+                  final firstBranch = _branches.isNotEmpty ? _branches.first : null;
+                  setState(() {
+                    _selectedBranchId = firstBranch?['id'] as String?;
+                    _selectedBranchName = firstBranch?['name'] as String? ?? 'الفرع';
+                  });
+                  _load();
+                }
+              },
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildScopeButton({
+    required String title,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) =>
+      InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.primaryContainer.withValues(alpha: 0.15)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected ? AppColors.primaryContainer : Colors.transparent,
+            ),
+          ),
+          child: Row(children: [
+            Icon(icon,
+                size: 18,
+                color: isSelected
+                    ? AppColors.primaryContainer
+                    : const Color(0xFF8A92A3)),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: GoogleFonts.ibmPlexSansArabic(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
+                color: isSelected ? Colors.white : const Color(0xFF8A92A3),
+              ),
+            ),
+          ]),
+        ),
+      );
+
   // ── FILTER BAR ──────────────────────────────────────────────────────────────
   Widget _buildFilterBar() => Container(
         padding: const EdgeInsets.all(16),
@@ -250,57 +355,69 @@ class _ComprehensiveReportsScreenState
           runSpacing: 12,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            // Branch Dropdown
-            SizedBox(
-              width: 250,
-              child: DropdownButtonFormField<String?>(
-                initialValue: _selectedBranchId,
-                dropdownColor: const Color(0xFF1A1E26),
-                style: GoogleFonts.ibmPlexSansArabic(
-                    color: Colors.white, fontSize: 13),
-                decoration: InputDecoration(
-                  labelText: 'الفرع المستهدف',
-                  labelStyle: GoogleFonts.ibmPlexSansArabic(
-                      color: const Color(0xFF8A92A3), fontSize: 12),
-                  filled: true,
-                  fillColor: const Color(0xFF0B0E14),
-                  isDense: true,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFF2A2E3A))),
-                ),
-                items: [
-                  DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('جميع الفروع — الشركة كاملة',
-                        style: GoogleFonts.ibmPlexSansArabic(
-                            color: AppColors.primaryContainer,
-                            fontWeight: FontWeight.w600)),
+            // Branch Selection or Info Badge
+            if (!_isCompany)
+              SizedBox(
+                width: 260,
+                child: DropdownButtonFormField<String>(
+                  key: ValueKey(_selectedBranchId),
+                  initialValue: _selectedBranchId,
+                  dropdownColor: const Color(0xFF1A1E26),
+                  style: GoogleFonts.ibmPlexSansArabic(
+                      color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    labelText: 'الفرع المحدد',
+                    labelStyle: GoogleFonts.ibmPlexSansArabic(
+                        color: const Color(0xFF8A92A3), fontSize: 12),
+                    filled: true,
+                    fillColor: const Color(0xFF0B0E14),
+                    isDense: true,
+                    prefixIcon: const Icon(Icons.storefront_rounded, size: 18, color: Color(0xFF60A0FF)),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF2A2E3A))),
                   ),
-                  ..._branches.map((b) => DropdownMenuItem<String?>(
-                        value: b['id'] as String,
-                        child: Text(b['name'] as String? ?? '—',
-                            style: GoogleFonts.ibmPlexSansArabic(
-                                color: Colors.white)),
-                      )),
-                ],
-                onChanged: (val) {
-                  setState(() {
-                    _selectedBranchId = val;
-                    if (val == null) {
-                      _selectedBranchName = 'الشركة كاملة (جميع الفروع)';
-                    } else {
-                      final b = _branches.firstWhere((br) => br['id'] == val,
-                          orElse: () => {'name': 'الفرع'});
-                      _selectedBranchName = b['name'] as String? ?? 'الفرع';
+                  items: _branches
+                      .map((b) => DropdownMenuItem<String>(
+                            value: b['id'] as String,
+                            child: Text(b['name'] as String? ?? '—',
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                    color: Colors.white)),
+                          ))
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _selectedBranchId = val;
+                        final b = _branches.firstWhere((br) => br['id'] == val,
+                            orElse: () => {'name': 'الفرع'});
+                        _selectedBranchName = b['name'] as String? ?? 'الفرع';
+                      });
+                      _load();
                     }
-                  });
-                  _load();
-                },
+                  },
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1B2A4A).withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF2A4273)),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.apartment_rounded, color: Color(0xFF60A0FF), size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'التقرير يشمل كافة الفروع التابعة ومشتريات المستودع الرئيسي',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                        fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                  ),
+                ]),
               ),
-            ),
 
             // Quick Period Chips
             ...[
@@ -349,16 +466,24 @@ class _ComprehensiveReportsScreenState
                 decoration: BoxDecoration(
                   color: const Color(0xFF1A1E26),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFF2A2E3A)),
+                  border: Border.all(
+                    color: _quickPeriod == 'custom'
+                        ? AppColors.primaryContainer
+                        : const Color(0xFF2A2E3A),
+                  ),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Icons.calendar_month_outlined,
                       size: 16, color: Color(0xFF8A92A3)),
                   const SizedBox(width: 8),
                   Text(
-                    '${_df.format(_range.start)} إلى ${_df.format(_range.end)}',
+                    '${_df.format(_range.start)} — ${_df.format(_range.end)}',
                     style: GoogleFonts.spaceGrotesk(
-                        fontSize: 12, color: Colors.white),
+                      fontSize: 12,
+                      color: _quickPeriod == 'custom'
+                          ? AppColors.primaryContainer
+                          : Colors.white,
+                    ),
                   ),
                 ]),
               ),
@@ -369,26 +494,31 @@ class _ComprehensiveReportsScreenState
 
   Future<void> _pickCustomRange() async {
     final earliest = AccountingDateUtils.getRetentionEarliestDate();
-    final picked = await showDateRangePicker(
+    final latest = AccountingDateUtils.getRetentionLatestDate();
+    final safeStart = _range.start.isBefore(earliest) ? earliest : _range.start;
+    final safeEnd = _range.end.isAfter(latest) ? latest : _range.end;
+
+    final range = await showDateRangePicker(
       context: context,
       firstDate: earliest,
-      lastDate: DateTime.now(),
-      initialDateRange: _range,
-      builder: (context, child) => Theme(
+      lastDate: latest,
+      initialDateRange: DateTimeRange(start: safeStart, end: safeEnd),
+      locale: const Locale('ar'),
+      builder: (ctx, child) => Theme(
         data: ThemeData.dark().copyWith(
           colorScheme: const ColorScheme.dark(
             primary: AppColors.primaryContainer,
+            onPrimary: Color(0xFF1A1200),
             surface: Color(0xFF1A1E26),
           ),
         ),
         child: child!,
       ),
     );
-
-    if (picked != null) {
+    if (range != null) {
       setState(() {
         _quickPeriod = 'custom';
-        _range = picked;
+        _range = range;
       });
       _load();
     }
@@ -416,13 +546,19 @@ class _ComprehensiveReportsScreenState
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('قيمة رواتب الموظفين الفعلية للفترة المحددة',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white)),
               Text(
-                'أدخل القيمة الإجمالية الفعلية لرواتب الموظفين ($_selectedBranchName) للشهر المحدد، لتُحسب وتُخصم فوراً في نتائج الأرباح والشيت المصدر.',
+                _isCompany
+                    ? 'قيمة رواتب موظفي الشركة كاملة للفترة (إدخال يدوي مانوال)'
+                    : 'قيمة رواتب موظفي فرع $_selectedBranchName الإجمالي للفترة (إدخال يدوي مانوال)',
+                style: GoogleFonts.ibmPlexSansArabic(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white),
+              ),
+              Text(
+                _isCompany
+                    ? 'أدخل القيمة الإجمالية الفعلية لرواتب جميع موظفي الشركة للفترة المحددة، لتُحسب وتُخصم فوراً في نتائج الأرباح والشيت المصدر.'
+                    : 'أدخل القيمة الإجمالية الفعلية لرواتب موظفي فرع $_selectedBranchName فقط للفترة المحددة، لتُحسب وتُخصم فوراً في أرباح الفرع والشيت المصدر.',
                 style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 12, color: const Color(0xFF8A92A3)),
               ),
@@ -430,7 +566,7 @@ class _ComprehensiveReportsScreenState
           ),
           const SizedBox(width: 20),
           SizedBox(
-            width: 200,
+            width: 220,
             child: TextField(
               controller: _actualSalariesCtrl,
               keyboardType:
@@ -440,7 +576,7 @@ class _ComprehensiveReportsScreenState
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF60A0FF)),
               decoration: InputDecoration(
-                labelText: 'إجمالي الرواتب الفعلية',
+                labelText: _isCompany ? 'إجمالي رواتب الشركة' : 'إجمالي رواتب الفرع',
                 labelStyle: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 12, color: const Color(0xFF8A92A3)),
                 suffixText: 'ر.س',
@@ -502,7 +638,9 @@ class _ComprehensiveReportsScreenState
           const SizedBox(width: 16),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(
-              isProfit ? 'صافي الربح التشغيلي المحقق' : 'صافي الخسارة التشغيلية',
+              isProfit
+                  ? (_isCompany ? 'صافي الربح التشغيلي للشركة كاملة' : 'صافي الربح التشغيلي لفرع $_selectedBranchName')
+                  : (_isCompany ? 'صافي الخسارة التشغيلية للشركة' : 'صافي الخسارة التشغيلية لفرع $_selectedBranchName'),
               style: GoogleFonts.ibmPlexSansArabic(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -519,7 +657,9 @@ class _ComprehensiveReportsScreenState
           const Spacer(),
           Text(
             isProfit
-                ? 'المعادلة: (المبيعات + فائض الكاشير) - (المصروفات + المسحوبات/المشتريات + الرواتب)'
+                ? (_isCompany
+                    ? 'المعادلة: (مبيعات جميع الفروع + فائض الكاشير) - (جميع المصروفات + مشتريات المخزون + رواتب الشركة)'
+                    : 'المعادلة: (مبيعات الفرع + فائض الكاشير) - (مصروفات الفرع + طلبات المخزون كفلوس + رواتب الفرع)')
                 : 'التكاليف والمصروفات والرواتب تتجاوز الإيرادات المحققة في هذه الفترة',
             style: GoogleFonts.ibmPlexSansArabic(
                 fontSize: 12, color: const Color(0xFF8A92A3)),
@@ -531,7 +671,7 @@ class _ComprehensiveReportsScreenState
       // بطاقات المؤشرات الستة
       Row(children: [
         AccKpiCard(
-          title: 'إجمالي المبيعات',
+          title: _isCompany ? 'مبيعات جميع الفروع' : 'إجمالي مبيعات الفرع',
           value: _money.format(_salesTotal),
           icon: Icons.point_of_sale_rounded,
           iconColor: AppColors.primaryContainer,
@@ -539,7 +679,7 @@ class _ComprehensiveReportsScreenState
         ),
         const SizedBox(width: 10),
         AccKpiCard(
-          title: 'المصروفات المعتمدة',
+          title: _isCompany ? 'جميع المصروفات المعتمدة' : 'إجمالي مصروفات الفرع',
           value: _money.format(_expensesTotal),
           icon: Icons.receipt_long_rounded,
           iconColor: const Color(0xFFFF6B6B),
@@ -547,7 +687,7 @@ class _ComprehensiveReportsScreenState
         ),
         const SizedBox(width: 10),
         AccKpiCard(
-          title: _isCompany ? 'مشتريات التوريد' : 'مسحوبات المخزن',
+          title: _isCompany ? 'جميع مشتريات المخزون' : 'طلباته من المخزون كفلوس',
           value: _money.format(_suppliesCost),
           icon: Icons.inventory_2_outlined,
           iconColor: const Color(0xFFFFAA00),
@@ -555,7 +695,7 @@ class _ComprehensiveReportsScreenState
         ),
         const SizedBox(width: 10),
         AccKpiCard(
-          title: 'الرواتب الفعلية',
+          title: _isCompany ? 'رواتب الشركة كاملة' : 'رواتب موظفي الفرع',
           value: _money.format(_actualSalaries),
           icon: Icons.badge_outlined,
           iconColor: const Color(0xFF60A0FF),
@@ -563,7 +703,7 @@ class _ComprehensiveReportsScreenState
         ),
         const SizedBox(width: 10),
         AccKpiCard(
-          title: 'فائض الكاشير (+)',
+          title: _isCompany ? 'فائض كاشيرات الفروع (+)' : 'فائض كاشير الفرع (+)',
           value: _money.format(_surplusTotal),
           icon: Icons.add_circle_outline_rounded,
           iconColor: AppColors.tertiary,
@@ -577,54 +717,56 @@ class _ComprehensiveReportsScreenState
   Widget _buildPnlTable() {
     final rows = [
       (
-        'المبيعات الإجمالية المحققة',
+        _isCompany ? 'مبيعات جميع الفروع الإجمالية' : 'مبيعات الفرع الإجمالية المحققة',
         _salesTotal,
         '100.0%',
-        'إيرادات فواتير الطلبات المكتملة في الفترة',
+        _isCompany ? 'إجمالي إيرادات فواتير المبيعات لكافة الفروع' : 'إيرادات فواتير مبيعات الفرع المكتملة في الفترة',
         const Color(0xFFFFAA00),
       ),
       (
-        'فائض تقفيل الكاشير (+)',
+        _isCompany ? 'فائض كاشيرات الفروع (+)' : 'فائض تقفيل كاشير الفرع (+)',
         _surplusTotal,
         _salesTotal > 0
             ? '${(_surplusTotal / _salesTotal * 100).toStringAsFixed(1)}%'
             : '0%',
-        'المبالغ الزائدة المودعة عند إغلاق الشفتات وتضاف للإيراد',
+        'المبالغ الزائدة المودعة بصناديق الكاشير وتضاف للإيراد',
         AppColors.tertiary,
       ),
       (
         _isCompany
-            ? 'مشتريات التوريدات للمستودع (-)'
-            : 'طلبيات الفرع من المستودع بسعر بدون مكسب (-)',
+            ? 'مشتريات التوريد للمخزون الرئيسي (-)'
+            : 'طلبات الفرع من المخزون كفلوس (بدون مكسب) (-)',
         _suppliesCost,
         _salesTotal > 0
             ? '${(_suppliesCost / _salesTotal * 100).toStringAsFixed(1)}%'
             : '0%',
         _isCompany
-            ? 'تكلفة طلبات الشراء المعتمدة والمستلمة'
-            : 'المواد والوجبات المسحوبة من المخزن بتكلفة التوريد',
+            ? 'تكلفة طلبات الشراء والتوريد المعتمدة للمستودع من الموردين'
+            : 'قيمة المواد والوجبات المسحوبة من المخزن بتكلفة التوريد بدون مكسب',
         const Color(0xFFFF8888),
       ),
       (
-        'المصروفات التشغيلية والنثريات (-)',
+        _isCompany ? 'جميع المصروفات التشغيلية المعتمدة (-)' : 'إجمالي مصروفات الفرع المعتمدة (-)',
         _expensesTotal,
         _salesTotal > 0
             ? '${(_expensesTotal / _salesTotal * 100).toStringAsFixed(1)}%'
             : '0%',
-        'كافة سندات الصرف المقبولة والمعتمدة',
+        _isCompany ? 'كافة سندات وفواتير الصرف لكافة الفروع والإدارة' : 'كافة سندات وفواتير الصرف الخاصة بهذا الفرع',
         const Color(0xFFFF6B6B),
       ),
       (
-        'الرواتب الفعلية للموظفين (-)',
+        _isCompany
+            ? 'إجمالي رواتب موظفي الشركة كاملة (إدخال يدوي) (-)'
+            : 'قيمة رواتب موظفي الفرع (إدخال يدوي) (-)',
         _actualSalaries,
         _salesTotal > 0
             ? '${(_actualSalaries / _salesTotal * 100).toStringAsFixed(1)}%'
             : '0%',
-        'إجمالي الرواتب الفعلية المدخلة يدوياً للشهر',
+        _isCompany ? 'إجمالي رواتب الشركة الفعلية المدخلة يدوياً للفترة' : 'إجمالي رواتب موظفي الفرع الفعلية المدخلة يدوياً للفترة',
         const Color(0xFF60A0FF),
       ),
       (
-        'عجز الكاشير (للعلم)',
+        _isCompany ? 'عجز كاشيرات الفروع (للعلم)' : 'عجز كاشير الفرع (للعلم)',
         _shortageTotal,
         _salesTotal > 0
             ? '${(_shortageTotal / _salesTotal * 100).toStringAsFixed(1)}%'
@@ -986,9 +1128,99 @@ class _ComprehensiveReportsScreenState
     );
   }
 
+  // ── BRANCH SALES BREAKDOWN TABLE (COMPANY MODE) ───────────────────────────
+  Widget _buildBranchSalesBreakdownTable() {
+    final byBranch = (_salesSummary['by_branch'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        [];
+    if (byBranch.isEmpty) return const SizedBox.shrink();
+
+    return AccSectionCard(
+      title: 'مبيعات جميع الفروع وتوزيع الإيرادات (${byBranch.length} فروع)',
+      child: Table(
+        columnWidths: const {
+          0: FlexColumnWidth(1.2),
+          1: FlexColumnWidth(3.0),
+          2: FlexColumnWidth(2.0),
+          3: FlexColumnWidth(1.5),
+          4: FlexColumnWidth(1.5),
+        },
+        children: [
+          TableRow(
+            decoration: const BoxDecoration(color: Color(0xFF1A1E26)),
+            children: ['م', 'اسم الفرع', 'إجمالي المبيعات (ر.س)', 'عدد الفواتير', 'النسبة من المبيعات']
+                .map((h) => Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      child: Text(h,
+                          style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF8A92A3))),
+                    ))
+                .toList(),
+          ),
+          ...byBranch.asMap().entries.map((entry) {
+            final idx = entry.key + 1;
+            final b = entry.value;
+            final bName = b['branch_name'] as String? ?? '—';
+            final bTotal = (b['total_sales'] as num?)?.toDouble() ?? 0.0;
+            final bCount = (b['invoices_count'] as num?)?.toInt() ?? 0;
+            final bPct = _salesTotal > 0 ? (bTotal / _salesTotal * 100).toStringAsFixed(1) : '0.0';
+
+            return TableRow(
+              decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: Color(0xFF1E2430)))),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: Text('$idx',
+                      style: GoogleFonts.spaceGrotesk(
+                          fontSize: 12, color: const Color(0xFF8A92A3))),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: Text(bName,
+                      style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: Text(_money.format(bTotal),
+                      style: GoogleFonts.spaceGrotesk(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFFFAA00))),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: Text('$bCount فاتورة',
+                      style: GoogleFonts.spaceGrotesk(
+                          fontSize: 12, color: const Color(0xFF60A0FF))),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: Text('$bPct%',
+                      style: GoogleFonts.spaceGrotesk(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.tertiary)),
+                ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
   // ── EXPORT EXCEL ────────────────────────────────────────────────────────────
   Future<void> _exportExcel() async {
     try {
+      final byBranchList = (_salesSummary['by_branch'] as List?)
+          ?.cast<Map<String, dynamic>>();
+
       final path = await ComprehensiveReportsExcelService.exportFinancialReport(
         reportData: _reportData,
         actualSalaries: _actualSalaries,
@@ -996,6 +1228,7 @@ class _ComprehensiveReportsScreenState
         endDate: _range.end,
         branchName: _selectedBranchName,
         warehouseOrders: _warehouseOrders,
+        byBranchSales: byBranchList,
       );
 
       if (!mounted) return;

@@ -462,33 +462,36 @@ class _SalariesScreenState extends State<SalariesScreen> {
                               final dt   = DateTime.tryParse(h['changed_at'] as String? ?? '');
                               final eff  = DateTime.tryParse(h['effective_date'] as String? ?? '');
                               final isIncrease = newB > old;
-                              return ListTile(
-                                dense: true,
-                                leading: Icon(
-                                  isIncrease ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                                  color: isIncrease ? AppColors.tertiary : const Color(0xFFFF6B6B),
-                                  size: 20,
-                                ),
-                                title: Text(
-                                  '${_money.format(old)} ← ${_money.format(newB)}',
-                                  style: GoogleFonts.spaceGrotesk(
-                                      fontSize: 13,
-                                      color: isIncrease ? AppColors.tertiary : const Color(0xFFFF6B6B),
-                                      fontWeight: FontWeight.w600),
-                                ),
-                                subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                  Text(h['change_reason'] as String? ?? '—',
-                                      style: GoogleFonts.ibmPlexSansArabic(
-                                          fontSize: 11, color: Colors.white)),
-                                  Text(
-                                    (dt != null ? DateFormat('dd/MM/yyyy HH:mm').format(dt.toLocal()) : '') +
-                                        (eff != null ? '  —  يبدأ: ${DateFormat('dd/MM/yyyy').format(eff)}' : ''),
-                                    style: GoogleFonts.spaceGrotesk(
-                                        fontSize: 10, color: const Color(0xFF8A92A3)),
+                              return Material(
+                                color: Colors.transparent,
+                                child: ListTile(
+                                  dense: true,
+                                  leading: Icon(
+                                    isIncrease ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                                    color: isIncrease ? AppColors.tertiary : const Color(0xFFFF6B6B),
+                                    size: 20,
                                   ),
-                                ]),
+                                  title: Text(
+                                    '${_money.format(old)} ← ${_money.format(newB)}',
+                                    style: GoogleFonts.spaceGrotesk(
+                                        fontSize: 13,
+                                        color: isIncrease ? AppColors.tertiary : const Color(0xFFFF6B6B),
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                  subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                    Text(h['change_reason'] as String? ?? '—',
+                                        style: GoogleFonts.ibmPlexSansArabic(
+                                            fontSize: 11, color: Colors.white)),
+                                    Text(
+                                      (dt != null ? DateFormat('dd/MM/yyyy HH:mm').format(dt.toLocal()) : '') +
+                                          (eff != null ? '  —  يبدأ: ${DateFormat('dd/MM/yyyy').format(eff)}' : ''),
+                                      style: GoogleFonts.spaceGrotesk(
+                                          fontSize: 10, color: const Color(0xFF8A92A3)),
+                                    ),
+                                  ]),
+                                ),
                               );
                             },
                           ),

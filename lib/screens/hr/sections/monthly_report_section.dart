@@ -368,11 +368,14 @@ class _MonthlyReportSectionState extends State<MonthlyReportSection> {
               final branch = branches[i];
               final count =
                   _comprehensiveEntries.where((e) => e.branchName == branch).length;
-              return ListTile(
-                leading: const Icon(Icons.store_outlined, color: AppColors.primary),
-                title: Text(branch),
-                subtitle: Text('$count موظف'),
-                onTap: () => Navigator.pop(ctx, branch),
+              return Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  leading: const Icon(Icons.store_outlined, color: AppColors.primary),
+                  title: Text(branch),
+                  subtitle: Text('$count موظف'),
+                  onTap: () => Navigator.pop(ctx, branch),
+                ),
               );
             },
           ),

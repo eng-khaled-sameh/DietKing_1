@@ -3,6 +3,8 @@ import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../data/hr/models/deduction_bonus_model.dart';
+import '../../../data/hr/models/leave_request_model.dart';
 import '../../../data/hr/models/report_models.dart';
 
 /// ═══════════════════════════════════════════════════════════════
@@ -327,6 +329,809 @@ class HrExcelExportService {
     final fn =
         'DietKing_فرع_${cleanBranch}_${_df.format(startDate)}_${_df.format(endDate)}.xlsx';
     return _save(bytes, fn);
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // 6 — تصدير تقرير الخصومات والإضافات لجميع الفروع (مرتّب فرع فرع)
+  // ════════════════════════════════════════════════════════════════
+  static Future<String?> exportDeductionsAndBonusesGroupedByBranch({
+    required List<DeductionBonusRequest> requests,
+    String? branchFilter,
+  }) async {
+    if (requests.isEmpty) return null;
+
+    final excel = Excel.createExcel();
+    const mainSheetName = 'الخصومات والإضافات — بالفروع';
+    final sh = excel[mainSheetName];
+    excel.setDefaultSheet(mainSheetName);
+    if (excel.sheets.containsKey('Sheet1')) excel.delete('Sheet1');
+
+    sh.isRTL = true;
+
+    // أعمدة التقرير: 13 عموداً
+    const List<double> colWidths = [
+      6,  // A - م
+      12, // B - كود الموظف
+      22, // C - اسم الموظف
+      16, // D - المسمى الوظيفي
+      16, // E - الفرع
+      12, // F - النوع
+      14, // G - طريقة الاحتساب
+      14, // H - القيمة المطلوبة
+      16, // I - المبلغ المعتمد (ر.س)
+      14, // J - الحالة
+      28, // K - السبب / البيان
+      14, // L - تاريخ الطلب
+      14, // M - جهة التقديم
+    ];
+    for (int c = 0; c < colWidths.length; c++) {
+      sh.setColumnWidth(c, colWidths[c]);
+    }
+
+    final now = DateTime.now();
+    int row = 0;
+
+    // ── ترويسة رئيسية ──
+    _setMergedCell(
+      sh,
+      col: 0,
+      row: row,
+      toCol: 12,
+      value: 'نظام دايت كنج — إدارة الموارد البشرية | تقرير الخصومات والإضافات',
+      bold: true,
+      fontSize: 16,
+      fgHex: _cHeaderFg,
+      bgHex: _cHeaderBg,
+      hAlign: HorizontalAlign.Center,
+      vAlign: VerticalAlign.Center,
+      rowHeight: 32,
+    );
+    row++;
+
+    // ── ترويسة فرعية ──
+    _setMergedCell(
+      sh,
+      col: 0,
+      row: row,
+      toCol: 12,
+      value:
+          'تقرير شامل لكافة الفروع (مرتّب فرع فرع)     |     '
+          'تاريخ الاستخراج: ${_df.format(now)}',
+      bold: true,
+      fontSize: 11,
+      fgHex: _cHeaderFg,
+      bgHex: _cSubHeaderBg,
+      hAlign: HorizontalAlign.Center,
+      rowHeight: 24,
+    );
+    row++;
+
+    // حساب الإحصائيات العامة
+    final dedCount = requests.where((r) => r.type == 'deduction').length;
+    final bonusCount = requests.where((r) => r.type == 'bonus').length;
+    final totalApprovedDed = requests
+        .where((r) => r.type == 'deduction' && r.status == 'approved')
+        .fold<double>(0.0, (sum, r) => sum + (r.finalCashAmount ?? r.cashAmount ?? 0.0));
+    final totalApprovedBonus = requests
+        .where((r) => r.type == 'bonus' && r.status == 'approved')
+        .fold<double>(0.0, (sum, r) => sum + (r.finalCashAmount ?? r.cashAmount ?? 0.0));
+    final netImpact = totalApprovedBonus - totalApprovedDed;
+
+    // ── شريط الإحصائيات ──
+    _setMergedCell(
+      sh,
+      col: 0,
+      row: row,
+      toCol: 12,
+      value:
+          'إجمالي الطلبات: ${requests.length}     |     '
+          'خصومات: $dedCount طلب (${_money.format(totalApprovedDed)} ر.س معتمد)     |     '
+          'مكافآت: $bonusCount طلب (${_money.format(totalApprovedBonus)} ر.س معتمد)     |     '
+          'صافي الأثر المالي: ${_money.format(netImpact)} ر.س',
+      bold: true,
+      fontSize: 11,
+      fgHex: '#1B365D',
+      bgHex: _cSectionBg,
+      hAlign: HorizontalAlign.Center,
+      rowHeight: 24,
+    );
+    row++;
+    _rowHeight(sh, row, 8);
+    row++;
+
+    // تجميع بالفرع
+    final Map<String, List<DeductionBonusRequest>> grouped = {};
+    for (final r in requests) {
+      final bName = (r.branchName != null && r.branchName!.trim().isNotEmpty)
+          ? r.branchName!.trim()
+          : 'المركز الرئيسي';
+      grouped.putIfAbsent(bName, () => []).add(r);
+    }
+
+    final sortedBranches = grouped.keys.toList()
+      ..sort((a, b) {
+        if (a == 'المركز الرئيسي') return 1;
+        if (b == 'المركز الرئيسي') return -1;
+        return a.compareTo(b);
+      });
+
+    final Set<String> existingSheetNames = {mainSheetName};
+    int globalIndex = 1;
+
+    for (final bName in sortedBranches) {
+      final bRequests = grouped[bName]!;
+
+      // 1) كتابة الفرع في الشيت الرئيسي
+      _rowHeight(sh, row, 8);
+      row++;
+      _setMergedCell(
+        sh,
+        col: 0,
+        row: row,
+        toCol: 12,
+        value: '▶  فرع: $bName  —  عدد الطلبات: ${bRequests.length}',
+        bold: true,
+        fontSize: 13,
+        fgHex: _cHeaderFg,
+        bgHex: _cSubHeaderBg,
+        hAlign: HorizontalAlign.Right,
+        rowHeight: 26,
+      );
+      row++;
+
+      // رؤوس الأعمدة
+      row = _writeDeductTableHeaders(sh, row);
+
+      // سطور البيانات
+      row = _writeDeductRows(sh, row, bRequests, startIndex: globalIndex);
+      globalIndex += bRequests.length;
+
+      // إجمالي الفرع
+      row = _writeDeductTotalsRow(sh, row, bRequests, title: 'إجمالي فرع $bName');
+      _rowHeight(sh, row, 10);
+      row++;
+
+      // 2) شيت فرعي خاص بالفرع
+      final bSheetName = _sanitizeSheetName('خصومات_$bName', existingSheetNames);
+      final bSh = excel[bSheetName];
+      bSh.isRTL = true;
+      for (int c = 0; c < colWidths.length; c++) {
+        bSh.setColumnWidth(c, colWidths[c]);
+      }
+      int bRow = 0;
+      _setMergedCell(
+        bSh,
+        col: 0,
+        row: bRow,
+        toCol: 12,
+        value: 'نظام دايت كنج — كشف الخصومات والإضافات لفرع: $bName',
+        bold: true,
+        fontSize: 15,
+        fgHex: _cHeaderFg,
+        bgHex: _cHeaderBg,
+        hAlign: HorizontalAlign.Center,
+        vAlign: VerticalAlign.Center,
+        rowHeight: 30,
+      );
+      bRow++;
+      _setMergedCell(
+        bSh,
+        col: 0,
+        row: bRow,
+        toCol: 12,
+        value: 'عدد الطلبات: ${bRequests.length}     |     تاريخ الاستخراج: ${_df.format(now)}',
+        bold: true,
+        fontSize: 11,
+        fgHex: _cHeaderFg,
+        bgHex: _cSubHeaderBg,
+        hAlign: HorizontalAlign.Center,
+        rowHeight: 22,
+      );
+      bRow++;
+      _rowHeight(bSh, bRow, 6);
+      bRow++;
+      bRow = _writeDeductTableHeaders(bSh, bRow);
+      bRow = _writeDeductRows(bSh, bRow, bRequests, startIndex: 1);
+      _writeDeductTotalsRow(bSh, bRow, bRequests, title: 'إجمالي فرع $bName');
+    }
+
+    // الإجمالي العام لكافة الفروع في الشيت الرئيسي
+    if (sortedBranches.length > 1) {
+      _writeDeductTotalsRow(sh, row, requests, title: 'الإجمالي العام لكافة الفروع');
+    }
+
+    final bytes = excel.encode();
+    if (bytes == null) return null;
+    final fn = 'DietKing_الخصومات_والإضافات_بالفروع_${_df.format(now)}.xlsx';
+    return _save(bytes, fn);
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // 7 — تصدير تقرير الإجازات لجميع الفروع (مرتّب فرع فرع)
+  // ════════════════════════════════════════════════════════════════
+  static Future<String?> exportLeaveRequestsGroupedByBranch({
+    required List<LeaveRequest> requests,
+    String? branchFilter,
+  }) async {
+    if (requests.isEmpty) return null;
+
+    final excel = Excel.createExcel();
+    const mainSheetName = 'طلبات الإجازات — بالفروع';
+    final sh = excel[mainSheetName];
+    excel.setDefaultSheet(mainSheetName);
+    if (excel.sheets.containsKey('Sheet1')) excel.delete('Sheet1');
+
+    sh.isRTL = true;
+
+    // أعمدة تقرير الإجازات: 14 عموداً
+    const List<double> colWidths = [
+      6,  // A - م
+      12, // B - كود الموظف
+      22, // C - اسم الموظف
+      16, // D - المسمى الوظيفي
+      16, // E - الفرع
+      14, // F - من تاريخ
+      14, // G - إلى تاريخ
+      12, // H - عدد الأيام
+      20, // I - نوع الإجازة
+      14, // J - الحالة
+      28, // K - سبب الإجازة
+      22, // L - ملاحظات القرار
+      14, // M - تاريخ التقديم
+      14, // N - جهة التقديم
+    ];
+    for (int c = 0; c < colWidths.length; c++) {
+      sh.setColumnWidth(c, colWidths[c]);
+    }
+
+    final now = DateTime.now();
+    int row = 0;
+
+    // ── ترويسة رئيسية ──
+    _setMergedCell(
+      sh,
+      col: 0,
+      row: row,
+      toCol: 13,
+      value: 'نظام دايت كنج — إدارة الموارد البشرية | تقرير طلبات الإجازات',
+      bold: true,
+      fontSize: 16,
+      fgHex: '#FFFFFF',
+      bgHex: '#0F766E', // Teal داكن
+      hAlign: HorizontalAlign.Center,
+      vAlign: VerticalAlign.Center,
+      rowHeight: 32,
+    );
+    row++;
+
+    // ── ترويسة فرعية ──
+    _setMergedCell(
+      sh,
+      col: 0,
+      row: row,
+      toCol: 13,
+      value:
+          'تقرير شامل لكافة الفروع (مرتّب فرع فرع)     |     '
+          'تاريخ الاستخراج: ${_df.format(now)}',
+      bold: true,
+      fontSize: 11,
+      fgHex: '#FFFFFF',
+      bgHex: '#14B8A6',
+      hAlign: HorizontalAlign.Center,
+      rowHeight: 24,
+    );
+    row++;
+
+    // حساب الإحصائيات
+    final totalDays = requests.fold<int>(0, (sum, r) => sum + r.daysCount);
+    final approvedReqs = requests.where((r) => r.status == 'approved').toList();
+    final approvedDays = approvedReqs.fold<int>(0, (sum, r) => sum + r.daysCount);
+    final withDedDays = approvedReqs
+        .where((r) => r.decisionType == 'with_deduction' || !r.isPaid)
+        .fold<int>(0, (sum, r) => sum + r.daysCount);
+    final paidDays = approvedDays - withDedDays;
+
+    _setMergedCell(
+      sh,
+      col: 0,
+      row: row,
+      toCol: 13,
+      value:
+          'إجمالي الطلبات: ${requests.length}     |     '
+          'إجمالي الأيام: $totalDays يوم     |     '
+          'معتمدة: ${approvedReqs.length} طلب ($approvedDays يوم)     |     '
+          'مدفوعة: $paidDays يوم     |     '
+          'بخصم من الراتب: $withDedDays يوم',
+      bold: true,
+      fontSize: 11,
+      fgHex: '#0F766E',
+      bgHex: '#CCFBF1',
+      hAlign: HorizontalAlign.Center,
+      rowHeight: 24,
+    );
+    row++;
+    _rowHeight(sh, row, 8);
+    row++;
+
+    // تجميع بالفرع
+    final Map<String, List<LeaveRequest>> grouped = {};
+    for (final r in requests) {
+      final bName = (r.branchName != null && r.branchName!.trim().isNotEmpty)
+          ? r.branchName!.trim()
+          : 'المركز الرئيسي';
+      grouped.putIfAbsent(bName, () => []).add(r);
+    }
+
+    final sortedBranches = grouped.keys.toList()
+      ..sort((a, b) {
+        if (a == 'المركز الرئيسي') return 1;
+        if (b == 'المركز الرئيسي') return -1;
+        return a.compareTo(b);
+      });
+
+    final Set<String> existingSheetNames = {mainSheetName};
+    int globalIndex = 1;
+
+    for (final bName in sortedBranches) {
+      final bRequests = grouped[bName]!;
+      final bDays = bRequests.fold<int>(0, (sum, r) => sum + r.daysCount);
+
+      // 1) كتابة الفرع في الشيت الرئيسي
+      _rowHeight(sh, row, 8);
+      row++;
+      _setMergedCell(
+        sh,
+        col: 0,
+        row: row,
+        toCol: 13,
+        value: '▶  فرع: $bName  —  عدد طلبات الإجازة: ${bRequests.length} ($bDays يوم)',
+        bold: true,
+        fontSize: 13,
+        fgHex: '#FFFFFF',
+        bgHex: '#0F766E',
+        hAlign: HorizontalAlign.Right,
+        rowHeight: 26,
+      );
+      row++;
+
+      // رؤوس الأعمدة
+      row = _writeLeaveTableHeaders(sh, row);
+
+      // سطور البيانات
+      row = _writeLeaveRows(sh, row, bRequests, startIndex: globalIndex);
+      globalIndex += bRequests.length;
+
+      // إجمالي الفرع
+      row = _writeLeaveTotalsRow(sh, row, bRequests, title: 'إجمالي فرع $bName');
+      _rowHeight(sh, row, 10);
+      row++;
+
+      // 2) شيت فرعي خاص بالفرع
+      final bSheetName = _sanitizeSheetName('إجازات_$bName', existingSheetNames);
+      final bSh = excel[bSheetName];
+      bSh.isRTL = true;
+      for (int c = 0; c < colWidths.length; c++) {
+        bSh.setColumnWidth(c, colWidths[c]);
+      }
+      int bRow = 0;
+      _setMergedCell(
+        bSh,
+        col: 0,
+        row: bRow,
+        toCol: 13,
+        value: 'نظام دايت كنج — كشف طلبات الإجازات لفرع: $bName',
+        bold: true,
+        fontSize: 15,
+        fgHex: '#FFFFFF',
+        bgHex: '#0F766E',
+        hAlign: HorizontalAlign.Center,
+        vAlign: VerticalAlign.Center,
+        rowHeight: 30,
+      );
+      bRow++;
+      _setMergedCell(
+        bSh,
+        col: 0,
+        row: bRow,
+        toCol: 13,
+        value: 'عدد الطلبات: ${bRequests.length} ($bDays يوم)     |     تاريخ الاستخراج: ${_df.format(now)}',
+        bold: true,
+        fontSize: 11,
+        fgHex: '#FFFFFF',
+        bgHex: '#14B8A6',
+        hAlign: HorizontalAlign.Center,
+        rowHeight: 22,
+      );
+      bRow++;
+      _rowHeight(bSh, bRow, 6);
+      bRow++;
+      bRow = _writeLeaveTableHeaders(bSh, bRow);
+      bRow = _writeLeaveRows(bSh, bRow, bRequests, startIndex: 1);
+      _writeLeaveTotalsRow(bSh, bRow, bRequests, title: 'إجمالي فرع $bName');
+    }
+
+    // الإجمالي العام لكافة الفروع في الشيت الرئيسي
+    if (sortedBranches.length > 1) {
+      _writeLeaveTotalsRow(sh, row, requests, title: 'الإجمالي العام لكافة الفروع');
+    }
+
+    final bytes = excel.encode();
+    if (bytes == null) return null;
+    final fn = 'DietKing_طلبات_الإجازات_بالفروع_${_df.format(now)}.xlsx';
+    return _save(bytes, fn);
+  }
+
+  // ─── دوال مساعدة لتقرير الخصومات والإضافات ───
+  static int _writeDeductTableHeaders(Sheet sh, int row) {
+    _rowHeight(sh, row, 22);
+    const headers = [
+      'م',
+      'كود الموظف',
+      'اسم الموظف',
+      'المسمى الوظيفي',
+      'الفرع',
+      'النوع',
+      'طريقة الاحتساب',
+      'القيمة المطلوبة',
+      'المبلغ المعتمد (ر.س)',
+      'الحالة',
+      'السبب / البيان',
+      'تاريخ الطلب',
+      'جهة التقديم',
+    ];
+    for (int c = 0; c < headers.length; c++) {
+      _styleCell(
+        sh,
+        col: c,
+        row: row,
+        value: headers[c],
+        bold: true,
+        fontSize: 10,
+        fgHex: _cHeaderFg,
+        bgHex: _cHeaderBg,
+        hAlign: HorizontalAlign.Center,
+        border: true,
+      );
+    }
+    return row + 1;
+  }
+
+  static int _writeDeductRows(
+    Sheet sh,
+    int row,
+    List<DeductionBonusRequest> requests, {
+    required int startIndex,
+  }) {
+    int curIdx = startIndex;
+    for (int i = 0; i < requests.length; i++) {
+      final r = requests[i];
+      final isAlt = i.isOdd;
+      final bg = isAlt ? _cAltRow : '#FFFFFF';
+      _rowHeight(sh, row, 20);
+
+      final isDed = r.type == 'deduction';
+      final typeLabel = isDed ? 'خصم' : 'مكافأة';
+      final amountTypeLabel = r.amountType == 'cash' ? 'مبلغ نقدي' : 'أيام';
+      final amountVal = r.amountType == 'cash'
+          ? '${_money.format(r.cashAmount ?? 0)} ر.س'
+          : '${r.daysAmount ?? 0} يوم';
+      final finalAmt = r.finalCashAmount != null
+          ? _money.format(r.finalCashAmount)
+          : (r.cashAmount != null ? _money.format(r.cashAmount) : '—');
+      final dateStr = _df.format(r.createdAt);
+
+      final cells = [
+        '$curIdx',
+        r.employeeCode.isNotEmpty ? r.employeeCode : '—',
+        r.employeeName,
+        r.jobRole.isNotEmpty ? r.jobRole : '—',
+        r.branchName ?? 'المركز الرئيسي',
+        typeLabel,
+        amountTypeLabel,
+        amountVal,
+        finalAmt,
+        r.statusLabel,
+        r.notes.isNotEmpty ? r.notes : '—',
+        dateStr,
+        r.requestedFrom.isNotEmpty ? r.requestedFrom : '—',
+      ];
+
+      for (int c = 0; c < cells.length; c++) {
+        String cellBg = bg;
+        String cellFg = '#212529';
+        bool cellBold = false;
+
+        if (c == 5) {
+          cellBg = isDed ? '#FEE2E2' : '#DCFCE7';
+          cellFg = isDed ? '#991B1B' : '#166534';
+          cellBold = true;
+        } else if (c == 8) {
+          cellBold = true;
+          cellFg = isDed ? '#B91C1C' : '#047857';
+        } else if (c == 9) {
+          if (r.status == 'approved') {
+            cellBg = '#D1FAE5';
+            cellFg = '#065F46';
+          } else if (r.status == 'rejected') {
+            cellBg = '#FEE2E2';
+            cellFg = '#991B1B';
+          } else {
+            cellBg = '#FEF3C7';
+            cellFg = '#92400E';
+          }
+          cellBold = true;
+        }
+
+        _styleCell(
+          sh,
+          col: c,
+          row: row,
+          value: cells[c],
+          bold: cellBold,
+          fontSize: 10,
+          fgHex: cellFg,
+          bgHex: cellBg,
+          hAlign: c == 2 || c == 10 ? HorizontalAlign.Right : HorizontalAlign.Center,
+          border: true,
+        );
+      }
+      row++;
+      curIdx++;
+    }
+    return row;
+  }
+
+  static int _writeDeductTotalsRow(
+    Sheet sh,
+    int row,
+    List<DeductionBonusRequest> requests, {
+    required String title,
+  }) {
+    _rowHeight(sh, row, 22);
+    final dedCount = requests.where((r) => r.type == 'deduction').length;
+    final bonusCount = requests.where((r) => r.type == 'bonus').length;
+    final totalDedAmt = requests
+        .where((r) => r.type == 'deduction' && r.status == 'approved')
+        .fold<double>(0.0, (sum, r) => sum + (r.finalCashAmount ?? r.cashAmount ?? 0.0));
+    final totalBonusAmt = requests
+        .where((r) => r.type == 'bonus' && r.status == 'approved')
+        .fold<double>(0.0, (sum, r) => sum + (r.finalCashAmount ?? r.cashAmount ?? 0.0));
+    final netImpact = totalBonusAmt - totalDedAmt;
+
+    _setMergedCell(
+      sh,
+      col: 0,
+      row: row,
+      toCol: 7,
+      value: 'Σ  $title (${requests.length} طلب | خصومات: $dedCount | مكافآت: $bonusCount)',
+      bold: true,
+      fontSize: 11,
+      fgHex: _cTotalFg,
+      bgHex: _cTotalBg,
+      hAlign: HorizontalAlign.Right,
+      border: true,
+    );
+
+    _styleCell(
+      sh,
+      col: 8,
+      row: row,
+      value: _money.format(totalDedAmt + totalBonusAmt),
+      bold: true,
+      fontSize: 11,
+      fgHex: _cTotalFg,
+      bgHex: _cTotalBg,
+      hAlign: HorizontalAlign.Center,
+      border: true,
+    );
+
+    _setMergedCell(
+      sh,
+      col: 9,
+      row: row,
+      toCol: 12,
+      value:
+          'إجمالي الخصم: ${_money.format(totalDedAmt)}  |  '
+          'إجمالي المكافأة: ${_money.format(totalBonusAmt)}  |  '
+          'الصافي: ${_money.format(netImpact)} ر.س',
+      bold: true,
+      fontSize: 10,
+      fgHex: _cTotalFg,
+      bgHex: _cTotalBg,
+      hAlign: HorizontalAlign.Center,
+      border: true,
+    );
+
+    return row + 1;
+  }
+
+  // ─── دوال مساعدة لتقرير الإجازات ───
+  static int _writeLeaveTableHeaders(Sheet sh, int row) {
+    _rowHeight(sh, row, 22);
+    const headers = [
+      'م',
+      'كود الموظف',
+      'اسم الموظف',
+      'المسمى الوظيفي',
+      'الفرع',
+      'من تاريخ',
+      'إلى تاريخ',
+      'عدد الأيام',
+      'نوع الإجازة',
+      'الحالة',
+      'سبب الإجازة',
+      'ملاحظات القرار',
+      'تاريخ التقديم',
+      'جهة التقديم',
+    ];
+    for (int c = 0; c < headers.length; c++) {
+      _styleCell(
+        sh,
+        col: c,
+        row: row,
+        value: headers[c],
+        bold: true,
+        fontSize: 10,
+        fgHex: '#FFFFFF',
+        bgHex: '#0F766E',
+        hAlign: HorizontalAlign.Center,
+        border: true,
+      );
+    }
+    return row + 1;
+  }
+
+  static int _writeLeaveRows(
+    Sheet sh,
+    int row,
+    List<LeaveRequest> requests, {
+    required int startIndex,
+  }) {
+    int curIdx = startIndex;
+    for (int i = 0; i < requests.length; i++) {
+      final r = requests[i];
+      final isAlt = i.isOdd;
+      final bg = isAlt ? _cAltRow : '#FFFFFF';
+      _rowHeight(sh, row, 20);
+
+      final isWithDed = r.decisionType == 'with_deduction' || !r.isPaid;
+      final cells = [
+        '$curIdx',
+        r.employeeCode.isNotEmpty ? r.employeeCode : '—',
+        r.employeeName,
+        r.jobRole.isNotEmpty ? r.jobRole : '—',
+        r.branchName ?? 'المركز الرئيسي',
+        _df.format(r.startDate),
+        _df.format(r.endDate),
+        '${r.daysCount} يوم',
+        r.decisionTypeLabel,
+        r.statusLabel,
+        r.reason.isNotEmpty ? r.reason : '—',
+        r.decisionNotes ?? '—',
+        _df.format(r.createdAt),
+        r.requestedFrom.isNotEmpty ? r.requestedFrom : '—',
+      ];
+
+      for (int c = 0; c < cells.length; c++) {
+        String cellBg = bg;
+        String cellFg = '#212529';
+        bool cellBold = false;
+
+        if (c == 7) {
+          cellBold = true;
+        } else if (c == 8) {
+          cellBg = isWithDed ? '#FEE2E2' : '#DCFCE7';
+          cellFg = isWithDed ? '#991B1B' : '#166534';
+          cellBold = true;
+        } else if (c == 9) {
+          if (r.status == 'approved') {
+            cellBg = '#D1FAE5';
+            cellFg = '#065F46';
+          } else if (r.status == 'rejected') {
+            cellBg = '#FEE2E2';
+            cellFg = '#991B1B';
+          } else {
+            cellBg = '#FEF3C7';
+            cellFg = '#92400E';
+          }
+          cellBold = true;
+        }
+
+        _styleCell(
+          sh,
+          col: c,
+          row: row,
+          value: cells[c],
+          bold: cellBold,
+          fontSize: 10,
+          fgHex: cellFg,
+          bgHex: cellBg,
+          hAlign: c == 2 || c == 10 || c == 11
+              ? HorizontalAlign.Right
+              : HorizontalAlign.Center,
+          border: true,
+        );
+      }
+      row++;
+      curIdx++;
+    }
+    return row;
+  }
+
+  static int _writeLeaveTotalsRow(
+    Sheet sh,
+    int row,
+    List<LeaveRequest> requests, {
+    required String title,
+  }) {
+    _rowHeight(sh, row, 22);
+    final totalDays = requests.fold<int>(0, (sum, r) => sum + r.daysCount);
+    final approvedReqs = requests.where((r) => r.status == 'approved').toList();
+    final approvedDays = approvedReqs.fold<int>(0, (sum, r) => sum + r.daysCount);
+    final withDedDays = approvedReqs
+        .where((r) => r.decisionType == 'with_deduction' || !r.isPaid)
+        .fold<int>(0, (sum, r) => sum + r.daysCount);
+    final paidDays = approvedDays - withDedDays;
+
+    _setMergedCell(
+      sh,
+      col: 0,
+      row: row,
+      toCol: 6,
+      value: 'Σ  $title (${requests.length} طلب إجازة)',
+      bold: true,
+      fontSize: 11,
+      fgHex: _cTotalFg,
+      bgHex: _cTotalBg,
+      hAlign: HorizontalAlign.Right,
+      border: true,
+    );
+
+    _styleCell(
+      sh,
+      col: 7,
+      row: row,
+      value: '$totalDays يوم',
+      bold: true,
+      fontSize: 11,
+      fgHex: _cTotalFg,
+      bgHex: _cTotalBg,
+      hAlign: HorizontalAlign.Center,
+      border: true,
+    );
+
+    _setMergedCell(
+      sh,
+      col: 8,
+      row: row,
+      toCol: 13,
+      value:
+          'المعتمدة: ${approvedReqs.length} طلب ($approvedDays يوم)  |  '
+          'إجازات مدفوعة: $paidDays يوم  |  '
+          'إجازات بخصم: $withDedDays يوم',
+      bold: true,
+      fontSize: 10,
+      fgHex: _cTotalFg,
+      bgHex: _cTotalBg,
+      hAlign: HorizontalAlign.Center,
+      border: true,
+    );
+
+    return row + 1;
+  }
+
+  static String _sanitizeSheetName(String name, Set<String> existingSheets) {
+    String clean = name.replaceAll(RegExp(r'[\\/:*?\[\]"]'), '_').trim();
+    if (clean.isEmpty) clean = 'فرع';
+    if (clean.length > 25) clean = clean.substring(0, 25);
+    String candidate = clean;
+    int counter = 2;
+    while (existingSheets.contains(candidate)) {
+      candidate = '${clean}_$counter';
+      counter++;
+    }
+    existingSheets.add(candidate);
+    return candidate;
   }
 
   // ─── ترويسة الفرع في التقرير المجمّع ────────────────────────

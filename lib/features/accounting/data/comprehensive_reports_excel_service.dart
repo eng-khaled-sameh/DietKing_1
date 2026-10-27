@@ -33,9 +33,11 @@ class ComprehensiveReportsExcelService {
     required DateTime endDate,
     String? branchName,
     List<Map<String, dynamic>>? warehouseOrders,
+    List<Map<String, dynamic>>? byBranchSales,
   }) async {
     final excel = Excel.createExcel();
-    const sheetName = 'التقرير المالي الشامل';
+    final isCompany = branchName == null || branchName.contains('جميع الفروع') || branchName.contains('الشركة');
+    final sheetName = isCompany ? 'تقرير الشركة الشامل' : 'تقرير أداء الفرع';
     final sh = excel[sheetName];
     excel.setDefaultSheet(sheetName);
     if (excel.sheets.containsKey('Sheet1')) {
@@ -57,7 +59,6 @@ class ComprehensiveReportsExcelService {
 
     final salesTotal = (sales['total'] as num?)?.toDouble() ?? 0.0;
     final expTotal = (expenses['total'] as num?)?.toDouble() ?? 0.0;
-    final isCompany = branchName == null || branchName.contains('جميع الفروع') || branchName.contains('الشركة');
     final suppliesCost = isCompany
         ? ((purchases['total'] as num?)?.toDouble() ?? 0.0)
         : ((bo['total'] as num?)?.toDouble() ?? 0.0);
@@ -70,12 +71,15 @@ class ComprehensiveReportsExcelService {
     int row = 0;
 
     // ── 1. ترويسة التقرير ──────────────────────────────────────────
+    final bannerTitle = isCompany
+        ? 'شركة دايت كينج — التقرير المالي والإداري الشامل للشركة كاملة'
+        : 'شركة دايت كينج — تقرير الأداء المالي لفرع $branchName';
     _setMergedCell(
       sh,
       col: 0,
       row: row,
       toCol: 6,
-      text: 'DietKing — التقرير المالي والإداري الشامل للأرباح والخسائر',
+      text: bannerTitle,
       fontSize: 16,
       bold: true,
       bgHex: _cHeaderBg,
@@ -89,7 +93,7 @@ class ComprehensiveReportsExcelService {
       col: 0,
       row: row,
       toCol: 6,
-      text: 'الجهة: ${branchName ?? "الشركة كاملة (جميع الفروع)"}  |  الفترة: من ${_df.format(startDate)} إلى ${_df.format(endDate)}  |  تاريخ الاستخراج: ${_df.format(DateTime.now())}',
+      text: 'الجهة: ${branchName ?? "الشركة كاملة (جميع الفروع والمستودع)"}  |  الفترة: من ${_df.format(startDate)} إلى ${_df.format(endDate)}  |  تاريخ الاستخراج: ${_df.format(DateTime.now())}',
       fontSize: 11,
       bgHex: _cSubHeaderBg,
       fgHex: _cHeaderFg,
@@ -105,7 +109,7 @@ class ComprehensiveReportsExcelService {
       row: row,
       toCol: 6,
       text: isProfit
-          ? 'صافي أرباح الفترة: ${_money.format(netProfit)} ر.س'
+          ? 'صافي أرباح الفترة المحققة: ${_money.format(netProfit)} ر.س'
           : 'صافي خسائر الفترة: ${_money.format(netProfit.abs())} ر.س',
       fontSize: 15,
       bold: true,
@@ -142,7 +146,7 @@ class ComprehensiveReportsExcelService {
 
     final pnlRows = [
       (
-        'إجمالي المبيعات المحققة',
+        isCompany ? 'مبيعات جميع الفروع الإجمالية' : 'مبيعات الفرع الإجمالية المحققة',
         salesTotal,
         '100.0%',
         'مبيعات الوجبات والطلبات المكتملة'
@@ -151,25 +155,25 @@ class ComprehensiveReportsExcelService {
         'فائض تقفيل الكاشيرات (+)',
         surplus,
         salesTotal > 0 ? '${(surplus / salesTotal * 100).toStringAsFixed(1)}%' : '0%',
-        'مبالغ نقدية زائدة عند إغلاق الشفتات'
+        'مبالغ نقدية زائدة عند إغلاق الشفتات وتضاف للإيراد'
       ),
       (
-        isCompany ? 'إجمالي المشتريات والتوريدات (-)' : 'طلبيات الفرع من المستودع (-)',
+        isCompany ? 'إجمالي مشتريات المخزون والتوريدات (-)' : 'طلبات الفرع من المخزون كفلوس (-)',
         suppliesCost,
         salesTotal > 0 ? '${(suppliesCost / salesTotal * 100).toStringAsFixed(1)}%' : '0%',
-        isCompany ? 'تكلفة المواد الموردة للمستودع' : 'تكلفة المواد المسحوبة بسعر بدون مكسب'
+        isCompany ? 'تكلفة المواد وطلبات الشراء الموردة للمستودع' : 'المواد والوجبات المسحوبة بسعر التكلفة بدون مكسب'
       ),
       (
-        'إجمالي المصروفات التشغيلية (-)',
+        isCompany ? 'كافة مصروفات الشركة المعتمدة (-)' : 'إجمالي مصروفات الفرع المعتمدة (-)',
         expTotal,
         salesTotal > 0 ? '${(expTotal / salesTotal * 100).toStringAsFixed(1)}%' : '0%',
-        'كافة النثريات والمصروفات المعتمدة'
+        'كافة النثريات وفواتير الصرف المعتمدة'
       ),
       (
-        'رواتب موظفي الفترة (الفعلية) (-)',
+        isCompany ? 'إجمالي رواتب موظفي الشركة (إدخال يدوي) (-)' : 'قيمة رواتب موظفي الفرع (إدخال يدوي) (-)',
         actualSalaries,
         salesTotal > 0 ? '${(actualSalaries / salesTotal * 100).toStringAsFixed(1)}%' : '0%',
-        'القيمة الفعلية الإجمالية المدخلة يدوياً'
+        'القيمة الفعلية الإجمالية المدخلة يدوياً للفترة'
       ),
       (
         'عجز تقفيل الكاشير (للعلم)',
@@ -198,14 +202,73 @@ class ComprehensiveReportsExcelService {
     // صف النتيجة النهائية
     _writeRow(sh, row, [
       '★',
-      'صافي الدخل النهائي (Net Profit)',
+      isProfit ? 'صافي الربح التشغيلي النهائي' : 'صافي الخسارة التشغيلية',
       _money.format(netProfit),
       salesTotal > 0 ? '${(netProfit / salesTotal * 100).toStringAsFixed(1)}%' : '0%',
-      isProfit ? 'أرباح تشغيلية محققة' : 'خسائر تشغيلية خلال الفترة',
+      isProfit ? 'أرباح تشغيلية محققة بعد خصم كافة التكاليف' : 'خسائر تشغيلية خلال الفترة',
       '',
       '',
-    ], bgHex: _cTotalBg, fgHex: _cTotalFg, bold: true);
+    ], bgHex: isProfit ? _cProfitBg : _cLossBg, fgHex: isProfit ? _cProfitFg : _cLossFg, bold: true);
     row += 2;
+
+    // ── إذا كان تقرير الشركة، نعرض جدول مبيعات الفروع ───────────────
+    if (isCompany && byBranchSales != null && byBranchSales.isNotEmpty) {
+      _setMergedCell(
+        sh,
+        col: 0,
+        row: row,
+        toCol: 6,
+        text: '٢. توزيع مبيعات فروع الشركة ومساهمتها',
+        fontSize: 13,
+        bold: true,
+        bgHex: _cHeaderBg,
+        fgHex: _cHeaderFg,
+      );
+      row++;
+
+      _writeRow(sh, row, [
+        'م',
+        'اسم الفرع',
+        'إجمالي المبيعات (ر.س)',
+        'عدد الفواتير',
+        'النسبة من إجمالي مبيعات الشركة',
+        '',
+        '',
+      ], bgHex: _cSubHeaderBg, fgHex: _cHeaderFg, bold: true);
+      row++;
+
+      int bIdx = 1;
+      for (final b in byBranchSales) {
+        final bName = b['branch_name'] as String? ?? '—';
+        final bTot = (b['total_sales'] as num?)?.toDouble() ?? 0.0;
+        final bInv = (b['invoices_count'] as num?)?.toInt() ?? 0;
+        final bPct = salesTotal > 0 ? (bTot / salesTotal * 100).toStringAsFixed(1) : '0.0';
+        final bg = bIdx % 2 == 0 ? _cAltRow : '#FFFFFF';
+
+        _writeRow(sh, row, [
+          '$bIdx',
+          bName,
+          _money.format(bTot),
+          '$bInv فاتورة',
+          '$bPct%',
+          '',
+          '',
+        ], bgHex: bg);
+        row++;
+        bIdx++;
+      }
+
+      _writeRow(sh, row, [
+        'Σ',
+        'إجمالي فروع الشركة',
+        _money.format(salesTotal),
+        '—',
+        '100.0%',
+        '',
+        '',
+      ], bgHex: _cTotalBg, fgHex: _cTotalFg, bold: true);
+      row += 2;
+    }
 
     // ── 4. تفاصيل المبيعات وطرق الدفع ──────────────────────────────
     _setMergedCell(

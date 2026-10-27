@@ -234,7 +234,7 @@ class HrApi {
   Future<List<LeaveRequest>> listLeaveRequests({
     String? status,
     String? branchId,
-    int limit = 50,
+    int limit = 500,
     int offset = 0,
   }) async {
     try {
@@ -298,7 +298,7 @@ class HrApi {
 
   Future<List<DeductionBonusRequest>> listDeductionBonuses({
     String? status,
-    int limit = 50,
+    int limit = 500,
     int offset = 0,
   }) async {
     try {

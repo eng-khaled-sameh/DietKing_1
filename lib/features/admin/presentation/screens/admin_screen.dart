@@ -902,6 +902,8 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
     super.initState();
     _amountController.addListener(() => setState(() {}));
     _vatController.addListener(() => setState(() {}));
+    // مسح أي سجلات مصروفات محلية قديمة مخزنة في SQLite لكي لا تظهر بالخطأ
+    LocalRecordsRepository().clearExpenses();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadExpenses());
   }
 
@@ -920,29 +922,14 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
     final branchId = session.branchId;
     if (branchId == null) return;
 
-    final localExpenses = await LocalRecordsRepository().getByBranch(
-      branchId,
-      'expense',
-    );
-    final expensesByClientId = <String, ExpenseRecord>{
-      for (final record in localExpenses)
-        record.clientId: ExpenseRecord.fromLocalRecord(record),
-    };
-
     try {
       final serverExpenses = await ExpensesRepository().getBranchExpenses(
         branchId,
       );
-      for (final record in serverExpenses) {
-        expensesByClientId[record.clientId] = record;
-      }
+      if (mounted) setState(() => _branchExpenses = serverExpenses);
     } catch (_) {
-      // يبقى السجل المحلي ظاهراً إذا تعذر الوصول إلى الخادم مؤقتاً.
+      if (mounted) setState(() => _branchExpenses = []);
     }
-
-    final expenses = expensesByClientId.values.toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    if (mounted) setState(() => _branchExpenses = expenses);
   }
 
   Future<void> _handleSave() async {
@@ -967,88 +954,79 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
         });
         return;
       }
-      final repo = LocalRecordsRepository();
-      final clientId = generateUuidV4();
-      final localNumber = await repo.nextLocalNumber(
-        session.branchCode.isNotEmpty ? session.branchCode : 'DK',
-      );
-      final now = DateTime.now();
 
-      final payload = {
-        'client_id': clientId,
-        'branch_id': branchId,
-        'session_id': session.sessionId,
-        'local_number': localNumber,
-        'category': _category,
-        'payee': _payeeController.text.trim().isEmpty
-            ? null
-            : _payeeController.text.trim(),
-        'description': _descController.text.trim().isEmpty
-            ? null
-            : _descController.text.trim(),
-        'amount': double.parse(_amount.toStringAsFixed(2)),
-        'vat_amount': double.parse(_vatAmount.toStringAsFixed(2)),
-        'payment_method': _paymentMethod == 'نقدي' ? 'cash' : 'other',
-        'expense_date':
-            '${_expenseDate.year}-${_expenseDate.month.toString().padLeft(2, '0')}-${_expenseDate.day.toString().padLeft(2, '0')}',
-        'notes': _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-      };
-
-      await repo.insert(
-        LocalRecord(
-          kind: 'expense',
-          clientId: clientId,
-          userId: session.userId,
-          branchId: branchId,
-          sessionId: session.sessionId,
-          localNumber: localNumber,
-          paymentMethod: _paymentMethod,
-          total: _total,
-          payload: payload,
-          status: 'pending',
-          createdAt: now,
-        ),
+      // إرسال مباشر وسريع للسيرفر بدون أي تخزين محلي
+      final res = await ExpensesRepository().createExpense(
+        branchId: branchId,
+        branchName: session.branchName.isNotEmpty ? session.branchName : null,
+        branchCode: session.branchCode.isNotEmpty ? session.branchCode : null,
+        sessionId: session.sessionId.isNotEmpty ? session.sessionId : null,
+        category: _category,
+        amount: _amount,
+        vatAmount: _vatAmount,
+        paymentMethod: _paymentMethod,
+        expenseDate: _expenseDate,
+        payee: _payeeController.text,
+        description: _descController.text,
+        notes: _notesController.text,
       );
+
+      final invNum = res['invoice_number'] ?? res['number'] ?? '';
+
+      // تفريغ الحقول بعد النجاح
+      _amountController.clear();
+      _vatController.text = '0';
+      _payeeController.clear();
+      _descController.clear();
+      _notesController.clear();
 
       if (mounted) {
-        await context.read<SyncCubit>().triggerSync(userId: session.userId);
-        await _loadExpenses();
-        if (!mounted) return;
-        final savedRecord = await repo.getByClientId(clientId);
-        // إعادة التعيين
-        _amountController.clear();
-        _vatController.text = '0';
-        _payeeController.clear();
-        _descController.clear();
-        _notesController.clear();
         setState(() {
           _isSaving = false;
           _category = _expenseCategories.first;
           _paymentMethod = 'نقدي';
           _expenseDate = DateTime.now();
         });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              savedRecord?.status == 'synced'
-                  ? 'تم إرسال المصروف وحفظه في سجل الفرع'
-                  : 'تم حفظ المصروف محلياً وسيُعاد إرساله تلقائياً عند توفر الاتصال',
+              invNum.toString().isNotEmpty
+                  ? 'تم إرسال المصروف إلى الحسابات بنجاح (رقم: $invNum - قيد المراجعة)'
+                  : 'تم إرسال المصروف إلى الحسابات بنجاح (قيد المراجعة)',
               textAlign: TextAlign.right,
             ),
-            backgroundColor: savedRecord?.status == 'synced'
-                ? Colors.green
-                : AppColors.tertiary,
+            backgroundColor: const Color(0xFF1B365D),
           ),
         );
+
+        await _loadExpenses();
       }
     } catch (e) {
       if (mounted) {
+        String msg = e.toString();
+        if (msg.contains('Exception:')) {
+          msg = msg.replaceAll('Exception:', '').trim();
+        }
+        if (msg.contains('PostgrestException(')) {
+          final match = RegExp(r'message:\s*([^,\)]+)').firstMatch(msg);
+          if (match != null && match.group(1) != null) {
+            msg = match.group(1)!.trim();
+          }
+        }
         setState(() {
           _isSaving = false;
-          _errorMsg = 'خطأ: ${e.toString()}';
+          _errorMsg = msg;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              msg,
+              textAlign: TextAlign.right,
+            ),
+            backgroundColor: Colors.red.shade800,
+          ),
+        );
       }
     }
   }
@@ -1350,6 +1328,7 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                         _col('النوع'),
                         _col('المبلغ'),
                         _col('الإجمالي'),
+                        _col('الحالة'),
                       ],
                       rows: _branchExpenses.map((r) {
                         return DataRow(
@@ -1391,6 +1370,9 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
                                 ),
                               ),
                             ),
+                            DataCell(
+                              _buildExpenseStatusBadge(r),
+                            ),
                           ],
                         );
                       }).toList(),
@@ -1400,6 +1382,80 @@ class _ExpensesSectionState extends State<_ExpensesSection> {
         ],
       ),
     );
+  }
+
+  Widget _buildExpenseStatusBadge(ExpenseRecord r) {
+    final status = r.status.toLowerCase();
+    String label;
+    Color color;
+    IconData icon;
+
+    switch (status) {
+      case 'pending':
+        label = 'قيد المراجعة';
+        color = const Color(0xFFFFAA00);
+        icon = Icons.schedule_rounded;
+        break;
+      case 'approved':
+      case 'posted':
+        label = 'تم الاعتماد';
+        color = AppColors.tertiary;
+        icon = Icons.check_circle_outline_rounded;
+        break;
+      case 'rejected':
+        label = 'مرفوضة';
+        color = const Color(0xFFFF6B6B);
+        icon = Icons.cancel_outlined;
+        break;
+      default:
+        label = r.status;
+        color = AppColors.onSurfaceVariant;
+        icon = Icons.info_outline_rounded;
+    }
+
+    final badge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.ibmPlexSansArabic(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (status == 'rejected' &&
+        r.decisionNotes != null &&
+        r.decisionNotes!.isNotEmpty) {
+      return Tooltip(
+        message: 'سبب الرفض: ${r.decisionNotes}',
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F2430),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFFF6B6B)),
+        ),
+        textStyle: GoogleFonts.ibmPlexSansArabic(
+          color: Colors.white,
+          fontSize: 12,
+        ),
+        child: badge,
+      );
+    }
+
+    return badge;
   }
 
   DataColumn _col(String label) => DataColumn(

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/accounting_repository.dart';
+import '../../data/purchases_excel_export_service.dart';
 import '../widgets/accounting_shared_widgets.dart';
 // ══════════════════════════════════════════════════════════════════════════════
 // PurchasesScreen — صفحة طلبات التوريد (المشتريات)
@@ -106,6 +107,13 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
     ]),
     const Spacer(),
     AccActionButton(
+      icon: Icons.table_view_rounded,
+      label: 'تصدير Excel',
+      onTap: _exportExcel,
+      color: const Color(0xFF107C41),
+    ),
+    const SizedBox(width: 8),
+    AccActionButton(
       icon: Icons.add_rounded, label: 'طلب توريد جديد',
       onTap: () => _showNewOrderDialog(context),
       color: AppColors.primaryContainer,
@@ -114,6 +122,44 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
     AccActionButton(icon: Icons.refresh_rounded, label: 'تحديث', onTap: _load,
         color: const Color(0xFF8A92A3)),
   ]);
+
+  Future<void> _exportExcel() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('جاري إعداد شيت Excel للمشتريات والتوريد...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    try {
+      final path = await PurchasesExcelExportService.exportPurchasesReport(
+        orders: _orders,
+        statusFilter: _statusFilter != null
+            ? _statusOptions.firstWhere((opt) => opt.$1 == _statusFilter, orElse: () => (null, '')).$2
+            : null,
+      );
+
+      if (!mounted) return;
+
+      if (path != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF107C41),
+            content: Text('تم تصدير شيت Excel بنجاح:\n$path'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red.shade800,
+          content: Text('فشل تصدير Excel: $e'),
+        ),
+      );
+    }
+  }
 
   Widget _buildFilters() => Container(
     padding: const EdgeInsets.all(16),
@@ -319,7 +365,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                         lines: approvedLines,
                       );
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           const SnackBar(
                             content: Text('تم اعتماد طلب التوريد بنجاح، وأصبح جاهزاً للاستلام بالمستودع'),
                             backgroundColor: AppColors.tertiary,
@@ -329,7 +375,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                       _load();
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           SnackBar(content: Text('خطأ في الاعتماد: $e'), backgroundColor: const Color(0xFFFF6B6B)),
                         );
                         setState(() => _loading = false);
@@ -415,14 +461,14 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                         rejectionReason: reason,
                       );
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           const SnackBar(content: Text('تم رفض طلب التوريد بنجاح'), backgroundColor: Color(0xFFFF6B6B)),
                         );
                       }
                       _load();
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           SnackBar(content: Text('خطأ: $e'), backgroundColor: const Color(0xFFFF6B6B)),
                         );
                         setState(() => _loading = false);

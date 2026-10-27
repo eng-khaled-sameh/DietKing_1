@@ -249,12 +249,15 @@ class _AdminLeaveRequestsSectionState extends State<AdminLeaveRequestsSection> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: AppDimens.spaceMd),
                     color: AppColors.surfaceContainerLow,
-                    child: ListTile(
-                      title: Text(req['employee_name'] ?? 'غير محدد'),
-                      subtitle: Text(
-                        'من ${req['start_date']} إلى ${req['end_date']} - ${req['reason']}',
+                    child: Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        title: Text(req['employee_name'] ?? 'غير محدد'),
+                        subtitle: Text(
+                          'من ${req['start_date']} إلى ${req['end_date']} - ${req['reason']}',
+                        ),
+                        trailing: _buildStatusBadge(req['status']),
                       ),
-                      trailing: _buildStatusBadge(req['status']),
                     ),
                   );
                 },

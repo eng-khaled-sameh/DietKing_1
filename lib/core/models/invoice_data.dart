@@ -63,11 +63,15 @@ class InvoiceLineItem {
   final int quantity;
   final double unitPrice;
   final double totalPrice;
+  final String? variantLabel;
+  final bool isPackage;
 
   const InvoiceLineItem({
     required this.name,
     required this.quantity,
     required this.unitPrice,
     required this.totalPrice,
+    this.variantLabel,
+    this.isPackage = false,
   });
 }
